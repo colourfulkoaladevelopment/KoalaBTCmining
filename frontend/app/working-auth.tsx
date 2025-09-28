@@ -990,4 +990,216 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginBottom: 8,
   },
+  // Tab Navigation Styles
+  appContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  tabContent: {
+    flex: 1,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#2a2a2a',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    paddingBottom: 20,
+    paddingTop: 10,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activeTab: {
+    backgroundColor: 'transparent',
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  activeTabLabel: {
+    color: '#FF9800',
+    fontWeight: 'bold',
+  },
+  // Store Styles
+  storeHeader: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  minersGrid: {
+    paddingHorizontal: 15,
+  },
+  storeMinerCard: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  storeMinerName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  storeMinerHashRate: {
+    fontSize: 16,
+    color: '#FF9800',
+    marginBottom: 8,
+  },
+  storeMinerPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: 4,
+  },
+  storeMinerDuration: {
+    fontSize: 14,
+    color: '#AAA',
+    marginBottom: 15,
+  },
+  purchaseButton: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  purchaseButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  // Invites Styles
+  invitesHeader: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  referralCard: {
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF9800',
+  },
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  referralCode: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF9800',
+    letterSpacing: 2,
+  },
+  statsCard: {
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF9800',
+    marginBottom: 5,
+  },
+  shareButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 15,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  shareButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  // Profile Styles
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+  },
+  signOutText: {
+    color: '#FF5722',
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 5,
+  },
+  userEmail: {
+    fontSize: 16,
+    color: '#AAA',
+  },
+  profileStats: {
+    marginTop: 10,
+  },
+  profileStat: {
+    fontSize: 14,
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  supportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 15,
+    marginBottom: 10,
+    padding: 15,
+    borderRadius: 12,
+  },
+  supportButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  // Additional Action Button Style
+  adButton: {
+    backgroundColor: '#4A1A1A',
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 10,
+  },
 });
