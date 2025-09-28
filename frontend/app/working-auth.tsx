@@ -467,7 +467,18 @@ export default function WorkingAuthApp() {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <ScrollView style={styles.tabContent}>
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FF9800"
+                colors={["#FF9800"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
             {/* Wallet Card */}
             <View style={styles.walletCard}>
               <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
