@@ -197,9 +197,20 @@ async def create_miner(miner_data: dict):
     }
     
     result = miners_collection.insert_one(new_miner)
-    new_miner["id"] = str(result.inserted_id)
     
-    return {"message": "Miner created successfully", "miner": new_miner}
+    # Return serializable response
+    response_miner = {
+        "id": str(result.inserted_id),
+        "name": new_miner["name"],
+        "hash_rate": new_miner["hash_rate"],
+        "status": new_miner["status"],
+        "time_remaining": new_miner["time_remaining"],
+        "total_earned": new_miner["total_earned"],
+        "miner_type": new_miner["miner_type"],
+        "purchase_price": new_miner["purchase_price"]
+    }
+    
+    return {"message": "Miner created successfully", "miner": response_miner}
 
 @app.post("/api/miners/{miner_id}/activate")
 async def activate_miner(miner_id: str):
