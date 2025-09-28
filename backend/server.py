@@ -894,6 +894,42 @@ async def get_referral_stats(current_user: Dict = Depends(get_current_user)):
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0)
     }
 
+# Support endpoints
+@app.post("/api/support/contact")
+async def submit_contact_form(
+    contact_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Submit contact support form"""
+    try:
+        # In a real app, you would:
+        # 1. Send email to support team
+        # 2. Create a support ticket in database
+        # 3. Send confirmation email to user
+        
+        # For now, we'll just store in database
+        support_ticket = {
+            "user_id": current_user["id"],
+            "name": contact_data["name"],
+            "email": contact_data["email"],
+            "subject": contact_data["subject"],
+            "message": contact_data["message"],
+            "status": "open",
+            "created_at": datetime.utcnow()
+        }
+        
+        # Store in MongoDB (you could create a support_tickets collection)
+        db.support_tickets.insert_one(support_ticket)
+        
+        # Simulate email sending (in production, use SendGrid, SES, etc.)
+        logger.info(f"Support ticket created for user {current_user['id']}: {contact_data['subject']}")
+        
+        return {"message": "Support ticket submitted successfully", "ticket_id": str(support_ticket["_id"]) if "_id" in support_ticket else "simulated"}
+        
+    except Exception as e:
+        logger.error(f"Error submitting contact form: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit support request")
+
 # Health check
 @app.get("/api/health")
 async def health_check():
