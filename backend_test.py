@@ -182,7 +182,7 @@ def test_user_login():
         user = test_users[0]
         login_data = {
             "email": user["email"],
-            "password": "SecurePass123!"
+            "password": "testpass123"
         }
         
         response = requests.post(f"{API_BASE}/auth/login", json=login_data, timeout=10)
