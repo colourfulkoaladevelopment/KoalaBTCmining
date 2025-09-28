@@ -211,6 +211,92 @@ export default function WorkingAuthApp() {
     }
   };
 
+  const watchAdForMining = async () => {
+    Alert.alert(
+      'Watch Ad',
+      'Watch a 30-second video ad to get 2 GH/s mining power for 30 minutes?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Watch Ad', onPress: async () => {
+          try {
+            // Simulate ad watching delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const token = await AsyncStorage.getItem('session_token');
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/miners/watch-ad`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              Alert.alert('Success', 'Ad miner boost activated! Duration extended by 30 minutes.');
+              await loadAppData();
+            } else {
+              const result = await response.json();
+              Alert.alert('Error', result.detail || 'Failed to activate ad miner');
+            }
+          } catch (error) {
+            Alert.alert('Error', 'Network error occurred');
+          }
+        }}
+      ]
+    );
+  };
+
+  const purchaseMiner = (miner) => {
+    Alert.alert(
+      'Purchase Miner',
+      `Purchase ${miner.name} for $${miner.price}?\n\nHash Rate: ${miner.hash_rate >= 1000 ? (miner.hash_rate / 1000).toFixed(1) + ' TH/s' : miner.hash_rate + ' GH/s'}\nDuration: ${miner.duration_days} days`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Purchase', 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/store/purchase`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  ...miner,
+                  payment_method: 'credit_card'
+                })
+              });
+
+              if (response.ok) {
+                Alert.alert('Purchase Successful! 🎉', `${miner.name} has been added to your miners. Go to Dashboard to activate it.`);
+                await loadAppData();
+              } else {
+                const result = await response.json();
+                Alert.alert('Purchase Failed', result.detail || 'Payment processing failed');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const shareReferralCode = async () => {
+    if (referralStats?.referral_code) {
+      const message = `Join me on Bitcoin Mining Simulator and start earning Bitcoin! Use my referral code: ${referralStats.referral_code}\n\n🎁 We both get a 100 GH/s miner for 30 days when you sign up!\n\nDownload: https://bitcoinmining.app`;
+      
+      try {
+        await Share.share({ message, title: 'Join Bitcoin Mining Simulator' });
+      } catch (error) {
+        console.error('Share error:', error);
+      }
+    }
+  };
+
   // Loading Screen
   if (currentScreen === 'loading') {
     return (
