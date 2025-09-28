@@ -264,14 +264,17 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Core API Infrastructure"
-    - "User Management System"
-    - "Miners Management API"
-    - "Mining Sessions & Calculations"
+    - "Mining Dashboard UI"
+    - "Real-time Mining Simulation"
+    - "Miner Management Interface"
+    - "Ad Reward Integration"
+    - "Wallet & Earnings Display"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
     message: "Created complete Bitcoin mining simulator with backend API and frontend dashboard. Need to test all backend endpoints first before frontend integration testing."
+  - agent: "testing"
+    message: "✅ BACKEND TESTING COMPLETE - All 6 backend tasks are working correctly. Fixed ObjectId serialization issue in create miner endpoint. All API endpoints tested: health check, user management, miners management, mining stats, ad rewards, shop system, and transaction recording. Business logic validation passed 100%. Ready for frontend testing or final summary."
