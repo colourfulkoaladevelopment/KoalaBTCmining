@@ -63,42 +63,6 @@ export default function Dashboard() {
   const [currentHashRate, setCurrentHashRate] = useState(43.8);
   const [mining, setMining] = useState(true);
 
-  // Simulate real-time mining updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (mining) {
-        setWalletData(prev => ({
-          ...prev,
-          totalBalance: prev.totalBalance + 0.000000001,
-          todayEarnings: prev.todayEarnings + 0.000000001
-        }));
-
-        // Update miners time remaining
-        setMiners(prev => prev.map(miner => ({
-          ...miner,
-          timeRemaining: miner.status === 'active' && miner.timeRemaining > 0 
-            ? miner.timeRemaining - 0.1 
-            : miner.timeRemaining,
-          earned: miner.status === 'active' 
-            ? miner.earned + (miner.hashRate * 0.000000001)
-            : miner.earned
-        })));
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [mining]);
-
-  const chartData = [
-    { value: 0.00000012, dataPointText: '00:00' },
-    { value: 0.00000018, dataPointText: '04:00' },
-    { value: 0.00000023, dataPointText: '08:00' },
-    { value: 0.00000019, dataPointText: '12:00' },
-    { value: 0.00000026, dataPointText: '16:00' },
-    { value: 0.00000031, dataPointText: '20:00' },
-    { value: 0.00000234, dataPointText: '24:00' }
-  ];
-
   const toggleMining = () => {
     setMining(!mining);
     Alert.alert(
