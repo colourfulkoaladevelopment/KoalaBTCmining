@@ -654,10 +654,79 @@ export default function WorkingAuthApp() {
               <Text style={styles.supportButtonText}>FAQ</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.supportButton} onPress={() => Alert.alert('Contact Support', 'Support contact info...')}>
+            <TouchableOpacity style={styles.supportButton} onPress={() => setShowContactForm(true)}>
               <Ionicons name="headset" size={20} color="#4CAF50" />
               <Text style={styles.supportButtonText}>Contact Support</Text>
             </TouchableOpacity>
+
+            {/* Contact Support Form Modal */}
+            {showContactForm && (
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Contact Support</Text>
+                    <TouchableOpacity onPress={() => setShowContactForm(false)}>
+                      <Ionicons name="close" size={24} color="#FFF" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={styles.modalForm}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Your Name"
+                      placeholderTextColor="#666"
+                      value={contactForm.name}
+                      onChangeText={(text) => setContactForm({...contactForm, name: text})}
+                      editable={!isLoading}
+                    />
+
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email Address"
+                      placeholderTextColor="#666"
+                      value={contactForm.email}
+                      onChangeText={(text) => setContactForm({...contactForm, email: text.toLowerCase()})}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Subject"
+                      placeholderTextColor="#666"
+                      value={contactForm.subject}
+                      onChangeText={(text) => setContactForm({...contactForm, subject: text})}
+                      editable={!isLoading}
+                    />
+
+                    <TextInput
+                      style={[styles.input, styles.messageInput]}
+                      placeholder="Describe your issue or question..."
+                      placeholderTextColor="#666"
+                      value={contactForm.message}
+                      onChangeText={(text) => setContactForm({...contactForm, message: text})}
+                      multiline
+                      numberOfLines={6}
+                      textAlignVertical="top"
+                      editable={!isLoading}
+                    />
+
+                    <TouchableOpacity 
+                      style={[styles.primaryButton, isLoading && styles.disabledButton]}
+                      onPress={submitContactForm}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#FFF" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>Send Message</Text>
+                      )}
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </View>
+            )}
           </ScrollView>
         );
 
