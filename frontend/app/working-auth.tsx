@@ -182,6 +182,7 @@ export default function WorkingAuthApp() {
       setWalletData(null);
       setMiners([]);
       setCurrentScreen('auth');
+      setActiveTab('dashboard');
     } catch (error) {
       console.error('Logout error:', error);
     }
