@@ -179,26 +179,27 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Earnings Chart */}
+        {/* Earnings Overview */}
         <View style={styles.chartCard}>
-          <Text style={styles.cardTitle}>24h Earnings Chart</Text>
-          <LineChart
-            data={chartData}
-            width={width - 60}
-            height={180}
-            color="#FF9800"
-            thickness={3}
-            curved
-            dataPointsColor="#FF9800"
-            textColor="#FFF"
-            textFontSize={10}
-            yAxisColor="#444"
-            xAxisColor="#444"
-            backgroundColor="transparent"
-            hideRules
-            yAxisTextStyle={{ color: '#AAA' }}
-            xAxisLabelTextStyle={{ color: '#AAA' }}
-          />
+          <Text style={styles.cardTitle}>24h Earnings Overview</Text>
+          <View style={styles.earningsContainer}>
+            <View style={styles.earningItem}>
+              <Text style={styles.earningLabel}>00:00 - 06:00</Text>
+              <Text style={styles.earningValue}>₿ 0.00000012</Text>
+            </View>
+            <View style={styles.earningItem}>
+              <Text style={styles.earningLabel}>06:00 - 12:00</Text>
+              <Text style={styles.earningValue}>₿ 0.00000018</Text>
+            </View>
+            <View style={styles.earningItem}>
+              <Text style={styles.earningLabel}>12:00 - 18:00</Text>
+              <Text style={styles.earningValue}>₿ 0.00000023</Text>
+            </View>
+            <View style={styles.earningItem}>
+              <Text style={styles.earningLabel}>18:00 - 24:00</Text>
+              <Text style={styles.earningValue}>₿ 0.00000019</Text>
+            </View>
+          </View>
         </View>
 
         {/* Active Miners */}
