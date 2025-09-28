@@ -803,18 +803,54 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  // Main App Styles
+  appContainer: {
+    flex: 1,
+  },
   appHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
-  signOutBtn: {
-    padding: 8,
+  contentContainer: {
+    flex: 1,
   },
+  tabContent: {
+    flex: 1,
+    paddingBottom: 20,
+  },
+  // Tab Navigation Styles
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#2a2a2a',
+    borderTopColor: '#333',
+    borderTopWidth: 1,
+    height: 80,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: {
+    // Add any active tab specific styles if needed
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontWeight: 'bold',
+  },
+  activeTabLabel: {
+    color: '#FF9800',
+  },
+  // Content Styles
   walletCard: {
     backgroundColor: '#2a2a2a',
     margin: 15,
@@ -899,6 +935,14 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
+  },
+  adButton: {
+    backgroundColor: '#331C1C',
+    borderWidth: 1,
+    borderColor: '#FF5722',
+    borderRadius: 12,
+    padding: 16,
   },
   actionButtonContent: {
     flexDirection: 'row',
@@ -978,69 +1022,20 @@ const styles = StyleSheet.create({
     color: '#AAA',
     marginBottom: 2,
   },
-  userCard: {
-    backgroundColor: '#2a2a2a',
-    marginHorizontal: 15,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 12,
-  },
-  userInfo: {
-    fontSize: 14,
-    color: '#FFF',
-    marginBottom: 8,
-  },
-  // Tab Navigation Styles
-  appContainer: {
-    flex: 1,
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  tabContent: {
-    flex: 1,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    paddingBottom: 20,
-    paddingTop: 10,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  activeTab: {
-    backgroundColor: 'transparent',
-  },
-  tabLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  activeTabLabel: {
-    color: '#FF9800',
-    fontWeight: 'bold',
-  },
-  // Store Styles
+  // Store Tab Styles
   storeHeader: {
-    padding: 20,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   minersGrid: {
     paddingHorizontal: 15,
   },
   storeMinerCard: {
     backgroundColor: '#2a2a2a',
-    borderRadius: 12,
     padding: 20,
     marginBottom: 15,
+    borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
   },
   storeMinerName: {
     fontSize: 18,
@@ -1054,31 +1049,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   storeMinerPrice: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#4CAF50',
     marginBottom: 4,
   },
   storeMinerDuration: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#AAA',
     marginBottom: 15,
   },
   purchaseButton: {
     backgroundColor: '#FF9800',
-    paddingHorizontal: 30,
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   purchaseButtonText: {
     color: '#FFF',
+    fontSize: 14,
     fontWeight: 'bold',
-    fontSize: 16,
   },
-  // Invites Styles
+  // Invites Tab Styles
   invitesHeader: {
-    padding: 20,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   referralCard: {
     backgroundColor: '#2a2a2a',
@@ -1086,23 +1081,22 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     padding: 20,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FF9800',
   },
   referralCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#333',
-    padding: 15,
+    backgroundColor: '#1a1a1a',
+    padding: 16,
     borderRadius: 8,
-    marginTop: 10,
+    marginBottom: 12,
   },
   referralCode: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FF9800',
-    letterSpacing: 2,
+    letterSpacing: 1,
+    flex: 1,
+    textAlign: 'center',
   },
   statsCard: {
     backgroundColor: '#2a2a2a',
@@ -1113,62 +1107,84 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
   },
   statItem: {
     alignItems: 'center',
+    backgroundColor: '#333',
+    padding: 16,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 5,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FF9800',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   shareButton: {
-    backgroundColor: '#4CAF50',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FF9800',
     marginHorizontal: 15,
-    paddingVertical: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    marginBottom: 20,
   },
   shareButtonText: {
     color: '#FFF',
-    fontWeight: 'bold',
     fontSize: 16,
-    marginLeft: 8,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
-  // Profile Styles
+  // Profile Tab Styles
   profileHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
   },
   signOutText: {
     color: '#FF5722',
-    marginLeft: 5,
     fontSize: 14,
+    marginLeft: 8,
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    margin: 15,
+    padding: 20,
+    borderRadius: 12,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#333',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 15,
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  userInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFF',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   userEmail: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#AAA',
   },
   profileStats: {
@@ -1185,21 +1201,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a2a2a',
     marginHorizontal: 15,
     marginBottom: 10,
-    padding: 15,
+    padding: 16,
     borderRadius: 12,
   },
   supportButtonText: {
     color: '#FFF',
     fontSize: 16,
-    marginLeft: 10,
-  },
-  // Additional Action Button Style
-  adButton: {
-    backgroundColor: '#4A1A1A',
-    borderWidth: 1,
-    borderColor: '#FF5722',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 10,
+    marginLeft: 12,
   },
 });
