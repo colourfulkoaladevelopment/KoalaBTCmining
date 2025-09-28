@@ -1,11 +1,6 @@
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
 
+// Bypass expo-router temporarily due to LinkingContext issue
 export default function RootLayout() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
-  );
+  return <Slot />;
 }
