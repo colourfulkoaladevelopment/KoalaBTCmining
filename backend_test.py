@@ -136,7 +136,7 @@ def test_user_registration():
         referee_data = {
             "name": generate_test_name(),
             "email": referee_email,
-            "password": "SecurePass123!",
+            "password": "testpass123",
             "referral_code": referral_code
         }
         
