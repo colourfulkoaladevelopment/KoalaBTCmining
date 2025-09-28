@@ -602,7 +602,7 @@ export default function WorkingAuthApp() {
               <Text style={styles.cardTitle}>Account Stats</Text>
               <View style={styles.profileStats}>
                 <Text style={styles.profileStat}>Balance: ₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
-                <Text style={styles.profileStat}>Total Earnings: ₿ {user?.total_earnings?.toFixed(8) || '0.00000000'}</Text>
+                <Text style={styles.profileStat}>Total Earnings: ₿ {user?.total_earnings?.toFixed(11) || '0.00000000000'}</Text>
                 <Text style={styles.profileStat}>Referral Code: {user?.referral_code}</Text>
               </View>
             </View>
