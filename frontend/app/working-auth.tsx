@@ -304,6 +304,39 @@ export default function WorkingAuthApp() {
     }
   };
 
+  const submitContactForm = async () => {
+    if (!contactForm.name || !contactForm.email || !contactForm.subject || !contactForm.message) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem('session_token');
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/support/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(contactForm)
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Your message has been sent! We\'ll get back to you within 24 hours.');
+        setContactForm({ name: '', email: '', subject: '', message: '' });
+        setShowContactForm(false);
+      } else {
+        Alert.alert('Error', 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Loading Screen
   if (currentScreen === 'loading') {
     return (
