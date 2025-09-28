@@ -406,107 +406,303 @@ export default function WorkingAuthApp() {
     );
   }
 
-  // Main App Screen
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContainer}>
-        {/* Header */}
-        <View style={styles.appHeader}>
-          <Text style={styles.appTitle}>Bitcoin Mining Dashboard</Text>
-          <TouchableOpacity onPress={signOut} style={styles.signOutBtn}>
-            <Ionicons name="log-out" size={20} color="#FF5722" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Wallet Card */}
-        <View style={styles.walletCard}>
-          <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
-          <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(8) || '0.00000000'}</Text>
-          <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Today's Earnings</Text>
-              <Text style={styles.statValue}>₿ {walletData?.today_earnings?.toFixed(8) || '0.00000000'}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Active Miners</Text>
-              <Text style={styles.statValue}>{walletData?.active_miners || 0}/{walletData?.total_miners || 0}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Mining Status */}
-        <View style={styles.miningCard}>
-          <Text style={styles.cardTitle}>Mining Status</Text>
-          <View style={styles.hashRateContainer}>
-            <Text style={styles.hashRateLabel}>Current Hash Rate</Text>
-            <Text style={styles.hashRate}>{walletData?.current_hash_rate?.toFixed(1) || '0.0'} GH/s</Text>
-            {(walletData?.current_hash_rate || 0) > 0 && <View style={styles.miningIndicator} />}
-          </View>
-        </View>
-
-        {/* Free Miner */}
-        <View style={styles.quickActionsCard}>
-          <Text style={styles.cardTitle}>Free Daily Miner</Text>
-          <TouchableOpacity 
-            style={styles.freeButton}
-            onPress={activateFreeMiner}
-          >
-            <View style={styles.actionButtonContent}>
-              <Ionicons name="gift" size={24} color="#4CAF50" />
-              <View style={styles.actionButtonText}>
-                <Text style={styles.actionButtonTitle}>Activate Free Miner</Text>
-                <Text style={styles.actionButtonSubtitle}>1 GH/s for 24 hours</Text>
+  // Tab Content Renderer
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <ScrollView style={styles.tabContent}>
+            {/* Wallet Card */}
+            <View style={styles.walletCard}>
+              <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
+              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(8) || '0.00000000'}</Text>
+              <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
+              
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Today's Earnings</Text>
+                  <Text style={styles.statValue}>₿ {walletData?.today_earnings?.toFixed(8) || '0.00000000'}</Text>
+                </View>
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Active Miners</Text>
+                  <Text style={styles.statValue}>{walletData?.active_miners || 0}/{walletData?.total_miners || 0}</Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
             </View>
-          </TouchableOpacity>
-        </View>
 
-        {/* Miners List */}
-        <View style={styles.minersCard}>
-          <Text style={styles.cardTitle}>Your Miners ({miners.length})</Text>
-          {miners.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="hardware-chip" size={48} color="#666" />
-              <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Activate your free daily miner to get started
-              </Text>
+            {/* Mining Status */}
+            <View style={styles.miningCard}>
+              <Text style={styles.cardTitle}>Mining Status</Text>
+              <View style={styles.hashRateContainer}>
+                <Text style={styles.hashRateLabel}>Current Hash Rate</Text>
+                <Text style={styles.hashRate}>{walletData?.current_hash_rate?.toFixed(1) || '0.0'} GH/s</Text>
+                {(walletData?.current_hash_rate || 0) > 0 && <View style={styles.miningIndicator} />}
+              </View>
             </View>
-          ) : (
-            miners.map((miner) => (
-              <View key={miner.id} style={styles.minerItem}>
-                <View style={styles.minerHeader}>
-                  <Text style={styles.minerName}>{miner.name}</Text>
-                  <View style={[
-                    styles.minerStatus, 
-                    { backgroundColor: miner.status === 'active' ? '#4CAF50' : '#666' }
-                  ]}>
-                    <Text style={styles.statusText}>
-                      {miner.status.toUpperCase()}
-                    </Text>
+
+            {/* Quick Actions */}
+            <View style={styles.quickActionsCard}>
+              <Text style={styles.cardTitle}>Quick Start</Text>
+              
+              <TouchableOpacity style={styles.freeButton} onPress={activateFreeMiner}>
+                <View style={styles.actionButtonContent}>
+                  <Ionicons name="gift" size={24} color="#4CAF50" />
+                  <View style={styles.actionButtonText}>
+                    <Text style={styles.actionButtonTitle}>Free Daily Miner</Text>
+                    <Text style={styles.actionButtonSubtitle}>1 GH/s for 24 hours</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.adButton} onPress={watchAdForMining}>
+                <View style={styles.actionButtonContent}>
+                  <Ionicons name="play-circle" size={24} color="#FF5722" />
+                  <View style={styles.actionButtonText}>
+                    <Text style={styles.actionButtonTitle}>Watch Ad for Boost</Text>
+                    <Text style={styles.actionButtonSubtitle}>2 GH/s for 30 minutes</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#FF5722" />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Miners List */}
+            <View style={styles.minersCard}>
+              <Text style={styles.cardTitle}>Your Miners ({miners.length})</Text>
+              {miners.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="hardware-chip" size={48} color="#666" />
+                  <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
+                  <Text style={styles.emptyStateSubtitle}>Activate your free daily miner to get started</Text>
+                </View>
+              ) : (
+                miners.map((miner) => (
+                  <View key={miner.id} style={styles.minerItem}>
+                    <View style={styles.minerHeader}>
+                      <Text style={styles.minerName}>{miner.name}</Text>
+                      <View style={[styles.minerStatus, { backgroundColor: miner.status === 'active' ? '#4CAF50' : '#666' }]}>
+                        <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.minerStats}>
+                      <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                      <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(8)}</Text>
+                      <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
+        );
+
+      case 'store':
+        return (
+          <ScrollView style={styles.tabContent}>
+            <View style={styles.storeHeader}>
+              <Text style={styles.cardTitle}>Miner Store</Text>
+              <Text style={styles.subtitle}>Rent premium mining hardware</Text>
+            </View>
+
+            <View style={styles.minersGrid}>
+              {storeMiners.map((miner) => (
+                <View key={miner.id} style={styles.storeMinerCard}>
+                  <Text style={styles.storeMinerName}>{miner.name}</Text>
+                  <Text style={styles.storeMinerHashRate}>
+                    {miner.hash_rate >= 1000 ? `${(miner.hash_rate / 1000).toFixed(1)} TH/s` : `${miner.hash_rate} GH/s`}
+                  </Text>
+                  <Text style={styles.storeMinerPrice}>${miner.price}</Text>
+                  <Text style={styles.storeMinerDuration}>{miner.duration_days} days</Text>
+                  <TouchableOpacity 
+                    style={styles.purchaseButton}
+                    onPress={() => purchaseMiner(miner)}
+                  >
+                    <Text style={styles.purchaseButtonText}>Purchase</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        );
+
+      case 'invites':
+        return (
+          <ScrollView style={styles.tabContent}>
+            <View style={styles.invitesHeader}>
+              <Text style={styles.cardTitle}>Invite Friends</Text>
+              <Text style={styles.subtitle}>Earn rewards together</Text>
+            </View>
+
+            {/* Referral Code */}
+            <View style={styles.referralCard}>
+              <Text style={styles.cardTitle}>Your Referral Code</Text>
+              <View style={styles.referralCodeContainer}>
+                <Text style={styles.referralCode}>{referralStats?.referral_code || 'Loading...'}</Text>
+                <TouchableOpacity onPress={() => {
+                  if (referralStats?.referral_code) {
+                    Clipboard.setString(referralStats.referral_code);
+                    Alert.alert('Copied!', 'Referral code copied to clipboard');
+                  }
+                }}>
+                  <Ionicons name="copy" size={20} color="#FF9800" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Referral Stats */}
+            {referralStats && (
+              <View style={styles.statsCard}>
+                <Text style={styles.cardTitle}>Your Stats</Text>
+                <View style={styles.statsGrid}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>{referralStats.total_referrals}</Text>
+                    <Text style={styles.statLabel}>Total Referrals</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>{referralStats.total_commission?.toFixed(1) || '0.0'}</Text>
+                    <Text style={styles.statLabel}>Commission GH/s</Text>
                   </View>
                 </View>
-                <View style={styles.minerStats}>
-                  <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
-                  <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(8)}</Text>
-                  <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
-                </View>
               </View>
-            ))
-          )}
+            )}
+
+            {/* Share Button */}
+            <TouchableOpacity style={styles.shareButton} onPress={shareReferralCode}>
+              <Ionicons name="share" size={20} color="#FFF" />
+              <Text style={styles.shareButtonText}>Share Referral Code</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        );
+
+      case 'profile':
+        return (
+          <ScrollView style={styles.tabContent}>
+            <View style={styles.profileHeader}>
+              <Text style={styles.cardTitle}>Profile</Text>
+              <TouchableOpacity onPress={signOut} style={styles.signOutBtn}>
+                <Ionicons name="log-out" size={20} color="#FF5722" />
+                <Text style={styles.signOutText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* User Info */}
+            <View style={styles.userCard}>
+              <View style={styles.avatarContainer}>
+                <Ionicons name="person" size={48} color="#FF9800" />
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{user?.name}</Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+              </View>
+            </View>
+
+            {/* Account Stats */}
+            <View style={styles.statsCard}>
+              <Text style={styles.cardTitle}>Account Stats</Text>
+              <View style={styles.profileStats}>
+                <Text style={styles.profileStat}>Balance: ₿ {walletData?.total_balance?.toFixed(8) || '0.00000000'}</Text>
+                <Text style={styles.profileStat}>Total Earnings: ₿ {user?.total_earnings?.toFixed(8) || '0.00000000'}</Text>
+                <Text style={styles.profileStat}>Referral Code: {user?.referral_code}</Text>
+              </View>
+            </View>
+
+            {/* Support Actions */}
+            <TouchableOpacity style={styles.supportButton} onPress={() => Alert.alert('FAQ', 'FAQ content would go here...')}>
+              <Ionicons name="help-circle" size={20} color="#2196F3" />
+              <Text style={styles.supportButtonText}>FAQ</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.supportButton} onPress={() => Alert.alert('Contact Support', 'Support contact info...')}>
+              <Ionicons name="headset" size={20} color="#4CAF50" />
+              <Text style={styles.supportButtonText}>Contact Support</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        );
+
+      default:
+        return <View />;
+    }
+  };
+
+  // Main App with Tab Navigation
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.appContainer}>
+        {/* Header */}
+        <View style={styles.appHeader}>
+          <Text style={styles.appTitle}>
+            {activeTab === 'dashboard' && 'Dashboard'}
+            {activeTab === 'store' && 'Store'}
+            {activeTab === 'invites' && 'Invites'}
+            {activeTab === 'profile' && 'Profile'}
+          </Text>
         </View>
 
-        {/* User Info */}
-        <View style={styles.userCard}>
-          <Text style={styles.cardTitle}>Account Info</Text>
-          <Text style={styles.userInfo}>Name: {user?.name}</Text>
-          <Text style={styles.userInfo}>Email: {user?.email}</Text>
-          <Text style={styles.userInfo}>Referral Code: {user?.referral_code}</Text>
+        {/* Tab Content */}
+        <View style={styles.contentContainer}>
+          {renderTabContent()}
         </View>
-      </ScrollView>
+
+        {/* Bottom Tab Navigation */}
+        <View style={styles.tabBar}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'dashboard' && styles.activeTab]}
+            onPress={() => setActiveTab('dashboard')}
+          >
+            <Ionicons 
+              name="home" 
+              size={24} 
+              color={activeTab === 'dashboard' ? '#FF9800' : '#666'} 
+            />
+            <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.activeTabLabel]}>
+              Dashboard
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'store' && styles.activeTab]}
+            onPress={() => setActiveTab('store')}
+          >
+            <Ionicons 
+              name="storefront" 
+              size={24} 
+              color={activeTab === 'store' ? '#FF9800' : '#666'} 
+            />
+            <Text style={[styles.tabLabel, activeTab === 'store' && styles.activeTabLabel]}>
+              Store
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'invites' && styles.activeTab]}
+            onPress={() => setActiveTab('invites')}
+          >
+            <Ionicons 
+              name="people" 
+              size={24} 
+              color={activeTab === 'invites' ? '#FF9800' : '#666'} 
+            />
+            <Text style={[styles.tabLabel, activeTab === 'invites' && styles.activeTabLabel]}>
+              Invites
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTab]}
+            onPress={() => setActiveTab('profile')}
+          >
+            <Ionicons 
+              name="person" 
+              size={24} 
+              color={activeTab === 'profile' ? '#FF9800' : '#666'} 
+            />
+            <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
+              Profile
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
