@@ -104,7 +104,7 @@ def test_user_registration():
         referrer_data = {
             "name": generate_test_name(),
             "email": referrer_email,
-            "password": "SecurePass123!"
+            "password": "testpass123"
         }
         
         response = requests.post(f"{API_BASE}/auth/register", json=referrer_data, timeout=10)
