@@ -10,7 +10,9 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  Share,
+  Clipboard
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +32,8 @@ export default function WorkingAuthApp() {
   const [user, setUser] = useState(null);
   const [walletData, setWalletData] = useState(null);
   const [miners, setMiners] = useState([]);
+  const [storeMiners, setStoreMiners] = useState([]);
+  const [referralStats, setReferralStats] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
