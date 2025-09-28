@@ -96,6 +96,24 @@ export default function WorkingAuthApp() {
         const minersResult = await minersResponse.json();
         setMiners(minersResult.miners);
       }
+
+      // Load store miners
+      const storeResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/store/miners`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (storeResponse.ok) {
+        const storeResult = await storeResponse.json();
+        setStoreMiners(storeResult.miners);
+      }
+
+      // Load referral stats
+      const referralResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/referrals/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (referralResponse.ok) {
+        const referralResult = await referralResponse.json();
+        setReferralStats(referralResult);
+      }
     } catch (error) {
       console.error('Error loading app data:', error);
     }
