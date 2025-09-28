@@ -415,7 +415,7 @@ export default function WorkingAuthApp() {
             {/* Wallet Card */}
             <View style={styles.walletCard}>
               <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
-              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(8) || '0.00000000'}</Text>
+              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
               <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
               
               <View style={styles.statsRow}>
