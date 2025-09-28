@@ -566,7 +566,18 @@ export default function WorkingAuthApp() {
 
       case 'store':
         return (
-          <ScrollView style={styles.tabContent}>
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FF9800"
+                colors={["#FF9800"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
             <View style={styles.storeHeader}>
               <Text style={styles.cardTitle}>Miner Store</Text>
               <Text style={styles.subtitle}>Rent premium mining hardware</Text>
