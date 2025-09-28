@@ -128,6 +128,20 @@ export default function WorkingAuthApp() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadAppData();
+      // Add a small delay to show the refresh animation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Error', 'Failed to refresh data. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleAuth = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please fill in all required fields');
