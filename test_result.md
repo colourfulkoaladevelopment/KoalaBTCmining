@@ -107,75 +107,93 @@ user_problem_statement: "Create an identical clone of Bitcoin mining app from Go
 backend:
   - task: "Core API Infrastructure"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Created FastAPI backend with MongoDB integration, user management, miners management, wallet system, transactions, mining sessions, ad rewards, and shop functionality"
+      - working: true
+        agent: "testing"
+        comment: "✅ Health check endpoint working correctly. API is running and responding properly at /api/health"
 
   - task: "User Management System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented user profile, wallet balance, and demo user creation with simplified authentication"
+      - working: true
+        agent: "testing"
+        comment: "✅ User profile and wallet balance endpoints working correctly. Demo user system functioning, balance calculations accurate, wallet data consistent with profile data"
 
   - task: "Miners Management API"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Created APIs for listing miners, creating miners, activating/deactivating miners with different types (free, premium, ad)"
+      - working: true
+        agent: "testing"
+        comment: "✅ All miner management endpoints working correctly. Fixed ObjectId serialization issue in create miner endpoint. Miners list, create, activate/deactivate all functioning properly. Demo miners created on startup as expected"
 
   - task: "Mining Sessions & Calculations"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented mining session tracking, earnings calculation, and real-time mining stats with hash rate calculations"
+      - working: true
+        agent: "testing"
+        comment: "✅ Mining stats endpoint working correctly. Hash rate calculations accurate (38.2 GH/s from active miners), chart data properly structured, mining sessions tracking active/inactive states correctly"
 
   - task: "Ad Rewards System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Created ad reward activation system that provides 24-hour free mining boosts"
+      - working: true
+        agent: "testing"
+        comment: "✅ Ad rewards system working correctly. Successfully creates/activates Ad Boost Miner with 12.4 GH/s for 24 hours. Proper integration with miners management system"
 
   - task: "Shop & Purchase System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented shop with different miner types and purchase functionality with balance deduction"
+      - working: true
+        agent: "testing"
+        comment: "✅ Shop system working correctly. Shop miners endpoint returns 3 available miners with proper pricing. Purchase system correctly handles insufficient balance errors. Transaction recording and balance updates functioning properly"
 
 frontend:
   - task: "Mining Dashboard UI"
