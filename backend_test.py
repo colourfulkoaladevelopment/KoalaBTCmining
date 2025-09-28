@@ -36,430 +36,639 @@ API_BASE = f"{BACKEND_URL}/api"
 print(f"🔧 Testing Bitcoin Mining Simulator API at: {API_BASE}")
 print("=" * 80)
 
-class BitcoinMiningAPITester:
+class TestResults:
     def __init__(self):
-        self.session = requests.Session()
-        self.test_results = {
-            'passed': 0,
-            'failed': 0,
-            'errors': []
+        self.passed = 0
+        self.failed = 0
+        self.errors = []
+        
+    def success(self, test_name):
+        self.passed += 1
+        print(f"✅ {test_name}")
+        
+    def failure(self, test_name, error):
+        self.failed += 1
+        self.errors.append(f"{test_name}: {error}")
+        print(f"❌ {test_name}: {error}")
+        
+    def summary(self):
+        total = self.passed + self.failed
+        print("\n" + "=" * 80)
+        print(f"📊 TEST SUMMARY: {self.passed}/{total} passed")
+        if self.errors:
+            print("\n🚨 FAILED TESTS:")
+            for error in self.errors:
+                print(f"   • {error}")
+        print("=" * 80)
+
+results = TestResults()
+
+def generate_test_email():
+    """Generate unique test email"""
+    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    return f"testuser_{random_suffix}@example.com"
+
+def generate_test_name():
+    """Generate test user name"""
+    names = ["Alice Johnson", "Bob Smith", "Carol Davis", "David Wilson", "Emma Brown"]
+    return random.choice(names)
+
+# Test data storage
+test_users = []
+auth_tokens = []
+
+def test_health_check():
+    """Test API health check"""
+    try:
+        response = requests.get(f"{API_BASE}/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                results.success("Health Check")
+                return True
+            else:
+                results.failure("Health Check", f"Unhealthy status: {data}")
+                return False
+        else:
+            results.failure("Health Check", f"HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        results.failure("Health Check", str(e))
+        return False
+
+def test_user_registration():
+    """Test user registration with and without referral codes"""
+    try:
+        # Test 1: Register first user (referrer)
+        referrer_email = generate_test_email()
+        referrer_data = {
+            "name": generate_test_name(),
+            "email": referrer_email,
+            "password": "SecurePass123!"
         }
         
-    def log_result(self, test_name, success, message=""):
-        if success:
-            print(f"✅ {test_name}")
-            self.test_results['passed'] += 1
+        response = requests.post(f"{API_BASE}/auth/register", json=referrer_data, timeout=10)
+        if response.status_code != 200:
+            results.failure("User Registration (Referrer)", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        referrer_result = response.json()
+        if not all(key in referrer_result for key in ["user", "access_token", "message"]):
+            results.failure("User Registration (Referrer)", "Missing required fields in response")
+            return False
+            
+        referrer_user = referrer_result["user"]
+        referrer_token = referrer_result["access_token"]
+        referral_code = referrer_user["referral_code"]
+        
+        test_users.append({
+            "email": referrer_email,
+            "user_data": referrer_user,
+            "token": referrer_token,
+            "role": "referrer"
+        })
+        auth_tokens.append(referrer_token)
+        
+        results.success("User Registration (Referrer)")
+        
+        # Test 2: Register second user with referral code
+        referee_email = generate_test_email()
+        referee_data = {
+            "name": generate_test_name(),
+            "email": referee_email,
+            "password": "SecurePass123!",
+            "referral_code": referral_code
+        }
+        
+        response = requests.post(f"{API_BASE}/auth/register", json=referee_data, timeout=10)
+        if response.status_code != 200:
+            results.failure("User Registration (With Referral)", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        referee_result = response.json()
+        referee_user = referee_result["user"]
+        referee_token = referee_result["access_token"]
+        
+        test_users.append({
+            "email": referee_email,
+            "user_data": referee_user,
+            "token": referee_token,
+            "role": "referee"
+        })
+        auth_tokens.append(referee_token)
+        
+        results.success("User Registration (With Referral)")
+        
+        # Test 3: Try to register with existing email
+        response = requests.post(f"{API_BASE}/auth/register", json=referrer_data, timeout=10)
+        if response.status_code == 400:
+            results.success("User Registration (Duplicate Email Check)")
         else:
-            print(f"❌ {test_name}: {message}")
-            self.test_results['failed'] += 1
-            self.test_results['errors'].append(f"{test_name}: {message}")
-    
-    def test_health_check(self):
-        """Test /api/health endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/health")
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('status') == 'healthy':
-                    self.log_result("Health Check", True)
-                    return True
-                else:
-                    self.log_result("Health Check", False, f"Unexpected response: {data}")
-            else:
-                self.log_result("Health Check", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Health Check", False, f"Exception: {str(e)}")
-        return False
-    
-    def test_user_profile(self):
-        """Test /api/user/profile endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/user/profile")
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ['id', 'username', 'email', 'bitcoin_balance', 'total_earnings']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields:
-                    if data['username'] == 'demo_user':
-                        self.log_result("User Profile", True)
-                        return data
-                    else:
-                        self.log_result("User Profile", False, f"Unexpected username: {data['username']}")
-                else:
-                    self.log_result("User Profile", False, f"Missing fields: {missing_fields}")
-            else:
-                self.log_result("User Profile", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("User Profile", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_wallet_balance(self):
-        """Test /api/wallet/balance endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/wallet/balance")
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ['total_balance', 'today_earnings', 'total_miners', 'active_miners']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields:
-                    # Validate data types
-                    if (isinstance(data['total_balance'], (int, float)) and
-                        isinstance(data['today_earnings'], (int, float)) and
-                        isinstance(data['total_miners'], int) and
-                        isinstance(data['active_miners'], int)):
-                        self.log_result("Wallet Balance", True)
-                        return data
-                    else:
-                        self.log_result("Wallet Balance", False, "Invalid data types in response")
-                else:
-                    self.log_result("Wallet Balance", False, f"Missing fields: {missing_fields}")
-            else:
-                self.log_result("Wallet Balance", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Wallet Balance", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_miners_list(self):
-        """Test /api/miners/list endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/miners/list")
-            if response.status_code == 200:
-                data = response.json()
-                if 'miners' in data and isinstance(data['miners'], list):
-                    miners = data['miners']
-                    if len(miners) > 0:
-                        # Check first miner structure
-                        miner = miners[0]
-                        required_fields = ['id', 'name', 'hash_rate', 'status', 'time_remaining', 'total_earned', 'miner_type']
-                        missing_fields = [field for field in required_fields if field not in miner]
-                        
-                        if not missing_fields:
-                            self.log_result("Miners List", True)
-                            return miners
-                        else:
-                            self.log_result("Miners List", False, f"Missing miner fields: {missing_fields}")
-                    else:
-                        self.log_result("Miners List", False, "No miners found (demo miners should be created)")
-                else:
-                    self.log_result("Miners List", False, "Invalid response structure")
-            else:
-                self.log_result("Miners List", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Miners List", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_create_miner(self):
-        """Test /api/miners/create endpoint"""
-        try:
-            miner_data = {
-                "name": "Test Miner",
-                "hash_rate": 10.5,
-                "duration": 24.0,
-                "type": "free",
-                "price": 0.0
-            }
+            results.failure("User Registration (Duplicate Email Check)", f"Expected 400, got {response.status_code}")
             
-            response = self.session.post(f"{API_BASE}/miners/create", json=miner_data)
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data and 'miner' in data:
-                    miner = data['miner']
-                    if (miner['name'] == miner_data['name'] and 
-                        miner['hash_rate'] == miner_data['hash_rate']):
-                        self.log_result("Create Miner", True)
-                        return miner['id']
-                    else:
-                        self.log_result("Create Miner", False, "Miner data mismatch")
-                else:
-                    self.log_result("Create Miner", False, "Invalid response structure")
-            else:
-                self.log_result("Create Miner", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Create Miner", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_miner_activation(self, miner_id):
-        """Test /api/miners/{id}/activate endpoint"""
-        try:
-            response = self.session.post(f"{API_BASE}/miners/{miner_id}/activate")
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data and 'activated' in data['message'].lower():
-                    self.log_result("Miner Activation", True)
-                    return True
-                else:
-                    self.log_result("Miner Activation", False, f"Unexpected response: {data}")
-            else:
-                self.log_result("Miner Activation", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Miner Activation", False, f"Exception: {str(e)}")
-        return False
-    
-    def test_miner_deactivation(self, miner_id):
-        """Test /api/miners/{id}/deactivate endpoint"""
-        try:
-            response = self.session.post(f"{API_BASE}/miners/{miner_id}/deactivate")
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data and 'deactivated' in data['message'].lower():
-                    self.log_result("Miner Deactivation", True)
-                    return True
-                else:
-                    self.log_result("Miner Deactivation", False, f"Unexpected response: {data}")
-            else:
-                self.log_result("Miner Deactivation", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Miner Deactivation", False, f"Exception: {str(e)}")
-        return False
-    
-    def test_ad_rewards(self):
-        """Test /api/ad-rewards/activate endpoint"""
-        try:
-            ad_data = {"reward_type": "mining_boost"}
-            
-            response = self.session.post(f"{API_BASE}/ad-rewards/activate", json=ad_data)
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data and 'activated' in data['message'].lower():
-                    self.log_result("Ad Rewards Activation", True)
-                    return True
-                else:
-                    self.log_result("Ad Rewards Activation", False, f"Unexpected response: {data}")
-            else:
-                self.log_result("Ad Rewards Activation", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Ad Rewards Activation", False, f"Exception: {str(e)}")
-        return False
-    
-    def test_mining_stats(self):
-        """Test /api/mining/stats endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/mining/stats")
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ['current_hash_rate', 'mining_active', 'chart_data']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields:
-                    # Validate chart data structure
-                    if isinstance(data['chart_data'], list) and len(data['chart_data']) > 0:
-                        chart_item = data['chart_data'][0]
-                        if 'time' in chart_item and 'value' in chart_item:
-                            self.log_result("Mining Stats", True)
-                            return data
-                        else:
-                            self.log_result("Mining Stats", False, "Invalid chart data structure")
-                    else:
-                        self.log_result("Mining Stats", False, "Invalid or empty chart data")
-                else:
-                    self.log_result("Mining Stats", False, f"Missing fields: {missing_fields}")
-            else:
-                self.log_result("Mining Stats", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Mining Stats", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_shop_miners(self):
-        """Test /api/shop/miners endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/shop/miners")
-            if response.status_code == 200:
-                data = response.json()
-                if 'miners' in data and isinstance(data['miners'], list):
-                    miners = data['miners']
-                    if len(miners) > 0:
-                        # Check first shop miner structure
-                        miner = miners[0]
-                        required_fields = ['id', 'name', 'hash_rate', 'duration', 'price', 'description']
-                        missing_fields = [field for field in required_fields if field not in miner]
-                        
-                        if not missing_fields:
-                            self.log_result("Shop Miners", True)
-                            return miners
-                        else:
-                            self.log_result("Shop Miners", False, f"Missing shop miner fields: {missing_fields}")
-                    else:
-                        self.log_result("Shop Miners", False, "No shop miners available")
-                else:
-                    self.log_result("Shop Miners", False, "Invalid response structure")
-            else:
-                self.log_result("Shop Miners", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Shop Miners", False, f"Exception: {str(e)}")
-        return None
-    
-    def test_shop_purchase(self):
-        """Test /api/shop/purchase endpoint"""
-        try:
-            # First get user balance to check if purchase is possible
-            user_response = self.session.get(f"{API_BASE}/user/profile")
-            if user_response.status_code != 200:
-                self.log_result("Shop Purchase", False, "Could not get user profile for balance check")
-                return False
-            
-            user_data = user_response.json()
-            current_balance = user_data['bitcoin_balance']
-            
-            # Try to purchase the cheapest miner
-            purchase_data = {
-                "name": "Basic Test Miner",
-                "hash_rate": 15.0,
-                "duration": 168,
-                "price": 0.001
-            }
-            
-            if current_balance >= purchase_data['price']:
-                response = self.session.post(f"{API_BASE}/shop/purchase", json=purchase_data)
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'message' in data and 'purchased' in data['message'].lower():
-                        self.log_result("Shop Purchase", True)
-                        return True
-                    else:
-                        self.log_result("Shop Purchase", False, f"Unexpected response: {data}")
-                else:
-                    self.log_result("Shop Purchase", False, f"Status code: {response.status_code}")
-            else:
-                # Test insufficient balance scenario
-                response = self.session.post(f"{API_BASE}/shop/purchase", json=purchase_data)
-                if response.status_code == 400:
-                    data = response.json()
-                    if 'insufficient' in data.get('detail', '').lower():
-                        self.log_result("Shop Purchase (Insufficient Balance)", True)
-                        return True
-                    else:
-                        self.log_result("Shop Purchase", False, f"Expected insufficient balance error, got: {data}")
-                else:
-                    self.log_result("Shop Purchase", False, f"Expected 400 status for insufficient balance, got: {response.status_code}")
-        except Exception as e:
-            self.log_result("Shop Purchase", False, f"Exception: {str(e)}")
-        return False
-    
-    def test_transaction_recording(self):
-        """Test /api/transactions/record endpoint"""
-        try:
-            transaction_data = {
-                "type": "earning",
-                "amount": 0.00000123,
-                "description": "Test mining reward"
-            }
-            
-            response = self.session.post(f"{API_BASE}/transactions/record", json=transaction_data)
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data and 'transaction_id' in data:
-                    self.log_result("Transaction Recording", True)
-                    return data['transaction_id']
-                else:
-                    self.log_result("Transaction Recording", False, f"Invalid response structure: {data}")
-            else:
-                self.log_result("Transaction Recording", False, f"Status code: {response.status_code}")
-        except Exception as e:
-            self.log_result("Transaction Recording", False, f"Exception: {str(e)}")
-        return None
-    
-    def run_all_tests(self):
-        """Run all API tests in sequence"""
-        print("Starting Bitcoin Mining Simulator API Tests...")
-        print("-" * 60)
+        return True
         
-        # Test 1: Health Check
-        if not self.test_health_check():
-            print("❌ Health check failed - API may not be running")
-            return self.test_results
-        
-        # Test 2: User Profile
-        user_data = self.test_user_profile()
-        if not user_data:
-            print("❌ User profile test failed - cannot continue with user-dependent tests")
-            return self.test_results
-        
-        # Test 3: Wallet Balance
-        wallet_data = self.test_wallet_balance()
-        
-        # Test 4: Miners List
-        miners = self.test_miners_list()
-        
-        # Test 5: Create Miner
-        new_miner_id = self.test_create_miner()
-        
-        # Test 6: Miner Activation/Deactivation
-        if new_miner_id:
-            self.test_miner_activation(new_miner_id)
-            time.sleep(1)  # Brief pause between activation and deactivation
-            self.test_miner_deactivation(new_miner_id)
-        elif miners and len(miners) > 0:
-            # Use existing miner for activation/deactivation tests
-            existing_miner_id = miners[0]['id']
-            self.test_miner_activation(existing_miner_id)
-            time.sleep(1)
-            self.test_miner_deactivation(existing_miner_id)
-        
-        # Test 7: Ad Rewards
-        self.test_ad_rewards()
-        
-        # Test 8: Mining Stats
-        self.test_mining_stats()
-        
-        # Test 9: Shop Miners
-        shop_miners = self.test_shop_miners()
-        
-        # Test 10: Shop Purchase
-        self.test_shop_purchase()
-        
-        # Test 11: Transaction Recording
-        self.test_transaction_recording()
-        
-        return self.test_results
-    
-    def print_summary(self):
-        """Print test results summary"""
-        print("\n" + "=" * 60)
-        print("TEST RESULTS SUMMARY")
-        print("=" * 60)
-        print(f"✅ Passed: {self.test_results['passed']}")
-        print(f"❌ Failed: {self.test_results['failed']}")
-        print(f"📊 Total: {self.test_results['passed'] + self.test_results['failed']}")
-        
-        if self.test_results['errors']:
-            print("\n🔍 FAILED TESTS:")
-            for error in self.test_results['errors']:
-                print(f"   • {error}")
-        
-        success_rate = (self.test_results['passed'] / (self.test_results['passed'] + self.test_results['failed'])) * 100
-        print(f"\n📈 Success Rate: {success_rate:.1f}%")
-        
-        if success_rate >= 90:
-            print("🎉 Excellent! API is working well.")
-        elif success_rate >= 70:
-            print("⚠️  Good, but some issues need attention.")
-        else:
-            print("🚨 Multiple issues detected - needs investigation.")
-
-def main():
-    """Main test execution"""
-    tester = BitcoinMiningAPITester()
-    
-    try:
-        results = tester.run_all_tests()
-        tester.print_summary()
-        
-        # Return exit code based on results
-        if results['failed'] == 0:
-            print("\n✅ All tests passed!")
-            return 0
-        else:
-            print(f"\n❌ {results['failed']} test(s) failed!")
-            return 1
-            
-    except KeyboardInterrupt:
-        print("\n⏹️  Tests interrupted by user")
-        return 1
     except Exception as e:
-        print(f"\n💥 Unexpected error during testing: {str(e)}")
-        return 1
+        results.failure("User Registration", str(e))
+        return False
+
+def test_user_login():
+    """Test user login functionality"""
+    try:
+        if not test_users:
+            results.failure("User Login", "No test users available")
+            return False
+            
+        user = test_users[0]
+        login_data = {
+            "email": user["email"],
+            "password": "SecurePass123!"
+        }
+        
+        response = requests.post(f"{API_BASE}/auth/login", json=login_data, timeout=10)
+        if response.status_code != 200:
+            results.failure("User Login", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        login_result = response.json()
+        if not all(key in login_result for key in ["user", "access_token", "message"]):
+            results.failure("User Login", "Missing required fields in response")
+            return False
+            
+        results.success("User Login")
+        
+        # Test invalid credentials
+        invalid_login = {
+            "email": user["email"],
+            "password": "WrongPassword"
+        }
+        
+        response = requests.post(f"{API_BASE}/auth/login", json=invalid_login, timeout=10)
+        if response.status_code == 401:
+            results.success("User Login (Invalid Credentials)")
+        else:
+            results.failure("User Login (Invalid Credentials)", f"Expected 401, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("User Login", str(e))
+        return False
+
+def test_auth_me():
+    """Test getting current user info"""
+    try:
+        if not auth_tokens:
+            results.failure("Auth Me", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Auth Me", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        user_info = response.json()
+        required_fields = ["id", "name", "email", "referral_code", "bitcoin_balance", "total_earnings"]
+        
+        if not all(field in user_info for field in required_fields):
+            results.failure("Auth Me", f"Missing required fields: {required_fields}")
+            return False
+            
+        results.success("Auth Me")
+        return True
+        
+    except Exception as e:
+        results.failure("Auth Me", str(e))
+        return False
+
+def test_device_registration():
+    """Test device registration for push notifications"""
+    try:
+        if not auth_tokens:
+            results.failure("Device Registration", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        device_data = {
+            "expo_push_token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
+            "device_type": "android",
+            "app_version": "1.0.0"
+        }
+        
+        response = requests.post(f"{API_BASE}/devices/register", json=device_data, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Device Registration", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if "message" not in result:
+            results.failure("Device Registration", "Missing message in response")
+            return False
+            
+        results.success("Device Registration")
+        
+        # Test invalid token format
+        invalid_device_data = {
+            "expo_push_token": "InvalidTokenFormat",
+            "device_type": "ios",
+            "app_version": "1.0.0"
+        }
+        
+        response = requests.post(f"{API_BASE}/devices/register", json=invalid_device_data, headers=headers, timeout=10)
+        if response.status_code == 422:  # Validation error
+            results.success("Device Registration (Invalid Token)")
+        else:
+            results.failure("Device Registration (Invalid Token)", f"Expected 422, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Device Registration", str(e))
+        return False
+
+def test_wallet_balance():
+    """Test wallet balance endpoint"""
+    try:
+        if not auth_tokens:
+            results.failure("Wallet Balance", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Wallet Balance", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        balance_data = response.json()
+        required_fields = ["total_balance", "today_earnings", "total_miners", "active_miners", "current_hash_rate"]
+        
+        if not all(field in balance_data for field in required_fields):
+            results.failure("Wallet Balance", f"Missing required fields: {required_fields}")
+            return False
+            
+        # New users should start with 0 balance
+        if balance_data["total_balance"] != 0.0:
+            results.failure("Wallet Balance", f"New user should have 0 balance, got {balance_data['total_balance']}")
+            return False
+            
+        results.success("Wallet Balance")
+        return True
+        
+    except Exception as e:
+        results.failure("Wallet Balance", str(e))
+        return False
+
+def test_miners_list():
+    """Test getting user's miners list"""
+    try:
+        if not auth_tokens:
+            results.failure("Miners List", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Miners List", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        miners_data = response.json()
+        if "miners" not in miners_data:
+            results.failure("Miners List", "Missing 'miners' field in response")
+            return False
+            
+        miners = miners_data["miners"]
+        
+        # Check if referral reward miners were created (should have 2 users with referral miners)
+        referral_miners = [m for m in miners if m["miner_type"] in ["referral_reward"]]
+        if len(referral_miners) > 0:
+            results.success("Miners List (Referral Miners Created)")
+        else:
+            results.failure("Miners List (Referral Miners)", "No referral reward miners found")
+            
+        results.success("Miners List")
+        return True
+        
+    except Exception as e:
+        results.failure("Miners List", str(e))
+        return False
+
+def test_free_daily_miner():
+    """Test activating free daily miner"""
+    try:
+        if not auth_tokens:
+            results.failure("Free Daily Miner", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.post(f"{API_BASE}/miners/activate-free", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Free Daily Miner", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if not all(key in result for key in ["message", "miner_id"]):
+            results.failure("Free Daily Miner", "Missing required fields in response")
+            return False
+            
+        results.success("Free Daily Miner")
+        
+        # Test trying to activate again (should fail)
+        response = requests.post(f"{API_BASE}/miners/activate-free", headers=headers, timeout=10)
+        if response.status_code == 400:
+            results.success("Free Daily Miner (Duplicate Prevention)")
+        else:
+            results.failure("Free Daily Miner (Duplicate Prevention)", f"Expected 400, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Free Daily Miner", str(e))
+        return False
+
+def test_ad_mining():
+    """Test ad mining boost system"""
+    try:
+        if not auth_tokens:
+            results.failure("Ad Mining", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        # Test first ad watch
+        response = requests.post(f"{API_BASE}/miners/watch-ad", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Ad Mining", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if "message" not in result:
+            results.failure("Ad Mining", "Missing message in response")
+            return False
+            
+        results.success("Ad Mining (First Ad)")
+        
+        # Test stacking ads (should work)
+        response = requests.post(f"{API_BASE}/miners/watch-ad", headers=headers, timeout=10)
+        if response.status_code == 200:
+            results.success("Ad Mining (Stacking)")
+        else:
+            results.failure("Ad Mining (Stacking)", f"HTTP {response.status_code}: {response.text}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Ad Mining", str(e))
+        return False
+
+def test_store_miners():
+    """Test store miners endpoint"""
+    try:
+        response = requests.get(f"{API_BASE}/store/miners", timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Store Miners", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        store_data = response.json()
+        if "miners" not in store_data:
+            results.failure("Store Miners", "Missing 'miners' field in response")
+            return False
+            
+        miners = store_data["miners"]
+        if len(miners) == 0:
+            results.failure("Store Miners", "No miners available in store")
+            return False
+            
+        # Check required fields for each miner
+        required_fields = ["id", "name", "hash_rate", "price", "duration_days"]
+        for miner in miners:
+            if not all(field in miner for field in required_fields):
+                results.failure("Store Miners", f"Miner missing required fields: {required_fields}")
+                return False
+                
+        results.success("Store Miners")
+        return True
+        
+    except Exception as e:
+        results.failure("Store Miners", str(e))
+        return False
+
+def test_store_purchase():
+    """Test store purchase functionality"""
+    try:
+        if not auth_tokens:
+            results.failure("Store Purchase", "No auth tokens available")
+            return False
+            
+        # First get available miners
+        response = requests.get(f"{API_BASE}/store/miners", timeout=10)
+        if response.status_code != 200:
+            results.failure("Store Purchase", "Could not get store miners")
+            return False
+            
+        miners = response.json()["miners"]
+        test_miner = miners[0]  # Use first miner for testing
+        
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        purchase_data = {
+            "name": test_miner["name"],
+            "hash_rate": test_miner["hash_rate"],
+            "price": test_miner["price"],
+            "duration_days": test_miner["duration_days"],
+            "payment_method": "credit_card"
+        }
+        
+        response = requests.post(f"{API_BASE}/store/purchase", json=purchase_data, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Store Purchase", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if not all(key in result for key in ["message", "miner_id", "purchase_id"]):
+            results.failure("Store Purchase", "Missing required fields in response")
+            return False
+            
+        results.success("Store Purchase")
+        return True
+        
+    except Exception as e:
+        results.failure("Store Purchase", str(e))
+        return False
+
+def test_referral_stats():
+    """Test referral statistics endpoint"""
+    try:
+        if not auth_tokens:
+            results.failure("Referral Stats", "No auth tokens available")
+            return False
+            
+        # Test for referrer (first user)
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.get(f"{API_BASE}/referrals/stats", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Referral Stats", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        stats = response.json()
+        required_fields = ["referral_code", "total_referrals", "total_commission", "referral_miners"]
+        
+        if not all(field in stats for field in required_fields):
+            results.failure("Referral Stats", f"Missing required fields: {required_fields}")
+            return False
+            
+        # Should have 1 referral since we registered a user with referral code
+        if stats["total_referrals"] != 1:
+            results.failure("Referral Stats", f"Expected 1 referral, got {stats['total_referrals']}")
+            return False
+            
+        results.success("Referral Stats")
+        return True
+        
+    except Exception as e:
+        results.failure("Referral Stats", str(e))
+        return False
+
+def test_miner_activation():
+    """Test miner activation functionality"""
+    try:
+        if not auth_tokens:
+            results.failure("Miner Activation", "No auth tokens available")
+            return False
+            
+        # Get user's miners first
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Miner Activation", "Could not get miners list")
+            return False
+            
+        miners = response.json()["miners"]
+        inactive_miners = [m for m in miners if m["status"] == "inactive"]
+        
+        if not inactive_miners:
+            results.failure("Miner Activation", "No inactive miners to test activation")
+            return False
+            
+        # Activate first inactive miner
+        miner_id = inactive_miners[0]["id"]
+        response = requests.post(f"{API_BASE}/miners/{miner_id}/activate", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Miner Activation", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if "message" not in result:
+            results.failure("Miner Activation", "Missing message in response")
+            return False
+            
+        results.success("Miner Activation")
+        
+        # Test activating already active miner (should fail)
+        response = requests.post(f"{API_BASE}/miners/{miner_id}/activate", headers=headers, timeout=10)
+        if response.status_code == 400:
+            results.success("Miner Activation (Already Active)")
+        else:
+            results.failure("Miner Activation (Already Active)", f"Expected 400, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Miner Activation", str(e))
+        return False
+
+def test_logout():
+    """Test user logout"""
+    try:
+        if not auth_tokens:
+            results.failure("Logout", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        response = requests.post(f"{API_BASE}/auth/logout", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Logout", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if "message" not in result:
+            results.failure("Logout", "Missing message in response")
+            return False
+            
+        results.success("Logout")
+        
+        # Test using logged out token (should fail)
+        response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        if response.status_code == 401:
+            results.success("Logout (Token Invalidation)")
+        else:
+            results.failure("Logout (Token Invalidation)", f"Expected 401, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Logout", str(e))
+        return False
+
+def run_all_tests():
+    """Run all backend API tests"""
+    print("🚀 Starting comprehensive backend API testing...\n")
+    
+    # Core API tests
+    if not test_health_check():
+        print("❌ Health check failed - stopping tests")
+        return
+    
+    # Authentication flow tests
+    print("\n🔐 Testing Authentication System...")
+    test_user_registration()
+    test_user_login()
+    test_auth_me()
+    
+    # Device management tests
+    print("\n📱 Testing Device Management...")
+    test_device_registration()
+    
+    # Wallet and balance tests
+    print("\n💰 Testing Wallet System...")
+    test_wallet_balance()
+    
+    # Mining system tests
+    print("\n⛏️ Testing Mining System...")
+    test_miners_list()
+    test_free_daily_miner()
+    test_ad_mining()
+    test_miner_activation()
+    
+    # Store system tests
+    print("\n🏪 Testing Store System...")
+    test_store_miners()
+    test_store_purchase()
+    
+    # Referral system tests
+    print("\n👥 Testing Referral System...")
+    test_referral_stats()
+    
+    # Logout tests
+    print("\n🚪 Testing Logout...")
+    test_logout()
+    
+    # Final summary
+    results.summary()
+    
+    return results.failed == 0
 
 if __name__ == "__main__":
-    exit(main())
+    success = run_all_tests()
+    exit(0 if success else 1)
