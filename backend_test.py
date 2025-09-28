@@ -1,25 +1,40 @@
 #!/usr/bin/env python3
 """
-Bitcoin Mining Simulator Backend API Test Suite
-Tests all backend endpoints for functionality and data integrity
+Comprehensive Backend API Testing for Bitcoin Mining Simulator
+Tests all authentication, mining, referral, and store functionality
 """
 
 import requests
 import json
 import time
-from datetime import datetime
+import random
+import string
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv('/app/frontend/.env')
+load_dotenv()
 
-# Get backend URL from environment
-BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'http://localhost:8001')
+# Get backend URL from frontend .env
+FRONTEND_ENV_PATH = "/app/frontend/.env"
+BACKEND_URL = None
+
+try:
+    with open(FRONTEND_ENV_PATH, 'r') as f:
+        for line in f:
+            if line.startswith('EXPO_PUBLIC_BACKEND_URL='):
+                BACKEND_URL = line.split('=', 1)[1].strip().strip('"')
+                break
+except:
+    pass
+
+if not BACKEND_URL:
+    BACKEND_URL = "http://localhost:8001"
+
 API_BASE = f"{BACKEND_URL}/api"
 
-print(f"Testing Bitcoin Mining Simulator API at: {API_BASE}")
-print("=" * 60)
+print(f"🔧 Testing Bitcoin Mining Simulator API at: {API_BASE}")
+print("=" * 80)
 
 class BitcoinMiningAPITester:
     def __init__(self):
