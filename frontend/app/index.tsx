@@ -380,6 +380,28 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
   },
+  earningsContainer: {
+    marginTop: 10,
+  },
+  earningItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  earningLabel: {
+    fontSize: 14,
+    color: '#AAA',
+  },
+  earningValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FF9800',
+  },
   minersCard: {
     backgroundColor: '#2a2a2a',
     marginHorizontal: 15,
