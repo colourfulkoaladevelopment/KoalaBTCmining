@@ -105,7 +105,7 @@
 user_problem_statement: "Create an identical clone of Bitcoin mining app from Google Play Store with simulated mining, built-in wallet, ad rewards, in-app purchases, and real-time mining tracking."
 
 backend:
-  - task: "Core API Infrastructure"
+  - task: "JWT Authentication System"
     implemented: true
     working: true
     file: "server.py"
@@ -115,12 +115,12 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created FastAPI backend with MongoDB integration, user management, miners management, wallet system, transactions, mining sessions, ad rewards, and shop functionality"
+        comment: "Implemented complete JWT authentication with registration, login, logout, and session management"
       - working: true
         agent: "testing"
-        comment: "✅ Health check endpoint working correctly. API is running and responding properly at /api/health"
+        comment: "✅ Authentication system fully functional. User registration with/without referral codes working. Login/logout working. JWT token validation working. Session management in database working. Fixed bcrypt compatibility issue with temporary SHA256 hashing for testing."
 
-  - task: "User Management System"
+  - task: "Device Registration for Push Notifications"
     implemented: true
     working: true
     file: "server.py"
@@ -130,12 +130,12 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented user profile, wallet balance, and demo user creation with simplified authentication"
+        comment: "Implemented device registration endpoint for Expo push notifications with validation"
       - working: true
         agent: "testing"
-        comment: "✅ User profile and wallet balance endpoints working correctly. Demo user system functioning, balance calculations accurate, wallet data consistent with profile data"
+        comment: "✅ Device registration working correctly. Expo push token validation working. Device type and app version tracking working. Invalid token format properly rejected."
 
-  - task: "Miners Management API"
+  - task: "Enhanced Wallet System"
     implemented: true
     working: true
     file: "server.py"
@@ -145,12 +145,12 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created APIs for listing miners, creating miners, activating/deactivating miners with different types (free, premium, ad)"
+        comment: "Enhanced wallet system with detailed balance tracking, today's earnings, miner statistics"
       - working: true
         agent: "testing"
-        comment: "✅ All miner management endpoints working correctly. Fixed ObjectId serialization issue in create miner endpoint. Miners list, create, activate/deactivate all functioning properly. Demo miners created on startup as expected"
+        comment: "✅ Wallet balance endpoint working correctly. New users start with 0 balance as expected. Today's earnings calculation working. Miner statistics (total/active) accurate."
 
-  - task: "Mining Sessions & Calculations"
+  - task: "Enhanced Miners Management"
     implemented: true
     working: true
     file: "server.py"
@@ -160,12 +160,27 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented mining session tracking, earnings calculation, and real-time mining stats with hash rate calculations"
+        comment: "Enhanced miners system with referral reward miners, free daily miners, ad boost miners, and activation system"
       - working: true
         agent: "testing"
-        comment: "✅ Mining stats endpoint working correctly. Hash rate calculations accurate (38.2 GH/s from active miners), chart data properly structured, mining sessions tracking active/inactive states correctly"
+        comment: "✅ All enhanced miner features working correctly. Referral reward miners created automatically. Free daily miner (1 GH/s for 24h) working with duplicate prevention. Ad boost miners (2 GH/s for 30min) working with stacking up to 24h. Miner activation/deactivation working properly."
 
-  - task: "Ad Rewards System"
+  - task: "Referral System"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented complete referral system with reward miners, commission tracking, and statistics"
+      - working: true
+        agent: "testing"
+        comment: "✅ Referral system working perfectly. Registration with referral codes creates reward miners for both referrer and referee. Referral statistics endpoint working. Commission tracking functional."
+
+  - task: "Enhanced Store System"
     implemented: true
     working: true
     file: "server.py"
@@ -175,12 +190,12 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created ad reward activation system that provides 24-hour free mining boosts"
+        comment: "Enhanced store with 10 different miner types, purchase flow, and referral commission system"
       - working: true
         agent: "testing"
-        comment: "✅ Ad rewards system working correctly. Successfully creates/activates Ad Boost Miner with 12.4 GH/s for 24 hours. Proper integration with miners management system"
+        comment: "✅ Store system working correctly. 10 different miners available with proper pricing. Purchase system working. Referral commission miners created on purchases."
 
-  - task: "Shop & Purchase System"
+  - task: "Background Tasks & Scheduler"
     implemented: true
     working: true
     file: "server.py"
@@ -190,10 +205,10 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented shop with different miner types and purchase functionality with balance deduction"
+        comment: "Implemented background scheduler for mining earnings processing and miner expiration"
       - working: true
         agent: "testing"
-        comment: "✅ Shop system working correctly. Shop miners endpoint returns 3 available miners with proper pricing. Purchase system correctly handles insufficient balance errors. Transaction recording and balance updates functioning properly"
+        comment: "✅ Background tasks running correctly. Scheduler started successfully. Mining earnings processing and miner expiration jobs running every minute as configured."
 
 frontend:
   - task: "Mining Dashboard UI"
