@@ -36,6 +36,7 @@ export default function WorkingAuthApp() {
   const [storeMiners, setStoreMiners] = useState([]);
   const [referralStats, setReferralStats] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [refreshing, setRefreshing] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactForm, setContactForm] = useState({
     name: '',
