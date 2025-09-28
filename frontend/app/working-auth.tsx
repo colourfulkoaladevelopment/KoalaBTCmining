@@ -157,6 +157,7 @@ export default function WorkingAuthApp() {
         setUser(result.user);
         await loadAppData();
         setCurrentScreen('app');
+        setActiveTab('dashboard'); // Start on dashboard
         Alert.alert('Success', isLogin ? 'Welcome back!' : 'Account created successfully!');
       } else {
         Alert.alert('Error', result.detail || 'Authentication failed');
