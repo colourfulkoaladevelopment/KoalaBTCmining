@@ -648,7 +648,8 @@ export default function WorkingAuthApp() {
             </View>
 
             {/* Support Actions */}
-            <TouchableOpacity style={styles.supportButton} onPress={() => Alert.alert('FAQ', 'FAQ content would go here...')}>
+            <TouchableOpacity style={styles.supportButton} onPress={() => Alert.alert('Frequently Asked Questions', 
+              '🔸 How does Bitcoin mining work?\nOur app simulates real Bitcoin mining using cloud-based mining hardware. You rent miners that generate Bitcoin over time.\n\n🔸 How do I start mining?\nActivate your free daily miner or purchase premium miners from the store. Each miner has different hash rates and durations.\n\n🔸 When do I get paid?\nEarnings are calculated every minute and added to your wallet balance. You can withdraw once you reach the minimum threshold.\n\n🔸 Are the earnings real?\nThis is a simulation app for educational purposes. Earnings shown are virtual and for demonstration only.\n\n🔸 How do referrals work?\nShare your referral code with friends. When they sign up, you both get bonus mining power!\n\n🔸 Can I withdraw my Bitcoin?\nThis is a demo app - withdrawals are simulated for educational purposes only.')}>
               <Ionicons name="help-circle" size={20} color="#2196F3" />
               <Text style={styles.supportButtonText}>FAQ</Text>
             </TouchableOpacity>
