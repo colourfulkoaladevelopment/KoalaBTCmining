@@ -37,7 +37,15 @@ export default function WorkingAuthApp() {
   const [referralStats, setReferralStats] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawForm, setWithdrawForm] = useState({
+    address: '',
+    amount: '',
+    network: 'bitcoin' // bitcoin or lightning
+  });
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
