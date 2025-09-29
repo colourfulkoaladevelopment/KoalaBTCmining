@@ -59,8 +59,17 @@ export default function WorkingAuthApp() {
 
   const checkAuthStatus = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Loading screen
-      
+      // Progress bar animation
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + Math.random() * 15;
+        });
+      }, 150);
+
       const token = await AsyncStorage.getItem('session_token');
       const userData = await AsyncStorage.getItem('user_data');
       
@@ -70,6 +79,9 @@ export default function WorkingAuthApp() {
           const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
+          
+          setLoadingProgress(100);
+          await new Promise(resolve => setTimeout(resolve, 500)); // Show 100% briefly
           
           if (response.ok) {
             const userInfo = await response.json();
@@ -82,12 +94,18 @@ export default function WorkingAuthApp() {
             setCurrentScreen('auth');
           }
         } catch (error) {
+          setLoadingProgress(100);
+          await new Promise(resolve => setTimeout(resolve, 500));
           setCurrentScreen('auth');
         }
       } else {
+        setLoadingProgress(100);
+        await new Promise(resolve => setTimeout(resolve, 500));
         setCurrentScreen('auth');
       }
     } catch (error) {
+      setLoadingProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
       setCurrentScreen('auth');
     }
   };
