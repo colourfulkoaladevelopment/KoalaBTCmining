@@ -353,15 +353,24 @@ export default function WorkingAuthApp() {
     }
   };
 
-  // Loading Screen
+  // Loading Screen with Progress Bar
   if (currentScreen === 'loading') {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingScreen}>
-          <Text style={styles.logo}>₿</Text>
-          <Text style={styles.appTitle}>Bitcoin Mining</Text>
-          <ActivityIndicator size="large" color="#FF9800" style={styles.loader} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>₿</Text>
+            <Text style={styles.appTitle}>Bitcoin Mining</Text>
+          </View>
+          
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${loadingProgress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{Math.round(loadingProgress)}%</Text>
+          </View>
+          
+          <Text style={styles.loadingText}>Initializing secure connection...</Text>
         </View>
       </SafeAreaView>
     );
