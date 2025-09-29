@@ -1,3 +1,3 @@
-import WorkingAuthApp from './working-auth';
+import PremiumBitcoinMiningApp from './premium-mining-app';
 
-export default WorkingAuthApp;
+export default PremiumBitcoinMiningApp;
