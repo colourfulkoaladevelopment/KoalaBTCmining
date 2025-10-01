@@ -230,15 +230,18 @@ backend:
 
   - task: "Bitcoin Withdrawal System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented complete Bitcoin withdrawal system with support for Bitcoin and Lightning networks. Includes balance validation, minimum withdrawal limits, and transaction recording."
+      - working: true
+        agent: "testing"
+        comment: "✅ Bitcoin withdrawal system fully functional. Balance validation working correctly (insufficient balance properly detected). Address validation working (empty addresses rejected). Minimum withdrawal amount validation working (0.001 BTC minimum). Both Bitcoin and Lightning networks supported. Transaction recording in withdrawals collection working. Database updates for user balance working correctly."
 
   - task: "Enhanced Contact Support System"
     implemented: true
