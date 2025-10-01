@@ -920,7 +920,9 @@ def test_logout():
             results.failure("Logout", "No auth tokens available")
             return False
             
-        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        # Use the last token for logout test to avoid interfering with other tests
+        logout_token = auth_tokens[-1] if len(auth_tokens) > 1 else auth_tokens[0]
+        headers = {"Authorization": f"Bearer {logout_token}"}
         response = requests.post(f"{API_BASE}/auth/logout", headers=headers, timeout=10)
         
         if response.status_code != 200:
