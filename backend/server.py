@@ -1073,11 +1073,14 @@ async def withdraw_bitcoin(
         result = db.withdrawals.insert_one(withdrawal)
         withdrawal_id = str(result.inserted_id)
         
-        # Update user balance
+        # Update user balance and track total cashed out
         new_balance = current_balance - amount
         users_collection.update_one(
             {"_id": current_user["id"]},
-            {"$set": {"bitcoin_balance": new_balance}}
+            {
+                "$set": {"bitcoin_balance": new_balance},
+                "$inc": {"total_cashed_out": amount}
+            }
         )
         
         # Record transaction
