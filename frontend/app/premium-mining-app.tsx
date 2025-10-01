@@ -1519,4 +1519,564 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  
+  // Main App Styles
+  appContainer: {
+    flex: 1,
+  },
+  appHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  headerGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  tabContent: {
+    flex: 1,
+  },
+  
+  // Tab Navigation
+  tabBarContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    height: 70,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: {
+    transform: [{ scale: 1.1 }],
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontWeight: 'bold',
+  },
+  activeTabLabel: {
+    color: '#FFD700',
+  },
+  bottomClearance: {
+    height: 35,
+    backgroundColor: '#1a1a1a',
+  },
+  
+  // Card Styles
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginLeft: 10,
+  },
+  
+  // Wallet Card
+  walletCard: {
+    margin: 15,
+    padding: 20,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  balance: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginVertical: 10,
+    fontFamily: 'monospace',
+  },
+  usdValue: {
+    fontSize: 16,
+    color: '#AAA',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  stat: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#AAA',
+    marginBottom: 5,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  
+  // Withdraw Button
+  withdrawButton: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    borderRadius: 12,
+  },
+  withdrawButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  
+  // Mining Card
+  miningCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  hashRateContainer: {
+    alignItems: 'center',
+  },
+  hashRateLabel: {
+    fontSize: 14,
+    color: '#AAA',
+    marginBottom: 5,
+  },
+  hashRate: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  miningIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  
+  // Quick Actions
+  quickActionsCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+  },
+  actionButton: {
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  actionButtonGradient: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  actionButtonTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  actionButtonSubtitle: {
+    fontSize: 12,
+    color: '#AAA',
+    marginTop: 2,
+  },
+  
+  // Miners Cards
+  minersCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginTop: 16,
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#AAA',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 20,
+  },
+  minerItem: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  minerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  minerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
+    flex: 1,
+  },
+  minerStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  statusText: {
+    fontSize: 10,
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  minerStats: {
+    marginBottom: 10,
+  },
+  minerStat: {
+    fontSize: 12,
+    color: '#AAA',
+    marginBottom: 2,
+  },
+  renewButton: {
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  renewButtonText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  
+  // Expired Miners
+  expiredMinersCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+  },
+  expiredMinerItem: {
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  expiredMinerName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 4,
+  },
+  expiredMinerDetails: {
+    fontSize: 12,
+    color: '#999',
+  },
+  
+  // Store Styles
+  storeHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  storeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 8,
+  },
+  storeSubtitle: {
+    fontSize: 16,
+    color: '#AAA',
+  },
+  minersGrid: {
+    paddingHorizontal: 15,
+  },
+  storeMinerCard: {
+    borderRadius: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    overflow: 'hidden',
+  },
+  minerTier: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  tierText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#000',
+    letterSpacing: 2,
+  },
+  minerContent: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  minerIcon: {
+    marginBottom: 12,
+  },
+  storeMinerName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  storeMinerHashRate: {
+    fontSize: 18,
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  storeMinerPrice: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: 4,
+  },
+  storeMinerDuration: {
+    fontSize: 14,
+    color: '#AAA',
+    marginBottom: 20,
+  },
+  purchaseButton: {
+    borderRadius: 12,
+    minWidth: 160,
+  },
+  purchaseButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // Referral Styles
+  referralCard: {
+    margin: 15,
+    padding: 20,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  referralCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  referralCode: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    letterSpacing: 2,
+    flex: 1,
+    textAlign: 'center',
+  },
+  statsCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    flex: 1,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 4,
+  },
+  shareButton: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    borderRadius: 12,
+  },
+  shareButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  
+  // Profile Styles
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 15,
+    padding: 20,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 16,
+    color: '#AAA',
+    marginBottom: 4,
+  },
+  userCode: {
+    fontSize: 14,
+    color: '#FFD700',
+    fontWeight: 'bold',
+  },
+  profileStats: {
+    marginTop: 10,
+  },
+  profileStat: {
+    fontSize: 14,
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  supportButton: {
+    marginHorizontal: 15,
+    marginBottom: 10,
+    borderRadius: 12,
+  },
+  supportButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  supportButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    marginLeft: 12,
+    flex: 1,
+  },
+  signOutButton: {
+    marginHorizontal: 15,
+    marginTop: 20,
+    marginBottom: 15,
+    borderRadius: 12,
+  },
+  signOutButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  
+  // Withdraw Modal Styles
+  networkSelection: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  networkButton: {
+    flex: 1,
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  selectedNetwork: {
+    backgroundColor: '#FFD700',
+  },
+  networkText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  messageInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  
+  // FAQ Modal Styles
+  faqModal: {
+    maxHeight: height * 0.8,
+  },
+  faqContent: {
+    flex: 1,
+    marginVertical: 20,
+  },
+  faqItem: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  faqQuestion: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 8,
+  },
+  faqAnswer: {
+    fontSize: 14,
+    color: '#FFF',
+    lineHeight: 20,
+  },
+  closeButton: {
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  closeButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
