@@ -345,19 +345,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Mining Dashboard UI"
-    - "Real-time Mining Simulation"
-    - "Miner Management Interface"
-    - "Ad Reward Integration"
-    - "Wallet & Earnings Display"
+    - "Forgot Password System"
+    - "Bitcoin Withdrawal System"
+    - "Enhanced Contact Support System"
+    - "Enhanced Miners Management"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Created complete Bitcoin mining simulator with backend API and frontend dashboard. Need to test all backend endpoints first before frontend integration testing."
-  - agent: "testing"
-    message: "✅ BACKEND TESTING COMPLETE - All 6 backend tasks are working correctly. Fixed ObjectId serialization issue in create miner endpoint. All API endpoints tested: health check, user management, miners management, mining stats, ad rewards, shop system, and transaction recording. Business logic validation passed 100%. Ready for frontend testing or final summary."
-  - agent: "testing"
-    message: "✅ COMPREHENSIVE BACKEND TESTING COMPLETE - All 7 enhanced backend tasks working correctly (22/23 tests passed). Successfully tested: JWT authentication system, device registration for push notifications, enhanced wallet system, enhanced miners management with referral/free/ad miners, complete referral system, enhanced store system, and background tasks/scheduler. Fixed bcrypt compatibility issue. Only minor issue: logout token invalidation test (race condition). All core business logic validated and working perfectly. Backend API is production-ready."
+    message: "✅ WHITE SCREEN ISSUE FIXED: Completed premium-mining-app.tsx implementation with full functionality. ✅ FEATURES IMPLEMENTED: Black/gold theme, horizontal progress bar, forgot password flow, withdraw BTC system, auto-activate purchased miners, enhanced contact support. Need to test new backend endpoints: /api/auth/forgot-password, /api/withdraw/bitcoin, /api/support/contact, and updated miner purchase logic."
