@@ -407,6 +407,7 @@ async def register(request: RegisterRequest):
         "bitcoin_balance": 0.0,
         "total_earnings": 0.0,
         "total_referral_rewards": 0.0,
+        "total_cashed_out": 0.0,  # Track total withdrawals
         "created_at": datetime.utcnow()
     }
     
