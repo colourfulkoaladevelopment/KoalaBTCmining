@@ -855,11 +855,9 @@ async def purchase_miner(
                 "duration_hours": purchase_data["duration_days"] * 24,
                 "time_remaining": purchase_data["duration_days"] * 24,
                 "total_earned": 0.0,
+                "purchase_price": 0.0,
                 "activated_at": now if auto_activate else None,
                 "expires_at": expires_at,
-                "created_at": now
-            }
-                "purchase_price": 0.0,
                 "created_at": now
             }
             miners_collection.insert_one(commission_miner)
