@@ -245,6 +245,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ Bitcoin withdrawal system fully functional. Balance validation working correctly (insufficient balance properly detected). Address validation working (empty addresses rejected). Minimum withdrawal amount validation working (0.001 BTC minimum). Both Bitcoin and Lightning networks supported. Transaction recording in withdrawals collection working. Database updates for user balance working correctly."
+      - working: true
+        agent: "testing"
+        comment: "✅ TOTAL_CASHED_OUT TRACKING VERIFIED: Withdrawal system correctly updates total_cashed_out field when processing withdrawals. Database update includes both balance deduction ($set bitcoin_balance) and total_cashed_out increment ($inc total_cashed_out). /api/auth/me endpoint correctly returns total_cashed_out field. New users start with total_cashed_out: 0.0. All validation working: insufficient balance, empty address, minimum amount (0.001 BTC), both Bitcoin and Lightning networks supported."
 
   - task: "Enhanced Contact Support System"
     implemented: true
