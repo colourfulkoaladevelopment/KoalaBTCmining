@@ -911,13 +911,22 @@ async def submit_contact_form(
 ):
     """Submit contact support form and send email to support team"""
     try:
+        # Validate required fields
+        name = contact_data.get("name", "").strip()
+        email = contact_data.get("email", "").strip()
+        subject = contact_data.get("subject", "").strip()
+        message = contact_data.get("message", "").strip()
+        
+        if not name or not email or not subject or not message:
+            raise HTTPException(status_code=400, detail="All fields (name, email, subject, message) are required")
+        
         # Store support ticket in database
         support_ticket = {
             "user_id": current_user["id"],
-            "name": contact_data["name"],
-            "email": contact_data["email"],
-            "subject": contact_data["subject"],
-            "message": contact_data["message"],
+            "name": name,
+            "email": email,
+            "subject": subject,
+            "message": message,
             "status": "open",
             "created_at": datetime.utcnow()
         }
