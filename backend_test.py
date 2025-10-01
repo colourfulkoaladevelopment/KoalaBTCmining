@@ -961,6 +961,10 @@ def run_all_tests():
     test_user_login()
     test_auth_me()
     
+    # NEW: Test forgot password system
+    print("\n🔑 Testing Forgot Password System...")
+    test_forgot_password_system()
+    
     # Device management tests
     print("\n📱 Testing Device Management...")
     test_device_registration()
@@ -968,6 +972,10 @@ def run_all_tests():
     # Wallet and balance tests
     print("\n💰 Testing Wallet System...")
     test_wallet_balance()
+    
+    # NEW: Test Bitcoin withdrawal system
+    print("\n💸 Testing Bitcoin Withdrawal System...")
+    test_bitcoin_withdrawal_system()
     
     # Mining system tests
     print("\n⛏️ Testing Mining System...")
@@ -981,9 +989,17 @@ def run_all_tests():
     test_store_miners()
     test_store_purchase()
     
+    # NEW: Test enhanced miners management with auto-activation
+    print("\n🔧 Testing Enhanced Miners Management (Auto-Activation)...")
+    test_enhanced_miners_auto_activation()
+    
     # Referral system tests
     print("\n👥 Testing Referral System...")
     test_referral_stats()
+    
+    # NEW: Test enhanced contact support system
+    print("\n📧 Testing Enhanced Contact Support System...")
+    test_contact_support_system()
     
     # Logout tests
     print("\n🚪 Testing Logout...")
