@@ -1102,6 +1102,8 @@ async def forgot_password(email_data: Dict[str, str]):
         
         return {"message": "If an account with this email exists, you will receive password reset instructions."}
         
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
         logger.error(f"Error in forgot password: {e}")
         raise HTTPException(status_code=500, detail="Failed to process password reset request")
