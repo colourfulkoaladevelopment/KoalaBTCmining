@@ -71,6 +71,7 @@ class User(BaseModel):
     bitcoin_balance: float = 0.0
     total_earnings: float = 0.0
     total_referral_rewards: float = 0.0
+    total_cashed_out: float = 0.0
     created_at: datetime = datetime.utcnow()
     
     class Config:
