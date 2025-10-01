@@ -1057,6 +1057,91 @@ async def withdraw_bitcoin(
         logger.error(f"Error processing withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
 
+# Password reset endpoints
+@app.post("/api/auth/forgot-password")
+async def forgot_password(email_data: Dict[str, str]):
+    """Send password reset email"""
+    try:
+        email = email_data.get("email", "").strip().lower()
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        # Check if user exists
+        user = users_collection.find_one({"email": email})
+        
+        # Always return success for security (don't reveal if email exists)
+        if user:
+            # Generate reset token
+            reset_token = str(uuid.uuid4())
+            reset_expires = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+            
+            # Store reset token in database
+            users_collection.update_one(
+                {"_id": user["_id"]},
+                {"$set": {
+                    "reset_token": reset_token,
+                    "reset_token_expires": reset_expires
+                }}
+            )
+            
+            # In production, send email with reset link
+            # For now, just log it
+            logger.info(f"Password reset requested for {email}. Reset token: {reset_token}")
+            
+            # You would send an email with a link like:
+            # https://your-app.com/reset-password?token={reset_token}
+        
+        return {"message": "If an account with this email exists, you will receive password reset instructions."}
+        
+    except Exception as e:
+        logger.error(f"Error in forgot password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process password reset request")
+
+@app.post("/api/auth/reset-password")
+async def reset_password(reset_data: Dict[str, str]):
+    """Reset password using token"""
+    try:
+        token = reset_data.get("token", "").strip()
+        new_password = reset_data.get("new_password", "").strip()
+        
+        if not token or not new_password:
+            raise HTTPException(status_code=400, detail="Token and new password are required")
+        
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        # Find user with valid reset token
+        user = users_collection.find_one({
+            "reset_token": token,
+            "reset_token_expires": {"$gt": datetime.utcnow()}
+        })
+        
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+        # Hash new password
+        hashed_password = pwd_context.hash(new_password)
+        
+        # Update password and remove reset token
+        users_collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {
+                "password": hashed_password,
+                "updated_at": datetime.utcnow()
+            }, "$unset": {
+                "reset_token": "",
+                "reset_token_expires": ""
+            }}
+        )
+        
+        logger.info(f"Password reset successful for user {user['email']}")
+        
+        return {"message": "Password has been reset successfully. You can now log in with your new password."}
+        
+    except Exception as e:
+        logger.error(f"Error in reset password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset password")
+
 # Health check
 @app.get("/api/health")
 async def health_check():
