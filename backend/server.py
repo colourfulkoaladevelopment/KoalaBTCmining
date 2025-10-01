@@ -1187,7 +1187,7 @@ async def reset_password(reset_data: Dict[str, str]):
             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
         
         # Hash new password
-        hashed_password = pwd_context.hash(new_password)
+        hashed_password = hash_password(new_password)
         
         # Update password and remove reset token
         users_collection.update_one(
