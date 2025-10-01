@@ -368,3 +368,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "✅ WHITE SCREEN ISSUE FIXED: Completed premium-mining-app.tsx implementation with full functionality. ✅ FEATURES IMPLEMENTED: Black/gold theme, horizontal progress bar, forgot password flow, withdraw BTC system, auto-activate purchased miners, enhanced contact support. Need to test new backend endpoints: /api/auth/forgot-password, /api/withdraw/bitcoin, /api/support/contact, and updated miner purchase logic."
+  - agent: "testing"
+    message: "✅ BACKEND TESTING COMPLETE: All 4 new backend features tested successfully (35/35 tests passed). Forgot Password System working with proper security. Bitcoin Withdrawal System functional with balance/address/minimum validations for both Bitcoin and Lightning networks. Enhanced Contact Support System working with email logging to colourfulkoaladevelopment@gmail.com. Enhanced Miners Management auto-activation feature working perfectly. Fixed minor backend issues with error handling during testing. All existing functionality remains intact."
