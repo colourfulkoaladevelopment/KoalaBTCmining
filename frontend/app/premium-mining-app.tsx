@@ -633,9 +633,642 @@ export default function PremiumBitcoinMiningApp() {
     );
   }
 
-  // Rest of the app implementation would continue here...
-  // Due to space constraints, I'll continue in the next part
-  return <Text>Main app continues...</Text>;
+  // Main App with Tab Navigation
+  return (
+    <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
+      <View style={styles.appContainer}>
+        {/* Header */}
+        <View style={styles.appHeader}>
+          <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.headerGradient}>
+            <Text style={styles.headerTitle}>
+              {activeTab === 'dashboard' && '⚡ Dashboard'}
+              {activeTab === 'store' && '🛒 Store'}
+              {activeTab === 'invites' && '👥 Invites'}
+              {activeTab === 'profile' && '👤 Profile'}
+            </Text>
+          </LinearGradient>
+        </View>
+
+        {/* Tab Content */}
+        <View style={styles.contentContainer}>
+          {renderTabContent()}
+        </View>
+
+        {/* Bottom Tab Navigation */}
+        <View style={styles.tabBarContainer}>
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.tabBar}>
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'dashboard' && styles.activeTab]}
+              onPress={() => setActiveTab('dashboard')}
+            >
+              <Ionicons 
+                name="home" 
+                size={24} 
+                color={activeTab === 'dashboard' ? '#FFD700' : '#666'} 
+              />
+              <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.activeTabLabel]}>
+                Dashboard
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'store' && styles.activeTab]}
+              onPress={() => setActiveTab('store')}
+            >
+              <Ionicons 
+                name="storefront" 
+                size={24} 
+                color={activeTab === 'store' ? '#FFD700' : '#666'} 
+              />
+              <Text style={[styles.tabLabel, activeTab === 'store' && styles.activeTabLabel]}>
+                Store
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'invites' && styles.activeTab]}
+              onPress={() => setActiveTab('invites')}
+            >
+              <Ionicons 
+                name="people" 
+                size={24} 
+                color={activeTab === 'invites' ? '#FFD700' : '#666'} 
+              />
+              <Text style={[styles.tabLabel, activeTab === 'invites' && styles.activeTabLabel]}>
+                Invites
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'profile' && styles.activeTab]}
+              onPress={() => setActiveTab('profile')}
+            >
+              <Ionicons 
+                name="person" 
+                size={24} 
+                color={activeTab === 'profile' ? '#FFD700' : '#666'} 
+              />
+              <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
+                Profile
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+          
+          {/* Bottom Clearance */}
+          <View style={styles.bottomClearance} />
+        </View>
+
+        {/* Modals */}
+        {renderModals()}
+      </View>
+    </LinearGradient>
+  );
+
+  // Tab Content Renderer
+  function renderTabContent() {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFD700"
+                colors={["#FFD700"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
+            {/* Wallet Overview */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.walletCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="wallet" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
+              </View>
+              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
+              <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
+              
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Today's Earnings</Text>
+                  <Text style={styles.statValue}>₿ {walletData?.today_earnings?.toFixed(11) || '0.00000000000'}</Text>
+                </View>
+                <View style={styles.stat}>
+                  <Text style={styles.statLabel}>Active Miners</Text>
+                  <Text style={styles.statValue}>{walletData?.active_miners || 0}/{walletData?.total_miners || 0}</Text>
+                </View>
+              </View>
+            </LinearGradient>
+
+            {/* Withdraw Button */}
+            <TouchableOpacity 
+              style={styles.withdrawButton}
+              onPress={() => setShowWithdrawModal(true)}
+            >
+              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                <Ionicons name="send" size={20} color="#000" />
+                <Text style={styles.withdrawButtonText}>Withdraw BTC</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Mining Status */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.miningCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="flash" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Mining Status</Text>
+              </View>
+              <View style={styles.hashRateContainer}>
+                <Text style={styles.hashRateLabel}>Current Hash Rate</Text>
+                <Text style={styles.hashRate}>{walletData?.current_hash_rate?.toFixed(1) || '0.0'} GH/s</Text>
+                {(walletData?.current_hash_rate || 0) > 0 && (
+                  <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.miningIndicator} />
+                )}
+              </View>
+            </LinearGradient>
+
+            {/* Quick Actions */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.quickActionsCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="rocket" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Quick Start</Text>
+              </View>
+              
+              <TouchableOpacity style={styles.actionButton} onPress={activateFreeMiner}>
+                <LinearGradient colors={['#1B4332', '#2D5A3D']} style={styles.actionButtonGradient}>
+                  <View style={styles.actionButtonContent}>
+                    <Ionicons name="gift" size={24} color="#4CAF50" />
+                    <View style={styles.actionButtonText}>
+                      <Text style={styles.actionButtonTitle}>Free Daily Miner</Text>
+                      <Text style={styles.actionButtonSubtitle}>1 GH/s for 24 hours</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionButton} onPress={watchAdForMining}>
+                <LinearGradient colors={['#331C1C', '#4A2728']} style={styles.actionButtonGradient}>
+                  <View style={styles.actionButtonContent}>
+                    <Ionicons name="play-circle" size={24} color="#FF5722" />
+                    <View style={styles.actionButtonText}>
+                      <Text style={styles.actionButtonTitle}>Watch Ad for Boost</Text>
+                      <Text style={styles.actionButtonSubtitle}>2 GH/s for 30 minutes</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#FF5722" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
+
+            {/* Your Miners */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="hardware-chip" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Your Miners ({miners.length})</Text>
+              </View>
+              
+              {miners.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="hardware-chip" size={48} color="#666" />
+                  <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
+                  <Text style={styles.emptyStateSubtitle}>Activate your free daily miner to get started</Text>
+                </View>
+              ) : (
+                miners.map((miner) => (
+                  <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                    <View style={styles.minerHeader}>
+                      <Text style={styles.minerName}>{miner.name}</Text>
+                      <LinearGradient 
+                        colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                        style={styles.minerStatus}
+                      >
+                        <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                      </LinearGradient>
+                    </View>
+                    
+                    <View style={styles.minerStats}>
+                      <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                      <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(11)}</Text>
+                      <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
+                    </View>
+
+                    {miner.miner_type === 'premium' && miner.status === 'expired' && (
+                      <TouchableOpacity 
+                        style={styles.renewButton}
+                        onPress={() => renewMiner(miner)}
+                      >
+                        <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                          <Text style={styles.renewButtonText}>Renew for 30 Days</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    )}
+                  </LinearGradient>
+                ))
+              )}
+            </LinearGradient>
+
+            {/* Expired Miners Section */}
+            {expiredMiners.length > 0 && (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.expiredMinersCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="time" size={24} color="#666" />
+                  <Text style={styles.cardTitle}>Expired Miners ({expiredMiners.length})</Text>
+                </View>
+                
+                {expiredMiners.map((miner) => (
+                  <View key={miner.id} style={styles.expiredMinerItem}>
+                    <Text style={styles.expiredMinerName}>{miner.name}</Text>
+                    <Text style={styles.expiredMinerDetails}>
+                      Earned: ₿ {miner.total_earned?.toFixed(11)} | {miner.hash_rate} GH/s
+                    </Text>
+                  </View>
+                ))}
+              </LinearGradient>
+            )}
+          </ScrollView>
+        );
+
+      case 'store':
+        return (
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFD700"
+                colors={["#FFD700"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
+            <View style={styles.storeHeader}>
+              <Text style={styles.storeTitle}>Premium Miners</Text>
+              <Text style={styles.storeSubtitle}>Professional mining hardware rentals</Text>
+            </View>
+
+            <View style={styles.minersGrid}>
+              {storeMiners.map((miner) => (
+                <LinearGradient key={miner.id} colors={['#2a2a2a', '#1a1a1a']} style={styles.storeMinerCard}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.minerTier}>
+                    <Text style={styles.tierText}>PREMIUM</Text>
+                  </LinearGradient>
+                  
+                  <View style={styles.minerContent}>
+                    <Ionicons name="hardware-chip" size={32} color="#FFD700" style={styles.minerIcon} />
+                    <Text style={styles.storeMinerName}>{miner.name}</Text>
+                    <Text style={styles.storeMinerHashRate}>
+                      {miner.hash_rate >= 1000 ? `${(miner.hash_rate / 1000).toFixed(1)} TH/s` : `${miner.hash_rate} GH/s`}
+                    </Text>
+                    <Text style={styles.storeMinerPrice}>${miner.price}</Text>
+                    <Text style={styles.storeMinerDuration}>30 days rental</Text>
+                    
+                    <TouchableOpacity 
+                      style={styles.purchaseButton}
+                      onPress={() => purchaseMiner(miner)}
+                    >
+                      <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                        <Text style={styles.purchaseButtonText}>Purchase & Activate</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              ))}
+            </View>
+          </ScrollView>
+        );
+
+      case 'invites':
+        return (
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFD700"
+                colors={["#FFD700"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.referralCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="gift" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Your Referral Code</Text>
+              </View>
+              
+              <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.referralCodeContainer}>
+                <Text style={styles.referralCode}>{referralStats?.referral_code || 'Loading...'}</Text>
+                <TouchableOpacity onPress={() => {
+                  if (referralStats?.referral_code) {
+                    Clipboard.setString(referralStats.referral_code);
+                    Alert.alert('Copied! 📋', 'Referral code copied to clipboard');
+                  }
+                }}>
+                  <Ionicons name="copy" size={20} color="#FFD700" />
+                </TouchableOpacity>
+              </LinearGradient>
+            </LinearGradient>
+
+            {referralStats && (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statsCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="trophy" size={24} color="#FFD700" />
+                  <Text style={styles.cardTitle}>Referral Stats</Text>
+                </View>
+                
+                <View style={styles.statsGrid}>
+                  <LinearGradient colors={['#333', '#2a2a2a']} style={styles.statItem}>
+                    <Text style={styles.statNumber}>{referralStats.total_referrals}</Text>
+                    <Text style={styles.statLabel}>Total Referrals</Text>
+                  </LinearGradient>
+                  
+                  <LinearGradient colors={['#333', '#2a2a2a']} style={styles.statItem}>
+                    <Text style={styles.statNumber}>{referralStats.total_commission?.toFixed(1) || '0.0'}</Text>
+                    <Text style={styles.statLabel}>Commission GH/s</Text>
+                  </LinearGradient>
+                </View>
+              </LinearGradient>
+            )}
+
+            <TouchableOpacity style={styles.shareButton} onPress={() => {
+              const message = `🚀 Join me on Bitcoin Mining Simulator!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\nDownload: https://bitcoinmining.app`;
+              Share.share({ message });
+            }}>
+              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                <Ionicons name="share" size={20} color="#000" />
+                <Text style={styles.shareButtonText}>Share Referral Code</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
+        );
+
+      case 'profile':
+        return (
+          <ScrollView 
+            style={styles.tabContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFD700"
+                colors={["#FFD700"]}
+                progressBackgroundColor="#2a2a2a"
+              />
+            }
+          >
+            {/* User Profile */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.userCard}>
+              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.avatarContainer}>
+                <Ionicons name="person" size={48} color="#000" />
+              </LinearGradient>
+              
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{user?.name}</Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+                <Text style={styles.userCode}>Code: {user?.referral_code}</Text>
+              </View>
+            </LinearGradient>
+
+            {/* Account Stats */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statsCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="stats-chart" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Account Statistics</Text>
+              </View>
+              
+              <View style={styles.profileStats}>
+                <Text style={styles.profileStat}>Balance: ₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
+                <Text style={styles.profileStat}>Total Earned: ₿ {user?.total_earnings?.toFixed(11) || '0.00000000000'}</Text>
+                <Text style={styles.profileStat}>Referral Rewards: {user?.total_referral_rewards?.toFixed(1) || '0.0'} GH/s</Text>
+              </View>
+            </LinearGradient>
+
+            {/* Support Actions */}
+            <TouchableOpacity style={styles.supportButton} onPress={() => setShowFAQ(true)}>
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
+                <Ionicons name="help-circle" size={20} color="#2196F3" />
+                <Text style={styles.supportButtonText}>FAQ</Text>
+                <Ionicons name="chevron-forward" size={16} color="#666" />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.supportButton} onPress={() => setShowContactForm(true)}>
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
+                <Ionicons name="headset" size={20} color="#4CAF50" />
+                <Text style={styles.supportButtonText}>Contact Support</Text>
+                <Ionicons name="chevron-forward" size={16} color="#666" />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+              <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
+                <Ionicons name="log-out" size={20} color="#FFF" />
+                <Text style={styles.signOutButtonText}>Sign Out</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
+        );
+
+      default:
+        return <View />;
+    }
+  }
+
+  // Render all modals
+  function renderModals() {
+    return (
+      <>
+        {/* Withdraw Modal */}
+        <Modal visible={showWithdrawModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Withdraw Bitcoin</Text>
+              <Text style={styles.modalSubtitle}>Send BTC to your wallet</Text>
+              
+              {/* Network Selection */}
+              <View style={styles.networkSelection}>
+                <TouchableOpacity 
+                  style={[styles.networkButton, withdrawForm.network === 'bitcoin' && styles.selectedNetwork]}
+                  onPress={() => setWithdrawForm({...withdrawForm, network: 'bitcoin'})}
+                >
+                  <Text style={styles.networkText}>Bitcoin Network</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.networkButton, withdrawForm.network === 'lightning' && styles.selectedNetwork]}
+                  onPress={() => setWithdrawForm({...withdrawForm, network: 'lightning'})}
+                >
+                  <Text style={styles.networkText}>Lightning Network</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="wallet" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Bitcoin Address"
+                  placeholderTextColor="#666"
+                  value={withdrawForm.address}
+                  onChangeText={(text) => setWithdrawForm({...withdrawForm, address: text})}
+                  multiline
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="cash" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Amount (BTC)"
+                  placeholderTextColor="#666"
+                  value={withdrawForm.amount}
+                  onChangeText={(text) => setWithdrawForm({...withdrawForm, amount: text})}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={() => setShowWithdrawModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={handleWithdraw}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Withdraw</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
+
+        {/* Contact Form Modal */}
+        <Modal visible={showContactForm} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Contact Support</Text>
+              <Text style={styles.modalSubtitle}>We're here to help you</Text>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="person" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your Name"
+                  placeholderTextColor="#666"
+                  value={contactForm.name}
+                  onChangeText={(text) => setContactForm({...contactForm, name: text})}
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor="#666"
+                  value={contactForm.email}
+                  onChangeText={(text) => setContactForm({...contactForm, email: text})}
+                  keyboardType="email-address"
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="text" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Subject"
+                  placeholderTextColor="#666"
+                  value={contactForm.subject}
+                  onChangeText={(text) => setContactForm({...contactForm, subject: text})}
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="chatbubble" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.messageInput]}
+                  placeholder="Your Message"
+                  placeholderTextColor="#666"
+                  value={contactForm.message}
+                  onChangeText={(text) => setContactForm({...contactForm, message: text})}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={() => setShowContactForm(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={submitContactForm}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Send Message</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
+
+        {/* FAQ Modal */}
+        <Modal visible={showFAQ} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={[styles.modalContent, styles.faqModal]}>
+              <Text style={styles.modalTitle}>Frequently Asked Questions</Text>
+              
+              <ScrollView style={styles.faqContent}>
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>🚀 How does the mining simulation work?</Text>
+                  <Text style={styles.faqAnswer}>Our platform simulates Bitcoin mining using cloud computing power. You rent virtual mining hardware that generates Bitcoin rewards over time based on hash rates and mining difficulty.</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>💰 How do I start earning Bitcoin?</Text>
+                  <Text style={styles.faqAnswer}>Begin with the free daily miner (1 GH/s for 24 hours), watch ads for mining boosts, or purchase premium miners from our store for higher earning potential.</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>🎯 Are the Bitcoin earnings real?</Text>
+                  <Text style={styles.faqAnswer}>This is an educational mining simulation. While the app teaches real mining concepts, all transactions are simulated for learning purposes.</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>👥 How does the referral system work?</Text>
+                  <Text style={styles.faqAnswer}>Share your unique referral code with friends. When they sign up, both of you receive a 100 GH/s bonus miner for 30 days. Plus, you earn 10% commission on their purchases!</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>💸 How do withdrawals work?</Text>
+                  <Text style={styles.faqAnswer}>Use the Withdraw BTC feature to send Bitcoin to any wallet address via Bitcoin Network or Lightning Network. Processing typically takes a few minutes.</Text>
+                </View>
+                
+                <View style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>📱 Can I use this on multiple devices?</Text>
+                  <Text style={styles.faqAnswer}>Yes! Your account syncs across all devices. Just log in with the same credentials to access your miners and earnings anywhere.</Text>
+                </View>
+              </ScrollView>
+              
+              <TouchableOpacity 
+                style={styles.closeButton} 
+                onPress={() => setShowFAQ(false)}
+              >
+                <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </Modal>
+      </>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
