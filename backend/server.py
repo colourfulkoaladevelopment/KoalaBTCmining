@@ -989,11 +989,11 @@ async def withdraw_bitcoin(
             raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than 0")
             
         # Check user balance
-        user_data = users_collection.find_one({"_id": ObjectId(current_user["id"])})
+        user_data = users_collection.find_one({"_id": current_user["id"]})
         if not user_data:
             raise HTTPException(status_code=404, detail="User not found")
             
-        current_balance = user_data.get("total_balance", 0)
+        current_balance = user_data.get("bitcoin_balance", 0)
         
         if amount > current_balance:
             raise HTTPException(
