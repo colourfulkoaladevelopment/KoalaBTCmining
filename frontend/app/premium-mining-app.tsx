@@ -146,6 +146,25 @@ export default function PremiumBitcoinMiningApp() {
     }
   };
 
+  const loadWalletData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      
+      // Only load wallet balance - much faster and lighter than full app data
+      const walletResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (walletResponse.ok) {
+        const walletResult = await walletResponse.json();
+        setWalletData(walletResult);
+      }
+    } catch (error) {
+      // Silently fail for real-time updates to avoid disrupting user experience
+      console.error('Balance update failed:', error);
+    }
+  };
+
   const loadAppData = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
