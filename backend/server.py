@@ -798,20 +798,26 @@ async def purchase_miner(
 ):
     """Purchase a miner (simulated payment)"""
     miner_id = str(uuid.uuid4())
+    auto_activate = purchase_data.get("auto_activate", False)
     
-    # Create purchased miner
+    # Create purchased miner - auto-activate as requested
     now = datetime.utcnow()
+    status = "active" if auto_activate else "inactive"
+    expires_at = now + timedelta(hours=purchase_data["duration_days"] * 24) if auto_activate else None
+    
     purchased_miner = {
         "_id": miner_id,
         "user_id": current_user["id"],
         "name": purchase_data["name"],
         "hash_rate": purchase_data["hash_rate"],
         "miner_type": "premium",
-        "status": "inactive",
+        "status": status,
         "duration_hours": purchase_data["duration_days"] * 24,
         "time_remaining": purchase_data["duration_days"] * 24,
         "total_earned": 0.0,
         "purchase_price": purchase_data["price"],
+        "activated_at": now if auto_activate else None,
+        "expires_at": expires_at,
         "created_at": now
     }
     
@@ -826,28 +832,33 @@ async def purchase_miner(
         "price": purchase_data["price"],
         "payment_method": purchase_data.get("payment_method", "credit_card"),
         "payment_status": "completed",
+        "auto_activated": auto_activate,
         "created_at": now
     }
     purchases_collection.insert_one(purchase_record)
     
-    # Handle referral commission (10% of hash rate)
+    # Handle referral commission (10% of hash rate) - also auto-activate if parent miner is activated
     if current_user.get("referred_by"):
         referrer = users_collection.find_one({"referral_code": current_user["referred_by"]})
         if referrer:
             commission_hash_rate = purchase_data["hash_rate"] * 0.1
             commission_miner_id = str(uuid.uuid4())
             
-            # Create commission miner for referrer
+            # Create commission miner for referrer - also auto-activate
             commission_miner = {
                 "_id": commission_miner_id,
                 "user_id": str(referrer["_id"]),
                 "name": f"Referral Commission: {purchase_data['name']}",
                 "hash_rate": commission_hash_rate,
                 "miner_type": "referral_commission",
-                "status": "inactive",
+                "status": status,  # Same status as main purchase
                 "duration_hours": purchase_data["duration_days"] * 24,
                 "time_remaining": purchase_data["duration_days"] * 24,
                 "total_earned": 0.0,
+                "activated_at": now if auto_activate else None,
+                "expires_at": expires_at,
+                "created_at": now
+            }
                 "purchase_price": 0.0,
                 "created_at": now
             }
