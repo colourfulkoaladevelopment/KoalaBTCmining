@@ -119,6 +119,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ Authentication system fully functional. User registration with/without referral codes working. Login/logout working. JWT token validation working. Session management in database working. Fixed bcrypt compatibility issue with temporary SHA256 hashing for testing."
+      - working: true
+        agent: "testing"
+        comment: "✅ UPDATED USER INFO ENDPOINT VERIFIED: /api/auth/me now correctly returns total_cashed_out field. New user registration creates users with total_cashed_out: 0.0. User model includes total_cashed_out field in database schema. All required fields present in response: id, name, email, referral_code, bitcoin_balance, total_earnings, total_referral_rewards, total_cashed_out, created_at."
 
   - task: "Device Registration for Push Notifications"
     implemented: true
