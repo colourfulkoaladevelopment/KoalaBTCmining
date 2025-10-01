@@ -215,15 +215,18 @@ backend:
 
   - task: "Forgot Password System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented forgot password and reset password endpoints with secure token-based reset flow. Tokens expire after 1 hour for security."
+      - working: true
+        agent: "testing"
+        comment: "✅ Forgot password system fully functional. Valid email requests processed correctly with security message. Empty email validation working (400 error). Non-existent emails handled securely (no information disclosure). Token generation and database storage working correctly."
 
   - task: "Bitcoin Withdrawal System"
     implemented: true
