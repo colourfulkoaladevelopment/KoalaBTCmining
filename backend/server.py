@@ -1062,6 +1062,8 @@ async def withdraw_bitcoin(
         
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
         logger.error(f"Error processing withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
