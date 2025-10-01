@@ -647,7 +647,7 @@ def test_forgot_password_system():
         return False
 
 def test_bitcoin_withdrawal_system():
-    """Test Bitcoin withdrawal functionality"""
+    """Test Bitcoin withdrawal functionality with total_cashed_out tracking"""
     try:
         if not auth_tokens:
             results.failure("Bitcoin Withdrawal", "No auth tokens available")
@@ -655,17 +655,20 @@ def test_bitcoin_withdrawal_system():
             
         headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
         
-        # Get current balance first
-        balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
-        if balance_response.status_code != 200:
-            results.failure("Bitcoin Withdrawal (Get Balance)", "Could not get wallet balance")
+        # Get initial user info to check total_cashed_out
+        user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        if user_response.status_code != 200:
+            results.failure("Bitcoin Withdrawal (Get User Info)", "Could not get user info")
             return False
             
-        balance_data = balance_response.json()
-        current_balance = balance_data.get("total_balance", 0)
+        initial_user_data = user_response.json()
+        initial_balance = initial_user_data.get("bitcoin_balance", 0)
+        initial_cashed_out = initial_user_data.get("total_cashed_out", 0)
+        
+        print(f"💰 Initial Balance: {initial_balance} BTC, Initial Cashed Out: {initial_cashed_out} BTC")
         
         # Test 1: Valid withdrawal request (small amount)
-        test_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"  # Genesis block address
+        test_address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid Bitcoin address
         test_amount = 0.001  # Minimum withdrawal amount
         
         withdrawal_data = {
@@ -676,11 +679,34 @@ def test_bitcoin_withdrawal_system():
         
         response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
         
-        if current_balance >= test_amount:
+        if initial_balance >= test_amount:
             if response.status_code == 200:
                 result = response.json()
                 if "withdrawal_id" in result and result.get("status") == "processing":
                     results.success("Bitcoin Withdrawal (Valid Request)")
+                    
+                    # NEW: Check if total_cashed_out was updated
+                    updated_user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+                    if updated_user_response.status_code == 200:
+                        updated_user_data = updated_user_response.json()
+                        new_balance = updated_user_data.get("bitcoin_balance", 0)
+                        new_cashed_out = updated_user_data.get("total_cashed_out", 0)
+                        
+                        expected_balance = initial_balance - test_amount
+                        expected_cashed_out = initial_cashed_out + test_amount
+                        
+                        if abs(new_balance - expected_balance) < 0.00000001:  # Account for floating point precision
+                            results.success("Bitcoin Withdrawal (Balance Update)")
+                        else:
+                            results.failure("Bitcoin Withdrawal (Balance Update)", f"Expected {expected_balance}, got {new_balance}")
+                        
+                        if abs(new_cashed_out - expected_cashed_out) < 0.00000001:
+                            results.success("Bitcoin Withdrawal (total_cashed_out Update)")
+                            print(f"✅ total_cashed_out correctly updated: {initial_cashed_out} → {new_cashed_out}")
+                        else:
+                            results.failure("Bitcoin Withdrawal (total_cashed_out Update)", f"Expected {expected_cashed_out}, got {new_cashed_out}")
+                    else:
+                        results.failure("Bitcoin Withdrawal (Post-withdrawal Check)", "Could not get updated user info")
                 else:
                     results.failure("Bitcoin Withdrawal (Valid Request)", f"Unexpected response: {result}")
             else:
@@ -692,7 +718,7 @@ def test_bitcoin_withdrawal_system():
             else:
                 results.failure("Bitcoin Withdrawal (Insufficient Balance Check)", f"Expected balance error, got: {response.text}")
         
-        # Test 2: Empty address
+        # Test 2: Empty address validation
         withdrawal_data = {
             "address": "",
             "amount": 0.001,
@@ -701,12 +727,12 @@ def test_bitcoin_withdrawal_system():
         
         response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
         
-        if response.status_code == 400:
+        if response.status_code == 400 and "address is required" in response.text:
             results.success("Bitcoin Withdrawal (Empty Address Validation)")
         else:
-            results.failure("Bitcoin Withdrawal (Empty Address Validation)", f"Expected 400, got {response.status_code}")
+            results.failure("Bitcoin Withdrawal (Empty Address Validation)", f"Expected address error, got: {response.status_code} - {response.text}")
         
-        # Test 3: Below minimum amount
+        # Test 3: Below minimum amount validation
         withdrawal_data = {
             "address": test_address,
             "amount": 0.0001,  # Below minimum
@@ -715,29 +741,37 @@ def test_bitcoin_withdrawal_system():
         
         response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
         
-        # Should get either minimum amount error OR insufficient balance error (both are valid)
         if response.status_code == 400 and ("Minimum withdrawal" in response.text or "Insufficient balance" in response.text):
             results.success("Bitcoin Withdrawal (Minimum Amount Check)")
         else:
             results.failure("Bitcoin Withdrawal (Minimum Amount Check)", f"Expected minimum or balance error, got: {response.text}")
         
-        # Test 4: Lightning Network
+        # Test 4: Lightning Network support
+        lightning_address = "lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq8rkx3yf5tcsyz3d73gafnh3cax9rn449d9p5uxz9ezhhypd0elx87sjle52x86fux2ypatgddc6k63n7erqz25le42c4u4ecky03ylcqca784w"
+        
         withdrawal_data = {
-            "address": "lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq8rkx3yf5tcsyz3d73gafnh3cax9rn449d9p5uxz9ezhhypd0elx87sjle52x86fux2ypatgddc6k63n7erqz25le42c4u4ecky03ylcqca784w",
+            "address": lightning_address,
             "amount": 0.001,
             "network": "lightning"
         }
         
         response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
         
-        if current_balance >= 0.001:
-            if response.status_code == 200:
-                results.success("Bitcoin Withdrawal (Lightning Network)")
+        # Get current balance for Lightning test
+        current_user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        if current_user_response.status_code == 200:
+            current_balance = current_user_response.json().get("bitcoin_balance", 0)
+            
+            if current_balance >= 0.001:
+                if response.status_code == 200:
+                    results.success("Bitcoin Withdrawal (Lightning Network)")
+                else:
+                    results.failure("Bitcoin Withdrawal (Lightning Network)", f"HTTP {response.status_code}: {response.text}")
             else:
-                results.failure("Bitcoin Withdrawal (Lightning Network)", f"HTTP {response.status_code}: {response.text}")
-        else:
-            if response.status_code == 400:
-                results.success("Bitcoin Withdrawal (Lightning Network Balance Check)")
+                if response.status_code == 400 and "Insufficient balance" in response.text:
+                    results.success("Bitcoin Withdrawal (Lightning Network Balance Check)")
+                else:
+                    results.failure("Bitcoin Withdrawal (Lightning Network Balance Check)", f"Expected balance error, got: {response.text}")
         
         return True
         
