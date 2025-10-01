@@ -940,35 +940,72 @@ async def submit_contact_form(
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
             
-            # Email configuration (using gmail SMTP as example)
-            # In production, use environment variables for email credentials
-            support_email = "colourfulkoaladevelopment@gmail.com"
+            # Gmail SMTP configuration
+            smtp_server = "smtp.gmail.com"
+            smtp_port = 587
+            sender_email = "colourfulkoaladevelopment@gmail.com"
+            sender_password = "kwkg czgx shbd btrp"
+            recipient_email = "colourfulkoaladevelopment@gmail.com"
             
             # Create email message
-            email_subject = f"Bitcoin Mining App Support Request - {contact_data['subject']}"
+            email_subject = f"Bitcoin Mining App Support Request - {subject}"
+            
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = recipient_email
+            msg['Subject'] = email_subject
+            
+            # Create HTML email body
             email_body = f"""
-New support request from Bitcoin Mining App:
-
-User: {contact_data['name']} ({contact_data['email']})
-Subject: {contact_data['subject']}
-Ticket ID: {ticket_id}
-
-Message:
-{contact_data['message']}
-
-User Details:
-- User ID: {current_user['id']}
-- Account Email: {current_user['email']}
-- Submitted At: {datetime.utcnow().isoformat()}
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #FFD700; text-align: center;">🚀 Bitcoin Mining App Support Request</h2>
+                    
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">Contact Information</h3>
+                        <p><strong>Name:</strong> {name}</p>
+                        <p><strong>Email:</strong> {email}</p>
+                        <p><strong>Subject:</strong> {subject}</p>
+                        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+                    </div>
+                    
+                    <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">User Details</h3>
+                        <p><strong>User ID:</strong> {current_user['id']}</p>
+                        <p><strong>Account Email:</strong> {current_user['email']}</p>
+                        <p><strong>Submitted At:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+                    </div>
+                    
+                    <div style="background-color: #e8f4fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">📝 Message</h3>
+                        <p style="white-space: pre-wrap; background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #FFD700;">{message}</p>
+                    </div>
+                    
+                    <hr style="margin: 30px 0; border: none; border-top: 2px solid #FFD700;">
+                    <p style="text-align: center; color: #666; font-size: 12px;">
+                        This email was automatically generated from the Bitcoin Mining App support system.
+                    </p>
+                </div>
+            </body>
+            </html>
             """
             
-            # Log the email (for now just log instead of sending)
-            logger.info(f"Support email would be sent to {support_email}: {email_subject}")
-            logger.info(f"Email content: {email_body}")
+            msg.attach(MIMEText(email_body, 'html'))
+            
+            # Send email using Gmail SMTP
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()  # Enable security
+            server.login(sender_email, sender_password)
+            text = msg.as_string()
+            server.sendmail(sender_email, recipient_email, text)
+            server.quit()
+            
+            logger.info(f"✅ Support email sent successfully to {recipient_email}: {email_subject}")
             
         except Exception as email_error:
-            logger.error(f"Failed to send support email: {email_error}")
-            # Continue execution even if email fails
+            logger.error(f"❌ Failed to send support email: {email_error}")
+            # Continue execution even if email fails - still create the ticket
         
         return {
             "message": "Support request submitted successfully. We'll get back to you soon!",
