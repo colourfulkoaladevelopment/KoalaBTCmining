@@ -975,6 +975,8 @@ User Details:
             "ticket_id": ticket_id
         }
         
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
         logger.error(f"Error submitting contact form: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit support request")
