@@ -156,7 +156,7 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -167,6 +167,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Updated purchase miner logic to support auto-activation and proper expires_at tracking for purchased miners. Premium miners now auto-activate when purchased."
+      - working: true
+        agent: "testing"
+        comment: "✅ Auto-activation feature fully functional. Miners purchased with auto_activate: true are immediately activated with proper expires_at timestamps. Miners purchased with auto_activate: false remain inactive as expected. Referral commission miners also inherit auto-activation status. Purchase transactions recorded correctly with auto_activated flag."
 
   - task: "Referral System"
     implemented: true
