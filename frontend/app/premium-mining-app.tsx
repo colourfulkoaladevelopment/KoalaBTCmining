@@ -248,14 +248,28 @@ export default function PremiumBitcoinMiningApp() {
     }
 
     try {
-      // In a real app, this would send a password reset email
-      Alert.alert(
-        'Password Reset Sent! 📧',
-        'If an account with this email exists, you will receive password reset instructions.',
-        [{ text: 'OK', onPress: () => setShowForgotPassword(false) }]
-      );
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotPasswordEmail })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          'Password Reset Sent! 📧',
+          result.message || 'If an account with this email exists, you will receive password reset instructions.',
+          [{ text: 'OK', onPress: () => {
+            setShowForgotPassword(false);
+            setForgotPasswordEmail('');
+          }}]
+        );
+      } else {
+        Alert.alert('Error', result.detail || 'Failed to send reset email');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send reset email');
+      Alert.alert('Error', 'Network error occurred. Please try again.');
     }
   };
 
