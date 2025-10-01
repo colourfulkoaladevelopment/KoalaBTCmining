@@ -522,6 +522,7 @@ async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
         "bitcoin_balance": current_user.get("bitcoin_balance", 0.0),
         "total_earnings": current_user.get("total_earnings", 0.0),
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0),
+        "total_cashed_out": current_user.get("total_cashed_out", 0.0),
         "created_at": current_user["created_at"]
     }
 
