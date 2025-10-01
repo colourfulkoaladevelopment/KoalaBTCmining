@@ -871,6 +871,94 @@ This test verifies that user support requests are properly sent to the support t
         results.failure("Contact Support", str(e))
         return False
 
+def test_multiple_withdrawals_total_cashed_out():
+    """Test multiple withdrawals accumulate total_cashed_out correctly"""
+    try:
+        if not auth_tokens:
+            results.failure("Multiple Withdrawals", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        # Get initial user state
+        user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        if user_response.status_code != 200:
+            results.failure("Multiple Withdrawals (Initial State)", "Could not get user info")
+            return False
+            
+        initial_data = user_response.json()
+        initial_balance = initial_data.get("bitcoin_balance", 0)
+        initial_cashed_out = initial_data.get("total_cashed_out", 0)
+        
+        print(f"💰 Starting Multiple Withdrawals Test:")
+        print(f"   Initial Balance: {initial_balance} BTC")
+        print(f"   Initial Cashed Out: {initial_cashed_out} BTC")
+        
+        # Test multiple withdrawal attempts
+        test_amounts = [0.001, 0.002, 0.003]  # Small amounts
+        test_address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+        
+        successful_withdrawals = 0
+        total_withdrawn = 0.0
+        
+        for i, amount in enumerate(test_amounts):
+            print(f"   Attempting withdrawal {i+1}: {amount} BTC")
+            
+            withdrawal_data = {
+                "address": test_address,
+                "amount": amount,
+                "network": "bitcoin"
+            }
+            
+            response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                successful_withdrawals += 1
+                total_withdrawn += amount
+                results.success(f"Multiple Withdrawals (Attempt {i+1})")
+                print(f"   ✅ Withdrawal {i+1} successful: {amount} BTC")
+            elif response.status_code == 400 and "Insufficient balance" in response.text:
+                results.success(f"Multiple Withdrawals (Insufficient Balance {i+1})")
+                print(f"   ⚠️  Withdrawal {i+1} failed: Insufficient balance (expected)")
+                break  # Stop trying if we run out of balance
+            else:
+                results.failure(f"Multiple Withdrawals (Attempt {i+1})", f"HTTP {response.status_code}: {response.text}")
+                print(f"   ❌ Withdrawal {i+1} failed unexpectedly")
+        
+        # Check final state
+        final_user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        if final_user_response.status_code == 200:
+            final_data = final_user_response.json()
+            final_balance = final_data.get("bitcoin_balance", 0)
+            final_cashed_out = final_data.get("total_cashed_out", 0)
+            
+            expected_balance = initial_balance - total_withdrawn
+            expected_cashed_out = initial_cashed_out + total_withdrawn
+            
+            print(f"   Final Balance: {final_balance} BTC (expected: {expected_balance})")
+            print(f"   Final Cashed Out: {final_cashed_out} BTC (expected: {expected_cashed_out})")
+            
+            # Check balance accuracy
+            if abs(final_balance - expected_balance) < 0.00000001:
+                results.success("Multiple Withdrawals (Final Balance)")
+            else:
+                results.failure("Multiple Withdrawals (Final Balance)", f"Expected {expected_balance}, got {final_balance}")
+            
+            # Check total_cashed_out accumulation
+            if abs(final_cashed_out - expected_cashed_out) < 0.00000001:
+                results.success("Multiple Withdrawals (total_cashed_out Accumulation)")
+                print(f"   ✅ total_cashed_out correctly accumulated: {initial_cashed_out} → {final_cashed_out}")
+            else:
+                results.failure("Multiple Withdrawals (total_cashed_out Accumulation)", f"Expected {expected_cashed_out}, got {final_cashed_out}")
+        else:
+            results.failure("Multiple Withdrawals (Final Check)", "Could not get final user state")
+        
+        return True
+        
+    except Exception as e:
+        results.failure("Multiple Withdrawals", str(e))
+        return False
+
 def test_enhanced_miners_auto_activation():
     """Test enhanced miners management with auto-activation"""
     try:
