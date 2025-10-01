@@ -1135,6 +1135,10 @@ def run_all_tests():
     print("\n💸 Testing Bitcoin Withdrawal System...")
     test_bitcoin_withdrawal_system()
     
+    # NEW: Test multiple withdrawals total_cashed_out accumulation
+    print("\n💰 Testing Multiple Withdrawals (total_cashed_out Accumulation)...")
+    test_multiple_withdrawals_total_cashed_out()
+    
     # Mining system tests
     print("\n⛏️ Testing Mining System...")
     test_miners_list()
