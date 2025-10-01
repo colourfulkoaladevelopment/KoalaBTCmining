@@ -1193,7 +1193,7 @@ async def reset_password(reset_data: Dict[str, str]):
         users_collection.update_one(
             {"_id": user["_id"]},
             {"$set": {
-                "password": hashed_password,
+                "password_hash": hashed_password,
                 "updated_at": datetime.utcnow()
             }, "$unset": {
                 "reset_token": "",
