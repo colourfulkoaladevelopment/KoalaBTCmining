@@ -587,6 +587,331 @@ def test_miner_activation():
         results.failure("Miner Activation", str(e))
         return False
 
+def test_forgot_password_system():
+    """Test forgot password functionality"""
+    try:
+        if not test_users:
+            results.failure("Forgot Password", "No test users available")
+            return False
+            
+        user_email = test_users[0]["email"]
+        
+        # Test 1: Valid email
+        response = requests.post(f"{API_BASE}/auth/forgot-password", 
+                               json={"email": user_email}, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Forgot Password (Valid Email)", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        expected_message = "If an account with this email exists, you will receive password reset instructions."
+        if expected_message not in result.get("message", ""):
+            results.failure("Forgot Password (Valid Email)", f"Unexpected message: {result}")
+            return False
+            
+        results.success("Forgot Password (Valid Email)")
+        
+        # Test 2: Empty email
+        response = requests.post(f"{API_BASE}/auth/forgot-password", 
+                               json={"email": ""}, timeout=10)
+        
+        if response.status_code == 400:
+            results.success("Forgot Password (Empty Email Validation)")
+        else:
+            results.failure("Forgot Password (Empty Email Validation)", f"Expected 400, got {response.status_code}")
+            
+        # Test 3: Non-existent email (should still return success for security)
+        response = requests.post(f"{API_BASE}/auth/forgot-password", 
+                               json={"email": "nonexistent@example.com"}, timeout=10)
+        
+        if response.status_code == 200:
+            results.success("Forgot Password (Non-existent Email Security)")
+        else:
+            results.failure("Forgot Password (Non-existent Email Security)", f"Expected 200, got {response.status_code}")
+            
+        return True
+        
+    except Exception as e:
+        results.failure("Forgot Password", str(e))
+        return False
+
+def test_bitcoin_withdrawal_system():
+    """Test Bitcoin withdrawal functionality"""
+    try:
+        if not auth_tokens:
+            results.failure("Bitcoin Withdrawal", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        # Get current balance first
+        balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+        if balance_response.status_code != 200:
+            results.failure("Bitcoin Withdrawal (Get Balance)", "Could not get wallet balance")
+            return False
+            
+        balance_data = balance_response.json()
+        current_balance = balance_data.get("total_balance", 0)
+        
+        # Test 1: Valid withdrawal request (small amount)
+        test_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"  # Genesis block address
+        test_amount = 0.001  # Minimum withdrawal amount
+        
+        withdrawal_data = {
+            "address": test_address,
+            "amount": test_amount,
+            "network": "bitcoin"
+        }
+        
+        response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
+        
+        if current_balance >= test_amount:
+            if response.status_code == 200:
+                result = response.json()
+                if "withdrawal_id" in result and result.get("status") == "processing":
+                    results.success("Bitcoin Withdrawal (Valid Request)")
+                else:
+                    results.failure("Bitcoin Withdrawal (Valid Request)", f"Unexpected response: {result}")
+            else:
+                results.failure("Bitcoin Withdrawal (Valid Request)", f"HTTP {response.status_code}: {response.text}")
+        else:
+            # Expect insufficient balance error
+            if response.status_code == 400 and "Insufficient balance" in response.text:
+                results.success("Bitcoin Withdrawal (Insufficient Balance Check)")
+            else:
+                results.failure("Bitcoin Withdrawal (Insufficient Balance Check)", f"Expected balance error, got: {response.text}")
+        
+        # Test 2: Empty address
+        withdrawal_data = {
+            "address": "",
+            "amount": 0.001,
+            "network": "bitcoin"
+        }
+        
+        response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
+        
+        if response.status_code == 400:
+            results.success("Bitcoin Withdrawal (Empty Address Validation)")
+        else:
+            results.failure("Bitcoin Withdrawal (Empty Address Validation)", f"Expected 400, got {response.status_code}")
+        
+        # Test 3: Below minimum amount
+        withdrawal_data = {
+            "address": test_address,
+            "amount": 0.0001,  # Below minimum
+            "network": "bitcoin"
+        }
+        
+        response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
+        
+        if response.status_code == 400 and "Minimum withdrawal" in response.text:
+            results.success("Bitcoin Withdrawal (Minimum Amount Check)")
+        else:
+            results.failure("Bitcoin Withdrawal (Minimum Amount Check)", f"Expected minimum error, got: {response.text}")
+        
+        # Test 4: Lightning Network
+        withdrawal_data = {
+            "address": "lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq8rkx3yf5tcsyz3d73gafnh3cax9rn449d9p5uxz9ezhhypd0elx87sjle52x86fux2ypatgddc6k63n7erqz25le42c4u4ecky03ylcqca784w",
+            "amount": 0.001,
+            "network": "lightning"
+        }
+        
+        response = requests.post(f"{API_BASE}/withdraw/bitcoin", json=withdrawal_data, headers=headers, timeout=10)
+        
+        if current_balance >= 0.001:
+            if response.status_code == 200:
+                results.success("Bitcoin Withdrawal (Lightning Network)")
+            else:
+                results.failure("Bitcoin Withdrawal (Lightning Network)", f"HTTP {response.status_code}: {response.text}")
+        else:
+            if response.status_code == 400:
+                results.success("Bitcoin Withdrawal (Lightning Network Balance Check)")
+        
+        return True
+        
+    except Exception as e:
+        results.failure("Bitcoin Withdrawal", str(e))
+        return False
+
+def test_contact_support_system():
+    """Test enhanced contact support system"""
+    try:
+        if not auth_tokens:
+            results.failure("Contact Support", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        # Test 1: Valid support request
+        support_data = {
+            "name": "John Bitcoin Miner",
+            "email": "john.miner@example.com",
+            "subject": "Mining Performance Issue",
+            "message": "Hello, I'm experiencing issues with my premium miners not generating expected hash rates. Could you please help me troubleshoot this issue? My miners seem to be running slower than advertised."
+        }
+        
+        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Contact Support (Valid Request)", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        if "ticket_id" not in result or "submitted successfully" not in result.get("message", ""):
+            results.failure("Contact Support (Valid Request)", f"Unexpected response: {result}")
+            return False
+            
+        results.success("Contact Support (Valid Request)")
+        
+        # Test 2: Missing fields (should handle gracefully)
+        incomplete_data = {
+            "name": "Test User",
+            "email": "",  # Missing email
+            "subject": "Test Subject"
+            # Missing message
+        }
+        
+        response = requests.post(f"{API_BASE}/support/contact", json=incomplete_data, headers=headers, timeout=10)
+        
+        # Should either reject with 400/422 or handle gracefully with 200
+        if response.status_code in [200, 400, 422]:
+            results.success("Contact Support (Missing Fields Handling)")
+        else:
+            results.failure("Contact Support (Missing Fields Handling)", f"Unexpected status: {response.status_code}")
+        
+        # Test 3: Long message (stress test)
+        long_message = "This is a very long support message. " * 100  # 4000+ characters
+        
+        support_data = {
+            "name": "Stress Test User",
+            "email": "stress@test.com",
+            "subject": "Long Message Test",
+            "message": long_message
+        }
+        
+        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            results.success("Contact Support (Long Message)")
+        else:
+            results.failure("Contact Support (Long Message)", f"HTTP {response.status_code}: {response.text}")
+        
+        return True
+        
+    except Exception as e:
+        results.failure("Contact Support", str(e))
+        return False
+
+def test_enhanced_miners_auto_activation():
+    """Test enhanced miners management with auto-activation"""
+    try:
+        if not auth_tokens:
+            results.failure("Auto-Activation", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        # Get available miners from store
+        response = requests.get(f"{API_BASE}/store/miners", timeout=10)
+        if response.status_code != 200:
+            results.failure("Auto-Activation (Get Store)", "Could not get store miners")
+            return False
+            
+        miners = response.json()["miners"]
+        test_miner = miners[0]  # Use cheapest miner for testing
+        
+        # Test 1: Purchase with auto-activation enabled
+        purchase_data = {
+            "name": f"{test_miner['name']} (Auto)",
+            "hash_rate": test_miner["hash_rate"],
+            "price": test_miner["price"],
+            "duration_days": test_miner["duration_days"],
+            "payment_method": "credit_card",
+            "auto_activate": True  # Key feature to test
+        }
+        
+        response = requests.post(f"{API_BASE}/store/purchase", json=purchase_data, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Auto-Activation Purchase", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        result = response.json()
+        miner_id = result.get("miner_id")
+        
+        if not miner_id:
+            results.failure("Auto-Activation Purchase", "No miner_id returned")
+            return False
+        
+        # Verify the miner was auto-activated
+        miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        if miners_response.status_code != 200:
+            results.failure("Auto-Activation Verification", "Could not get miners list")
+            return False
+            
+        miners_data = miners_response.json()
+        purchased_miner = None
+        
+        for miner in miners_data.get("miners", []):
+            if miner["id"] == miner_id:
+                purchased_miner = miner
+                break
+        
+        if not purchased_miner:
+            results.failure("Auto-Activation Verification", "Purchased miner not found")
+            return False
+            
+        if purchased_miner["status"] == "active":
+            results.success("Auto-Activation Purchase (Enabled)")
+        else:
+            results.failure("Auto-Activation Purchase (Enabled)", f"Miner not activated. Status: {purchased_miner['status']}")
+        
+        # Test 2: Purchase without auto-activation
+        purchase_data = {
+            "name": f"{test_miner['name']} (Manual)",
+            "hash_rate": test_miner["hash_rate"],
+            "price": test_miner["price"],
+            "duration_days": test_miner["duration_days"],
+            "payment_method": "credit_card",
+            "auto_activate": False  # Should remain inactive
+        }
+        
+        response = requests.post(f"{API_BASE}/store/purchase", json=purchase_data, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            miner_id = result.get("miner_id")
+            
+            if miner_id:
+                # Verify the miner remained inactive
+                miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+                if miners_response.status_code == 200:
+                    miners_data = miners_response.json()
+                    purchased_miner = None
+                    
+                    for miner in miners_data.get("miners", []):
+                        if miner["id"] == miner_id:
+                            purchased_miner = miner
+                            break
+                    
+                    if purchased_miner and purchased_miner["status"] == "inactive":
+                        results.success("Auto-Activation Purchase (Disabled)")
+                    else:
+                        results.failure("Auto-Activation Purchase (Disabled)", f"Miner unexpectedly activated. Status: {purchased_miner.get('status', 'not found')}")
+                else:
+                    results.failure("Auto-Activation Purchase (Disabled)", "Could not verify miner status")
+            else:
+                results.failure("Auto-Activation Purchase (Disabled)", "No miner_id returned")
+        else:
+            results.failure("Auto-Activation Purchase (Disabled)", f"HTTP {response.status_code}: {response.text}")
+        
+        return True
+        
+    except Exception as e:
+        results.failure("Auto-Activation", str(e))
+        return False
+
 def test_logout():
     """Test user logout"""
     try:
