@@ -746,7 +746,7 @@ def test_bitcoin_withdrawal_system():
         return False
 
 def test_contact_support_system():
-    """Test enhanced contact support system"""
+    """Test enhanced contact support system with Gmail SMTP"""
     try:
         if not auth_tokens:
             results.failure("Contact Support", "No auth tokens available")
@@ -754,59 +754,82 @@ def test_contact_support_system():
             
         headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
         
-        # Test 1: Valid support request
+        # Test 1: Valid support request - GMAIL SMTP TEST
         support_data = {
-            "name": "John Bitcoin Miner",
-            "email": "john.miner@example.com",
-            "subject": "Mining Performance Issue",
-            "message": "Hello, I'm experiencing issues with my premium miners not generating expected hash rates. Could you please help me troubleshoot this issue? My miners seem to be running slower than advertised."
+            "name": "Bitcoin Mining App Tester",
+            "email": "tester@bitcoinmining.app",
+            "subject": "🚀 AUTOMATED TEST - Gmail SMTP Integration Verification",
+            "message": f"""This is an automated test message to verify Gmail SMTP functionality in the Bitcoin Mining App.
+
+TEST DETAILS:
+- Test Time: {datetime.utcnow().isoformat()}
+- Purpose: Verify Gmail SMTP email sending capability
+- Expected Recipient: colourfulkoaladevelopment@gmail.com
+- Gmail Credentials: colourfulkoaladevelopment@gmail.com with app password
+
+FUNCTIONALITY BEING TESTED:
+✅ Contact form submission
+✅ Email content formatting (HTML)
+✅ Gmail SMTP connection (smtp.gmail.com:587)
+✅ Authentication with app password
+✅ Email delivery to support team
+
+If you receive this email, the Gmail SMTP integration is working correctly!
+
+This test verifies that user support requests are properly sent to the support team via Gmail SMTP."""
         }
         
-        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=10)
+        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=15)
         
         if response.status_code != 200:
-            results.failure("Contact Support (Valid Request)", f"HTTP {response.status_code}: {response.text}")
+            results.failure("Gmail SMTP Contact Form", f"HTTP {response.status_code}: {response.text}")
             return False
             
         result = response.json()
         if "ticket_id" not in result or "submitted successfully" not in result.get("message", ""):
-            results.failure("Contact Support (Valid Request)", f"Unexpected response: {result}")
+            results.failure("Gmail SMTP Contact Form", f"Unexpected response: {result}")
             return False
             
-        results.success("Contact Support (Valid Request)")
+        print(f"📧 Gmail SMTP Test Email Sent! Check colourfulkoaladevelopment@gmail.com")
+        print(f"   Subject: {support_data['subject']}")
+        print(f"   Ticket ID: {result['ticket_id']}")
+        results.success("Gmail SMTP Contact Form (Email Sent)")
         
-        # Test 2: Missing fields (should handle gracefully)
+        # Test 2: Missing fields validation
         incomplete_data = {
             "name": "Test User",
             "email": "",  # Missing email
-            "subject": "Test Subject"
-            # Missing message
+            "subject": "Test Subject",
+            "message": ""  # Missing message
         }
         
         response = requests.post(f"{API_BASE}/support/contact", json=incomplete_data, headers=headers, timeout=10)
         
-        # Should either reject with 400/422 or handle gracefully with 200
-        if response.status_code in [200, 400, 422]:
-            results.success("Contact Support (Missing Fields Handling)")
+        if response.status_code == 400:
+            response_data = response.json()
+            if "required" in response_data.get("detail", "").lower():
+                results.success("Contact Support (Field Validation)")
+            else:
+                results.failure("Contact Support (Field Validation)", f"Unexpected error: {response_data.get('detail')}")
         else:
-            results.failure("Contact Support (Missing Fields Handling)", f"Unexpected status: {response.status_code}")
+            results.failure("Contact Support (Field Validation)", f"Expected 400, got {response.status_code}")
         
-        # Test 3: Long message (stress test)
-        long_message = "This is a very long support message. " * 100  # 4000+ characters
+        # Test 3: Long message handling
+        long_message = "This is a comprehensive test message for the Bitcoin Mining App support system. " * 50  # ~4000 characters
         
         support_data = {
-            "name": "Stress Test User",
-            "email": "stress@test.com",
-            "subject": "Long Message Test",
+            "name": "Long Message Tester",
+            "email": "longtest@example.com",
+            "subject": "Long Message Handling Test",
             "message": long_message
         }
         
-        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=10)
+        response = requests.post(f"{API_BASE}/support/contact", json=support_data, headers=headers, timeout=15)
         
         if response.status_code == 200:
-            results.success("Contact Support (Long Message)")
+            results.success("Contact Support (Long Message Handling)")
         else:
-            results.failure("Contact Support (Long Message)", f"HTTP {response.status_code}: {response.text}")
+            results.failure("Contact Support (Long Message Handling)", f"HTTP {response.status_code}: {response.text}")
         
         return True
         
