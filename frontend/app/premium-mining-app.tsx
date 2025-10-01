@@ -72,19 +72,19 @@ export default function PremiumBitcoinMiningApp() {
     checkAuthStatus();
   }, []);
 
-  // Real-time balance updates (30-second interval)
+  // Real-time balance updates (1-second interval)
   useEffect(() => {
     let intervalId;
     
     if (currentScreen === 'app' && user) {
-      // Start real-time updates after successful login
+      // Start real-time balance updates after successful login
       intervalId = setInterval(async () => {
         try {
-          await loadAppData(); // Refresh wallet and miner data
+          await loadWalletData(); // Only refresh wallet balance - faster and non-intrusive
         } catch (error) {
-          console.error('Real-time update failed:', error);
+          console.error('Real-time balance update failed:', error);
         }
-      }, 30000); // Update every 30 seconds
+      }, 1000); // Update balance every 1 second
     }
 
     return () => {
