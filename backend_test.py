@@ -216,7 +216,7 @@ def test_user_login():
         return False
 
 def test_auth_me():
-    """Test getting current user info"""
+    """Test getting current user info - UPDATED to include total_cashed_out"""
     try:
         if not auth_tokens:
             results.failure("Auth Me", "No auth tokens available")
@@ -230,11 +230,21 @@ def test_auth_me():
             return False
             
         user_info = response.json()
-        required_fields = ["id", "name", "email", "referral_code", "bitcoin_balance", "total_earnings"]
+        required_fields = ["id", "name", "email", "referral_code", "bitcoin_balance", "total_earnings", "total_cashed_out"]
         
         if not all(field in user_info for field in required_fields):
             results.failure("Auth Me", f"Missing required fields: {required_fields}")
             return False
+        
+        # NEW: Specifically test total_cashed_out field
+        total_cashed_out = user_info.get("total_cashed_out")
+        if total_cashed_out is None:
+            results.failure("Auth Me (total_cashed_out)", "total_cashed_out field missing")
+            return False
+        elif total_cashed_out == 0.0:
+            results.success("Auth Me (total_cashed_out initialized)")
+        else:
+            results.success(f"Auth Me (total_cashed_out: {total_cashed_out})")
             
         results.success("Auth Me")
         return True
