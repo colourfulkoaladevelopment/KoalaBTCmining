@@ -1027,8 +1027,8 @@ async def withdraw_bitcoin(
         # Update user balance
         new_balance = current_balance - amount
         users_collection.update_one(
-            {"_id": ObjectId(current_user["id"])},
-            {"$set": {"total_balance": new_balance}}
+            {"_id": current_user["id"]},
+            {"$set": {"bitcoin_balance": new_balance}}
         )
         
         # Record transaction
