@@ -1144,9 +1144,9 @@ export default function PremiumBitcoinMiningApp() {
               </View>
               
               <View style={styles.profileStats}>
-                <Text style={styles.profileStat}>Balance: ₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
-                <Text style={styles.profileStat}>Total Earned: ₿ {user?.total_earnings?.toFixed(11) || '0.00000000000'}</Text>
-                <Text style={styles.profileStat}>Total Cashed Out: ₿ {user?.total_cashed_out?.toFixed(11) || '0.00000000000'}</Text>
+                <Text style={styles.profileStat}>Balance: ₿ {walletData?.total_balance?.toFixed(14) || '0.00000000000000'}</Text>
+                <Text style={styles.profileStat}>Total Earned: ₿ {user?.total_earnings?.toFixed(14) || '0.00000000000000'}</Text>
+                <Text style={styles.profileStat}>Total Cashed Out: ₿ {user?.total_cashed_out?.toFixed(14) || '0.00000000000000'}</Text>
                 <Text style={styles.profileStat}>Referral Rewards: {user?.total_referral_rewards?.toFixed(1) || '0.0'} GH/s</Text>
               </View>
             </LinearGradient>
