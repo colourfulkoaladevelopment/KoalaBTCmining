@@ -1209,6 +1209,57 @@ async def reset_password(reset_data: Dict[str, str]):
         logger.error(f"Error in reset password: {e}")
         raise HTTPException(status_code=500, detail="Failed to reset password")
 
+# Reset test account endpoint
+@app.post("/api/test/reset-account")
+async def reset_test_account(current_user: Dict = Depends(get_current_user)):
+    """Reset test account - clear balance and miners for testing"""
+    try:
+        user_id = current_user["id"]
+        
+        # Reset user balance and earnings
+        users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "bitcoin_balance": 0.0,
+                "total_earnings": 0.0,
+                "total_referral_rewards": 0.0,
+                "total_cashed_out": 0.0
+            }}
+        )
+        
+        # Remove all miners for this user
+        miners_collection.delete_many({"user_id": user_id})
+        
+        # Remove all transactions for this user
+        transactions_collection.delete_many({"user_id": user_id})
+        
+        # Remove all mining sessions for this user
+        mining_sessions_collection.delete_many({"user_id": user_id})
+        
+        # Remove all purchases for this user
+        purchases_collection.delete_many({"user_id": user_id})
+        
+        # Remove all withdrawals for this user
+        db.withdrawals.delete_many({"user_id": user_id})
+        
+        logger.info(f"Test account reset completed for user {user_id}")
+        
+        return {
+            "message": "Test account reset successfully",
+            "reset_items": [
+                "Bitcoin balance set to 0",
+                "All miners removed",
+                "All transactions cleared",
+                "All mining sessions cleared",
+                "All purchases cleared",
+                "All withdrawals cleared"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting test account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset test account")
+
 # Health check
 @app.get("/api/health")
 async def health_check():
