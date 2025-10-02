@@ -1377,6 +1377,10 @@ def run_all_tests():
     print("\n📧 Testing Enhanced Contact Support System...")
     test_contact_support_system()
     
+    # NEW: Test account reset functionality
+    print("\n🔄 Testing Account Reset Functionality...")
+    test_account_reset()
+    
     # Logout tests
     print("\n🚪 Testing Logout...")
     test_logout()
