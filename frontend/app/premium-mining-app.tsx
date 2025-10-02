@@ -1691,6 +1691,10 @@ const styles = StyleSheet.create({
   activeTabLabel: {
     color: '#FFD700',
   },
+  topHeader: {
+    height: 35,
+    backgroundColor: '#1a1a1a',
+  },
   bottomClearance: {
     height: 35,
     backgroundColor: '#1a1a1a',
