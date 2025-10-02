@@ -349,17 +349,17 @@ async def lifespan(app: FastAPI):
     # Startup
     scheduler.start()
     
-    # Schedule background tasks
+    # Schedule background tasks to run every 5 seconds for more visible updates
     scheduler.add_job(
         check_expired_miners,
-        IntervalTrigger(minutes=1),
+        IntervalTrigger(seconds=5),  # Check every 5 seconds instead of 60
         id="check_expired_miners",
         replace_existing=True
     )
     
     scheduler.add_job(
         process_mining_earnings,
-        IntervalTrigger(minutes=1),
+        IntervalTrigger(seconds=5),  # Process earnings every 5 seconds for visible changes
         id="process_mining_earnings",
         replace_existing=True
     )
