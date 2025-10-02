@@ -1068,6 +1068,220 @@ def test_enhanced_miners_auto_activation():
         results.failure("Auto-Activation", str(e))
         return False
 
+def test_account_reset():
+    """Test account reset functionality - Reset User Test Account"""
+    try:
+        if not auth_tokens:
+            results.failure("Account Reset", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        print("\n🔄 Testing Account Reset Functionality...")
+        print("=" * 60)
+        
+        # Step 1: Get initial account status
+        print("📊 Getting initial account status...")
+        user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+        miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        
+        if user_response.status_code != 200 or balance_response.status_code != 200 or miners_response.status_code != 200:
+            results.failure("Account Reset (Initial Status)", "Could not get initial account status")
+            return False
+            
+        initial_user = user_response.json()
+        initial_balance = balance_response.json()
+        initial_miners = miners_response.json().get("miners", [])
+        
+        print(f"   Bitcoin balance: {initial_user.get('bitcoin_balance', 0):.8f} BTC")
+        print(f"   Total earnings: {initial_user.get('total_earnings', 0):.8f} BTC")
+        print(f"   Total cashed out: {initial_user.get('total_cashed_out', 0):.8f} BTC")
+        print(f"   Total miners: {len(initial_miners)}")
+        print(f"   Active miners: {initial_balance.get('active_miners', 0)}")
+        
+        # Step 2: Create some test data if account is empty
+        if len(initial_miners) == 0 or initial_user.get('bitcoin_balance', 0) == 0:
+            print("⚡ Creating test data for reset verification...")
+            
+            # Activate free miner
+            free_response = requests.post(f"{API_BASE}/miners/activate-free", headers=headers, timeout=10)
+            if free_response.status_code == 200:
+                print("   ✅ Free miner activated")
+            
+            # Watch ad for ad miner
+            ad_response = requests.post(f"{API_BASE}/miners/watch-ad", headers=headers, timeout=10)
+            if ad_response.status_code == 200:
+                print("   ✅ Ad miner activated")
+            
+            # Wait for some earnings
+            print("   ⏳ Waiting 10 seconds for mining earnings...")
+            time.sleep(10)
+            
+            # Get updated status
+            user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+            balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+            miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+            
+            if user_response.status_code == 200:
+                updated_user = user_response.json()
+                updated_balance = balance_response.json()
+                updated_miners = miners_response.json().get("miners", [])
+                
+                print(f"   Updated balance: {updated_user.get('bitcoin_balance', 0):.8f} BTC")
+                print(f"   Updated miners: {len(updated_miners)}")
+        
+        # Step 3: Call the reset endpoint
+        print("🔄 Calling account reset endpoint...")
+        reset_response = requests.post(f"{API_BASE}/test/reset-account", headers=headers, timeout=10)
+        
+        if reset_response.status_code != 200:
+            results.failure("Account Reset (API Call)", f"HTTP {reset_response.status_code}: {reset_response.text}")
+            return False
+            
+        reset_data = reset_response.json()
+        print(f"✅ Reset response: {reset_data.get('message', 'No message')}")
+        
+        # Verify expected response structure
+        expected_items = [
+            "Bitcoin balance set to 0",
+            "All miners removed",
+            "All transactions cleared",
+            "All mining sessions cleared",
+            "All purchases cleared",
+            "All withdrawals cleared"
+        ]
+        
+        reset_items = reset_data.get("reset_items", [])
+        print("📋 Reset items completed:")
+        for item in reset_items:
+            print(f"   ✓ {item}")
+            
+        # Verify all expected items are present
+        missing_items = []
+        for expected_item in expected_items:
+            if expected_item not in reset_items:
+                missing_items.append(expected_item)
+                
+        if missing_items:
+            results.failure("Account Reset (Response Items)", f"Missing reset items: {missing_items}")
+            return False
+        else:
+            results.success("Account Reset (Response Structure)")
+        
+        # Step 4: Verify the reset worked
+        print("🔍 Verifying account reset...")
+        
+        # Get post-reset status
+        post_user_response = requests.get(f"{API_BASE}/auth/me", headers=headers, timeout=10)
+        post_balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+        post_miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        
+        if post_user_response.status_code != 200 or post_balance_response.status_code != 200 or post_miners_response.status_code != 200:
+            results.failure("Account Reset (Post-Reset Status)", "Could not get post-reset account status")
+            return False
+            
+        post_user = post_user_response.json()
+        post_balance = post_balance_response.json()
+        post_miners = post_miners_response.json().get("miners", [])
+        
+        print("📊 Status AFTER reset:")
+        print(f"   Bitcoin balance: {post_user.get('bitcoin_balance', 0):.8f} BTC")
+        print(f"   Total earnings: {post_user.get('total_earnings', 0):.8f} BTC")
+        print(f"   Total cashed out: {post_user.get('total_cashed_out', 0):.8f} BTC")
+        print(f"   Total miners: {len(post_miners)}")
+        print(f"   Active miners: {post_balance.get('active_miners', 0)}")
+        
+        # Verification checks
+        verification_passed = True
+        
+        # Check bitcoin balance is 0
+        if post_user.get('bitcoin_balance', 0) != 0.0:
+            results.failure("Account Reset (Bitcoin Balance)", f"Balance not reset to 0: {post_user.get('bitcoin_balance', 0)}")
+            verification_passed = False
+        else:
+            results.success("Account Reset (Bitcoin Balance)")
+            
+        # Check total earnings is 0
+        if post_user.get('total_earnings', 0) != 0.0:
+            results.failure("Account Reset (Total Earnings)", f"Total earnings not reset to 0: {post_user.get('total_earnings', 0)}")
+            verification_passed = False
+        else:
+            results.success("Account Reset (Total Earnings)")
+            
+        # Check total cashed out is 0
+        if post_user.get('total_cashed_out', 0) != 0.0:
+            results.failure("Account Reset (Total Cashed Out)", f"Total cashed out not reset to 0: {post_user.get('total_cashed_out', 0)}")
+            verification_passed = False
+        else:
+            results.success("Account Reset (Total Cashed Out)")
+            
+        # Check all miners removed
+        if len(post_miners) != 0:
+            results.failure("Account Reset (Miners Removed)", f"Miners not removed - still have {len(post_miners)} miners")
+            verification_passed = False
+        else:
+            results.success("Account Reset (Miners Removed)")
+            
+        # Check active miners is 0
+        if post_balance.get('active_miners', 0) != 0:
+            results.failure("Account Reset (Active Miners)", f"Active miners not reset to 0: {post_balance.get('active_miners', 0)}")
+            verification_passed = False
+        else:
+            results.success("Account Reset (Active Miners)")
+        
+        # Step 5: Test balance growth after reset (ultra-fast system)
+        print("🚀 Testing balance growth from 0 with ultra-fast system...")
+        
+        # Activate free miner to start earning
+        free_response = requests.post(f"{API_BASE}/miners/activate-free", headers=headers, timeout=10)
+        if free_response.status_code == 200:
+            print("   ✅ Free miner activated after reset")
+            results.success("Account Reset (Post-Reset Miner Activation)")
+            
+            # Wait for earnings with ultra-fast 5-second updates
+            print("   ⏳ Waiting 15 seconds for new earnings with ultra-fast system...")
+            time.sleep(15)
+            
+            # Check new balance
+            new_balance_response = requests.get(f"{API_BASE}/wallet/balance", headers=headers, timeout=10)
+            if new_balance_response.status_code == 200:
+                new_balance_data = new_balance_response.json()
+                new_balance = new_balance_data.get('total_balance', 0)
+                print(f"   💰 New balance after reset: {new_balance:.8f} BTC")
+                
+                if new_balance > 0:
+                    results.success("Account Reset (Balance Growth from 0)")
+                    print("   🎉 Ultra-fast balance update system working - balance growing from 0!")
+                else:
+                    results.failure("Account Reset (Balance Growth from 0)", "Balance still 0 after mining activation")
+                    verification_passed = False
+            else:
+                results.failure("Account Reset (Balance Growth Check)", "Could not check new balance")
+                verification_passed = False
+        else:
+            results.failure("Account Reset (Post-Reset Miner Activation)", f"Could not activate miner after reset: {free_response.status_code}")
+            verification_passed = False
+        
+        if verification_passed:
+            print("=" * 60)
+            print("🎉 ACCOUNT RESET TEST COMPLETED SUCCESSFULLY!")
+            print("✅ All user data cleared as expected")
+            print("✅ Balance growth from 0 verified with ultra-fast updates")
+            print("✅ User can start fresh with new 5-second mining earnings")
+            results.success("Account Reset (Complete Verification)")
+            return True
+        else:
+            print("=" * 60)
+            print("❌ ACCOUNT RESET TEST FAILED!")
+            print("❌ Some verification checks failed")
+            results.failure("Account Reset (Complete Verification)", "Some reset verification checks failed")
+            return False
+            
+    except Exception as e:
+        results.failure("Account Reset", str(e))
+        return False
+
 def test_logout():
     """Test user logout"""
     try:
