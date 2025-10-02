@@ -270,6 +270,18 @@ backend:
         agent: "testing"
         comment: "✅ GMAIL SMTP EMAIL SYSTEM VERIFIED: Real emails successfully sent to colourfulkoaladevelopment@gmail.com using Gmail SMTP (smtp.gmail.com:587) with app password authentication. HTML email formatting working correctly. Backend logs confirm successful email delivery: 'Support email sent successfully to colourfulkoaladevelopment@gmail.com'. Contact form validation working (empty fields rejected with 400 error). Long message handling working correctly."
 
+  - task: "Account Reset System"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ ACCOUNT RESET SYSTEM FULLY FUNCTIONAL: POST /api/test/reset-account endpoint working perfectly. All user data cleared successfully: Bitcoin balance set to 0.0, Total earnings reset to 0.0, Total cashed out reset to 0.0, All miners removed (6→0), All transactions cleared, All mining sessions cleared, All purchases cleared, All withdrawals cleared. Ultra-fast balance growth verified - balance grows from 0 with new 5-second mining earnings system. User can start completely fresh as requested."
+
 frontend:
   - task: "Premium Mining App Component - White Screen Fix"
     implemented: true
