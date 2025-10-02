@@ -848,7 +848,7 @@ export default function PremiumBitcoinMiningApp() {
                 <Ionicons name="wallet" size={24} color="#FFD700" />
                 <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
               </View>
-              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(11) || '0.00000000000'}</Text>
+              <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(14) || '0.00000000000000'}</Text>
               <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
               
               <View style={styles.statsRow}>
