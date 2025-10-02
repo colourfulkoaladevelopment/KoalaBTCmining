@@ -1973,6 +1973,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
   },
+  storeMinerEarnings: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   storeMinerPrice: {
     fontSize: 32,
     fontWeight: 'bold',
