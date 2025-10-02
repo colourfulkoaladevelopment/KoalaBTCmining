@@ -737,6 +737,9 @@ export default function PremiumBitcoinMiningApp() {
   // Main App with Tab Navigation
   return (
     <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
+      {/* Header for safe area - similar to bottom clearance */}
+      <View style={styles.topHeader} />
+      
       <View style={styles.appContainer}>
         {/* Header */}
         <View style={styles.appHeader}>
