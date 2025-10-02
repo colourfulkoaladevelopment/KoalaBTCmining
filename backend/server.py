@@ -780,7 +780,6 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
 async def get_store_miners():
     """Get available miners for purchase"""
     store_miners = [
-        {"id": "miner_50gh", "name": "Basic Miner", "hash_rate": 50.0, "price": 3.99, "duration_days": 30},
         {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30},
         {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30},
         {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30},
@@ -788,8 +787,8 @@ async def get_store_miners():
         {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30},
         {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30},
         {"id": "miner_6th", "name": "Ultimate Miner", "hash_rate": 6000.0, "price": 449.99, "duration_days": 30},
-        {"id": "miner_10th", "name": "Legendary Miner", "hash_rate": 10000.0, "price": 749.99, "duration_days": 30},
-        {"id": "miner_15th", "name": "Mythic Miner", "hash_rate": 15000.0, "price": 999.99, "duration_days": 30}
+        {"id": "miner_8th", "name": "Legendary Miner", "hash_rate": 8000.0, "price": 599.99, "duration_days": 30},
+        {"id": "miner_10th", "name": "Mythical Miner", "hash_rate": 10000.0, "price": 999.99, "duration_days": 30}
     ]
     
     return {"miners": store_miners}
