@@ -76,7 +76,7 @@ export default function PremiumBitcoinMiningApp() {
     const intervalSeconds = 5;
     const cyclesPerDay = secondsPerDay / intervalSeconds; // 17280 cycles per day
     
-    return (hashRate * baseRate * cyclesPerDay).toFixed(11);
+    return (hashRate * baseRate * cyclesPerDay).toFixed(14);
   };
 
   useEffect(() => {
