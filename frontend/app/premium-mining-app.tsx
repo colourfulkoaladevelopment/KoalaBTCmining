@@ -68,6 +68,17 @@ export default function PremiumBitcoinMiningApp() {
   
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
+  // Calculate estimated BTC per day for a given hash rate
+  const calculateDailyEarnings = (hashRate) => {
+    // Base rate: 0.00000005 BTC per GH/s per 5 seconds
+    const baseRate = 0.00000005;
+    const secondsPerDay = 86400;
+    const intervalSeconds = 5;
+    const cyclesPerDay = secondsPerDay / intervalSeconds; // 17280 cycles per day
+    
+    return (hashRate * baseRate * cyclesPerDay).toFixed(8);
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
