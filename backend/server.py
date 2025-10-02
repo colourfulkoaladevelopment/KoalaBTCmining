@@ -314,8 +314,8 @@ async def process_mining_earnings():
         active_miners = list(miners_collection.find({"status": "active"}))
         
         for miner in active_miners:
-            # Calculate earnings (reduced rate - 100x lower than before)
-            base_rate = 0.0000000001  # BTC per GH/s per minute (reduced from 0.00000001)
+            # Calculate earnings (increased rate for visible changes every 5 seconds)
+            base_rate = 0.000001  # BTC per GH/s per 5 seconds (much higher for visible changes)
             earnings = miner["hash_rate"] * base_rate
             
             # Update miner earnings
