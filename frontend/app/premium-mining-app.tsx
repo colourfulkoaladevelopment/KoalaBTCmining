@@ -983,7 +983,7 @@ export default function PremiumBitcoinMiningApp() {
                   <View key={miner.id} style={styles.expiredMinerItem}>
                     <Text style={styles.expiredMinerName}>{miner.name}</Text>
                     <Text style={styles.expiredMinerDetails}>
-                      Earned: ₿ {miner.total_earned?.toFixed(11)} | {miner.hash_rate} GH/s
+                      Earned: ₿ {miner.total_earned?.toFixed(11)} | {miner.hash_rate} GH/s | ₿ {calculateDailyEarnings(miner.hash_rate)}/day
                     </Text>
                   </View>
                 ))}
