@@ -854,7 +854,7 @@ export default function PremiumBitcoinMiningApp() {
               <View style={styles.statsRow}>
                 <View style={styles.stat}>
                   <Text style={styles.statLabel}>Today's Earnings</Text>
-                  <Text style={styles.statValue}>₿ {walletData?.today_earnings?.toFixed(11) || '0.00000000000'}</Text>
+                  <Text style={styles.statValue}>₿ {walletData?.today_earnings?.toFixed(14) || '0.00000000000000'}</Text>
                 </View>
                 <View style={styles.stat}>
                   <Text style={styles.statLabel}>Active Miners</Text>
