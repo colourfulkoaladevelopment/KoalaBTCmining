@@ -1215,7 +1215,7 @@ async def withdraw_bitcoin(
             "estimated_confirmation_time": "10-60 minutes"
         }
                 
-        except Exception as wallet_error:
+    except Exception as wallet_error:
             logger.error(f"❌ Bitcoin wallet integration error: {wallet_error}")
             
             # Mark withdrawal as failed
