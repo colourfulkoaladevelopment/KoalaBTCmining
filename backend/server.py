@@ -32,6 +32,7 @@ BITCOIN_WALLET_TYPE = os.getenv("BITCOIN_WALLET_TYPE", "demo")  # demo, bitgo, c
 BITGO_API_KEY = os.getenv("BITGO_API_KEY", "")
 BITGO_WALLET_ID = os.getenv("BITGO_WALLET_ID", "")
 BITGO_WALLET_PASSPHRASE = os.getenv("BITGO_WALLET_PASSPHRASE", "")
+BITGO_ENV = os.getenv("BITGO_ENV", "test")  # test or prod
 COINBASE_API_KEY = os.getenv("COINBASE_API_KEY", "")
 BITCOIN_RPC_USER = os.getenv("BITCOIN_RPC_USER", "")
 BITCOIN_RPC_PASSWORD = os.getenv("BITCOIN_RPC_PASSWORD", "")
