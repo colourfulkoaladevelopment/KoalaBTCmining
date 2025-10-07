@@ -1852,27 +1852,247 @@ async def capture_paypal_order(order_data: Dict[str, Any], current_user: Dict = 
         logger.error(f"Error capturing PayPal order: {e}")
         raise HTTPException(status_code=500, detail="Failed to process payment")
 
-@app.get("/api/payments/available-promos")
-async def get_available_promos():
-    """Get available promo codes for frontend display"""
+# Facebook Ads Integration Endpoints
+
+@app.post("/api/ads/daily-stats")
+async def get_daily_ad_stats(current_user: Dict = Depends(get_current_user)):
+    """Get user's daily ad viewing statistics"""
     try:
-        available_promos = []
-        for code, info in PROMO_CODES.items():
-            if info["used"] < info["max_uses"]:
-                available_promos.append({
-                    "code": code,
-                    "discount_percent": info["discount_percent"],
-                    "remaining_uses": info["max_uses"] - info["used"]
-                })
+        today = datetime.utcnow().date()
+        
+        # Get or create daily counter
+        daily_counter = db.daily_ad_counters.find_one({
+            "user_id": current_user["id"],
+            "date": today.isoformat()
+        })
+        
+        if not daily_counter:
+            daily_counter = {
+                "user_id": current_user["id"],
+                "date": today.isoformat(),
+                "ads_watched": 0,
+                "last_reset": datetime.utcnow(),
+                "created_at": datetime.utcnow()
+            }
+            db.daily_ad_counters.insert_one(daily_counter)
+        
+        ads_watched = daily_counter.get("ads_watched", 0)
+        remaining_ads = max(0, MAX_DAILY_ADS - ads_watched)
+        
+        # Calculate next reset time (midnight UTC)
+        tomorrow = today + timedelta(days=1)
+        next_reset = datetime.combine(tomorrow, datetime.min.time())
         
         return {
-            "available_promos": available_promos,
-            "total_available": len(available_promos)
+            "ads_watched_today": ads_watched,
+            "remaining_ads": remaining_ads,
+            "max_daily_ads": MAX_DAILY_ADS,
+            "next_reset": next_reset.isoformat(),
+            "can_watch_ad": remaining_ads > 0
         }
         
     except Exception as e:
-        logger.error(f"Error getting available promos: {e}")
-        return {"available_promos": [], "total_available": 0}
+        logger.error(f"Error getting daily ad stats for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get ad statistics")
+
+@app.post("/api/ads/watch")
+async def watch_ad(
+    ad_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Process ad watch and reward user with 2 GH/s for 24 hours"""
+    try:
+        ad_type = ad_data.get("ad_type")  # 'app_launch', 'miner_activation', 'withdrawal'
+        
+        # Validate ad type
+        valid_ad_types = ['app_launch', 'miner_activation', 'withdrawal']
+        if ad_type not in valid_ad_types:
+            raise HTTPException(status_code=400, detail="Invalid ad type")
+        
+        # Check daily limit
+        today = datetime.utcnow().date()
+        daily_counter = db.daily_ad_counters.find_one({
+            "user_id": current_user["id"],
+            "date": today.isoformat()
+        })
+        
+        if not daily_counter:
+            daily_counter = {
+                "user_id": current_user["id"],
+                "date": today.isoformat(),
+                "ads_watched": 0,
+                "last_reset": datetime.utcnow(),
+                "created_at": datetime.utcnow()
+            }
+            db.daily_ad_counters.insert_one(daily_counter)
+        
+        ads_watched = daily_counter.get("ads_watched", 0)
+        if ads_watched >= MAX_DAILY_ADS:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
+            )
+        
+        # Create ad miner (2 GH/s for 24 hours)
+        ad_miner_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+        expires_at = now + timedelta(hours=AD_MINER_DURATION_HOURS)
+        
+        ad_miner = {
+            "_id": ad_miner_id,
+            "user_id": current_user["id"],
+            "name": f"Ad Miner ({ad_type.replace('_', ' ').title()})",
+            "hash_rate": AD_MINER_HASHRATE,
+            "miner_type": "ad_reward",
+            "status": "active",
+            "duration_hours": AD_MINER_DURATION_HOURS,
+            "time_remaining": AD_MINER_DURATION_HOURS,
+            "total_earned": 0.0,
+            "ad_type": ad_type,
+            "activated_at": now,
+            "expires_at": expires_at,
+            "created_at": now
+        }
+        
+        miners_collection.insert_one(ad_miner)
+        
+        # Update daily counter
+        db.daily_ad_counters.update_one(
+            {"user_id": current_user["id"], "date": today.isoformat()},
+            {"$inc": {"ads_watched": 1}, "$set": {"updated_at": datetime.utcnow()}}
+        )
+        
+        # Record ad view transaction
+        ad_transaction = {
+            "_id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "transaction_type": "ad_reward",
+            "ad_type": ad_type,
+            "miner_id": ad_miner_id,
+            "hash_rate_awarded": AD_MINER_HASHRATE,
+            "duration_hours": AD_MINER_DURATION_HOURS,
+            "description": f"Watched {ad_type.replace('_', ' ')} ad - earned 2 GH/s for 24h",
+            "created_at": now
+        }
+        transactions_collection.insert_one(ad_transaction)
+        
+        # Get updated stats
+        new_ads_watched = ads_watched + 1
+        remaining_ads = MAX_DAILY_ADS - new_ads_watched
+        
+        logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded 2 GH/s ad miner for 24h")
+        
+        return {
+            "success": True,
+            "message": "Ad watched successfully! Earned 2 GH/s mining power for 24 hours.",
+            "ad_miner": {
+                "id": ad_miner_id,
+                "name": ad_miner["name"],
+                "hash_rate": AD_MINER_HASHRATE,
+                "duration_hours": AD_MINER_DURATION_HOURS,
+                "expires_at": expires_at.isoformat()
+            },
+            "daily_stats": {
+                "ads_watched_today": new_ads_watched,
+                "remaining_ads": remaining_ads,
+                "max_daily_ads": MAX_DAILY_ADS
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing ad watch for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process ad reward")
+
+@app.post("/api/ads/reset-daily-counter")
+async def reset_daily_counters():
+    """Reset daily ad counters at midnight (cron job endpoint)"""
+    try:
+        yesterday = (datetime.utcnow() - timedelta(days=1)).date()
+        
+        # Reset all counters for the new day
+        result = db.daily_ad_counters.update_many(
+            {"date": {"$lt": datetime.utcnow().date().isoformat()}},
+            {"$set": {"ads_watched": 0, "last_reset": datetime.utcnow()}}
+        )
+        
+        logger.info(f"Reset {result.modified_count} daily ad counters for new day")
+        
+        return {
+            "success": True,
+            "counters_reset": result.modified_count,
+            "reset_time": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting daily ad counters: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset daily counters")
+
+@app.get("/api/ads/active-miners")
+async def get_active_ad_miners(current_user: Dict = Depends(get_current_user)):
+    """Get user's active ad-reward miners"""
+    try:
+        # Get active ad miners
+        active_ad_miners = list(miners_collection.find({
+            "user_id": current_user["id"],
+            "miner_type": "ad_reward",
+            "status": "active",
+            "expires_at": {"$gt": datetime.utcnow()}
+        }).sort("expires_at", 1))
+        
+        # Format for frontend
+        formatted_miners = []
+        total_ad_hashrate = 0
+        
+        for miner in active_ad_miners:
+            time_remaining_seconds = (miner["expires_at"] - datetime.utcnow()).total_seconds()
+            time_remaining_hours = max(0, time_remaining_seconds / 3600)
+            
+            formatted_miners.append({
+                "id": miner["_id"],
+                "name": miner["name"],
+                "hash_rate": miner["hash_rate"],
+                "ad_type": miner.get("ad_type", "unknown"),
+                "time_remaining_hours": round(time_remaining_hours, 2),
+                "expires_at": miner["expires_at"].isoformat(),
+                "total_earned": miner.get("total_earned", 0.0)
+            })
+            
+            total_ad_hashrate += miner["hash_rate"]
+        
+        return {
+            "active_ad_miners": formatted_miners,
+            "total_miners": len(formatted_miners),
+            "total_ad_hashrate": total_ad_hashrate
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting active ad miners for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get active ad miners")
+
+# Update the existing ad boost miner endpoint to use new 24-hour duration
+@app.post("/api/miners/activate-ad-boost")
+async def activate_ad_boost(current_user: Dict = Depends(get_current_user)):
+    """Activate ad boost miner (now 2 GH/s for 24 hours instead of 30 minutes)"""
+    try:
+        # Check daily limit first
+        daily_stats = await get_daily_ad_stats(current_user)
+        if not daily_stats["can_watch_ad"]:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
+            )
+        
+        # Use the new ad watch endpoint
+        ad_data = {"ad_type": "miner_activation"}
+        return await watch_ad(ad_data, current_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error activating ad boost for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to activate ad boost")
 
 @app.get("/api/payments/user-purchases")
 async def get_user_purchases(current_user: Dict = Depends(get_current_user)):
