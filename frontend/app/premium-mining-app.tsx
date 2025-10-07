@@ -547,6 +547,123 @@ Your miner is now active and earning Bitcoin!`,
     );
   };
 
+  // Facebook Ads Functions
+  const loadAdStats = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/daily-stats`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const stats = await response.json();
+        setAdStats(stats);
+      }
+    } catch (error) {
+      console.error('Failed to load ad stats:', error);
+    }
+  };
+
+  const simulateAd = (adType) => {
+    return new Promise((resolve) => {
+      setIsWatchingAd(true);
+      
+      // Simulate ad duration (3 seconds)
+      setTimeout(() => {
+        setIsWatchingAd(false);
+        resolve(true);
+      }, 3000);
+    });
+  };
+
+  const watchAd = async (adType) => {
+    try {
+      if (!adStats.can_watch_ad) {
+        Alert.alert('Daily Limit Reached', 'You have watched the maximum number of ads for today. Try again tomorrow!');
+        return;
+      }
+
+      setCurrentAdType(adType);
+      setShowAdModal(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load ad. Please try again.');
+    }
+  };
+
+  const handleAdWatch = async () => {
+    try {
+      // Simulate watching the ad
+      await simulateAd(currentAdType);
+      
+      // Process ad reward on backend
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ad_type: currentAdType
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          '🎉 Ad Reward Earned!',
+          `${result.message}
+
+Mining Power: +${result.ad_miner.hash_rate} GH/s
+Duration: ${result.ad_miner.duration_hours} hours
+Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_daily_ads}`,
+          [{ 
+            text: 'Awesome!', 
+            onPress: () => {
+              loadAppData(); // Refresh app data to show new miner
+              loadAdStats(); // Refresh ad stats
+            }
+          }]
+        );
+      } else {
+        Alert.alert('Error', result.detail || 'Failed to process ad reward');
+      }
+      
+      setShowAdModal(false);
+      setCurrentAdType(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process ad reward. Please try again.');
+      setShowAdModal(false);
+      setCurrentAdType(null);
+    }
+  };
+
+  // Trigger ad on app launch (once per session)
+  const triggerAppLaunchAd = async () => {
+    const hasSeenAppLaunchAd = await AsyncStorage.getItem('app_launch_ad_shown');
+    if (!hasSeenAppLaunchAd && adStats.can_watch_ad) {
+      // Show ad after 2 seconds delay
+      setTimeout(() => {
+        Alert.alert(
+          '🎁 Welcome Bonus!',
+          'Watch an ad to earn free mining power!',
+          [
+            { text: 'Skip', style: 'cancel' },
+            { text: 'Watch Ad', onPress: () => {
+              AsyncStorage.setItem('app_launch_ad_shown', 'true');
+              watchAd('app_launch');
+            }}
+          ]
+        );
+      }, 2000);
+    }
+  };
+
   const handleWithdraw = async () => {
     if (!withdrawForm.address || !withdrawForm.amount) {
       Alert.alert('Error', 'Please enter Bitcoin address and amount');
