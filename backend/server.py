@@ -1270,6 +1270,9 @@ async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) ->
     try:
         import requests
         
+        # Determine BitGo API URL based on environment
+        base_url = "https://app.bitgo.com" if BITGO_ENV == "prod" else "https://test.bitgo.com"
+        
         headers = {
             'Authorization': f'Bearer {BITGO_API_KEY}',
             'Content-Type': 'application/json'
@@ -1279,21 +1282,26 @@ async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) ->
             'address': address,
             'amount': str(int(amount * 100000000)),  # Convert to satoshis
             'walletPassphrase': BITGO_WALLET_PASSPHRASE,
-            'comment': f'Mining withdrawal {withdrawal_id}'
+            'comment': f'Mining withdrawal {withdrawal_id}',
+            'feeRate': 1000  # Satoshis per kilobyte (1 sat/byte)
         }
         
         response = requests.post(
-            f'https://app.bitgo.com/api/v2/btc/wallet/{BITGO_WALLET_ID}/sendcoins',
+            f'{base_url}/api/v2/btc/wallet/{BITGO_WALLET_ID}/sendcoins',
             headers=headers,
             json=data,
-            timeout=30
+            timeout=60  # Increased timeout for Bitcoin transactions
         )
         
         if response.status_code == 200:
             result = response.json()
-            return result.get('hash', result.get('txid'))
+            tx_hash = result.get('hash', result.get('txid'))
+            logger.info(f"✅ BitGo transaction successful: {tx_hash}")
+            return tx_hash
         else:
-            raise Exception(f"BitGo API error: {response.text}")
+            error_msg = f"BitGo API error ({response.status_code}): {response.text}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
             
     except Exception as e:
         logger.error(f"BitGo withdrawal failed: {e}")
