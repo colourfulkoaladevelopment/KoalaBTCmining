@@ -1034,7 +1034,45 @@ async def submit_contact_form(
         logger.error(f"Error submitting contact form: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit support request")
 
-# Withdrawal endpoints
+# Get live Bitcoin price
+@app.get("/api/bitcoin/price")
+async def get_bitcoin_price():
+    """Get current Bitcoin price in USD"""
+    try:
+        # Using CoinGecko API for live Bitcoin price
+        import requests
+        response = requests.get(
+            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            btc_price = data["bitcoin"]["usd"]
+            
+            return {
+                "btc_price_usd": btc_price,
+                "last_updated": datetime.utcnow().isoformat(),
+                "source": "CoinGecko API"
+            }
+        else:
+            # Fallback price if API fails
+            return {
+                "btc_price_usd": 50000.0,  # Fallback price
+                "last_updated": datetime.utcnow().isoformat(),
+                "source": "Fallback (API unavailable)"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching Bitcoin price: {e}")
+        # Return fallback price
+        return {
+            "btc_price_usd": 50000.0,
+            "last_updated": datetime.utcnow().isoformat(),
+            "source": "Fallback (Error occurred)"
+        }
+
+# Bitcoin withdrawal endpoints
 @app.post("/api/withdraw/bitcoin")
 async def withdraw_bitcoin(
     withdrawal_data: Dict[str, Any],
@@ -1044,95 +1082,122 @@ async def withdraw_bitcoin(
     try:
         address = withdrawal_data.get("address", "").strip()
         amount = float(withdrawal_data.get("amount", 0))
-        network = withdrawal_data.get("network", "bitcoin")
         
         if not address:
             raise HTTPException(status_code=400, detail="Bitcoin address is required")
         
         if amount <= 0:
             raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than 0")
-            
+        
         # Check user balance
-        user_data = users_collection.find_one({"_id": current_user["id"]})
-        if not user_data:
+        user = users_collection.find_one({"_id": current_user["id"]})
+        if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
-        current_balance = user_data.get("bitcoin_balance", 0)
+        current_balance = user.get("bitcoin_balance", 0)
         
-        if amount > current_balance:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Insufficient balance. Available: {current_balance:.8f} BTC, Requested: {amount:.8f} BTC"
-            )
-        
-        # Minimum withdrawal amount (0.001 BTC)
-        min_withdrawal = 0.001
+        # Minimum withdrawal check
+        min_withdrawal = 0.00001  # Minimum 0.00001 BTC as requested
         if amount < min_withdrawal:
             raise HTTPException(
                 status_code=400, 
                 detail=f"Minimum withdrawal amount is {min_withdrawal} BTC"
             )
         
-        # Create withdrawal transaction
-        withdrawal = {
+        # Calculate processing fee (0.5% as requested)
+        processing_fee = amount * 0.005  # 0.5% fee
+        total_deduction = amount + processing_fee
+        
+        if total_deduction > current_balance:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient balance. Available: {current_balance:.8f} BTC, Required: {total_deduction:.8f} BTC (including 0.5% fee)"
+            )
+        
+        # Get current Bitcoin price for USD value calculation
+        try:
+            import requests
+            price_response = requests.get(
+                "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+                timeout=5
+            )
+            btc_price = 50000.0  # fallback
+            if price_response.status_code == 200:
+                btc_price = price_response.json()["bitcoin"]["usd"]
+        except:
+            btc_price = 50000.0  # fallback price
+        
+        usd_value = amount * btc_price
+        
+        # Create withdrawal record
+        withdrawal_id = str(uuid.uuid4())
+        withdrawal_record = {
+            "_id": withdrawal_id,
             "user_id": current_user["id"],
-            "address": address,
-            "amount": amount,
-            "network": network,
-            "status": "processing",
+            "bitcoin_address": address,
+            "amount_btc": amount,
+            "processing_fee_btc": processing_fee,
+            "total_deducted_btc": total_deduction,
+            "usd_value": usd_value,
+            "btc_price_at_withdrawal": btc_price,
+            "status": "pending",
             "transaction_hash": None,
             "created_at": datetime.utcnow(),
-            "processed_at": None
+            "processed_at": None,
+            "notes": ""
         }
         
-        result = db.withdrawals.insert_one(withdrawal)
-        withdrawal_id = str(result.inserted_id)
+        db.withdrawals.insert_one(withdrawal_record)
         
-        # Update user balance and track total cashed out
-        new_balance = current_balance - amount
+        # Update user balance (deduct amount + fee)
+        new_balance = current_balance - total_deduction
         users_collection.update_one(
             {"_id": current_user["id"]},
             {
                 "$set": {"bitcoin_balance": new_balance},
-                "$inc": {"total_cashed_out": amount}
+                "$inc": {"total_cashed_out": amount}  # Track only the withdrawal amount, not fee
             }
         )
         
-        # Record transaction
-        transaction = {
+        # Record transaction for balance tracking
+        transaction_record = {
+            "_id": str(uuid.uuid4()),
             "user_id": current_user["id"],
-            "transaction_type": "withdrawal",
-            "amount": -amount,  # Negative for withdrawal
+            "type": "withdrawal",
+            "amount": -total_deduction,  # Negative for withdrawal (includes fee)
             "balance_after": new_balance,
-            "description": f"Bitcoin withdrawal to {address[:10]}...{address[-4:]}",
-            "created_at": datetime.utcnow(),
-            "withdrawal_id": withdrawal_id
+            "description": f"Bitcoin withdrawal to {address[:10]}...{address[-6:]} + 0.5% fee",
+            "withdrawal_id": withdrawal_id,
+            "created_at": datetime.utcnow()
         }
-        transactions_collection.insert_one(transaction)
+        transactions_collection.insert_one(transaction_record)
         
-        # In production, this would integrate with Bitcoin/Lightning network APIs
-        # For simulation, we'll mark as completed after a delay
-        logger.info(f"Withdrawal initiated: {amount} BTC to {address} via {network} network")
+        # TODO: Process actual Bitcoin transaction here
+        # This would integrate with Bitcoin wallet services like:
+        # - BitGo API for enterprise wallets
+        # - Coinbase Commerce for business payments
+        # - Bitcoin Core RPC for self-hosted nodes
+        # - Lightning Network for faster payments
         
-        # Simulate processing (in production, this would be handled by background job)
-        # You could use the existing scheduler to process withdrawals
+        logger.info(f"Bitcoin withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
         
         return {
-            "message": "Withdrawal initiated successfully",
+            "success": True,
             "withdrawal_id": withdrawal_id,
-            "amount": amount,
-            "address": address,
-            "network": network,
-            "status": "processing",
-            "estimated_completion": "5-30 minutes"
+            "amount_btc": amount,
+            "processing_fee_btc": processing_fee,
+            "total_deducted_btc": total_deduction,
+            "usd_value": round(usd_value, 2),
+            "bitcoin_address": address,
+            "status": "pending",
+            "message": "Withdrawal request submitted successfully. Processing may take 10-60 minutes.",
+            "estimated_confirmation_time": "10-60 minutes"
         }
         
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
-    except HTTPException:
-        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
-        logger.error(f"Error processing withdrawal: {e}")
+        logger.error(f"Error processing Bitcoin withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
 
 # Password reset endpoints
