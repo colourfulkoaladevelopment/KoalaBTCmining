@@ -514,13 +514,27 @@ async def login(request: LoginRequest):
 @app.get("/api/auth/me")
 async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
     """Get current user information"""
+    
+    # Ensure data consistency: total_earnings should never be less than current balance
+    current_balance = current_user.get("bitcoin_balance", 0.0)
+    current_total_earnings = current_user.get("total_earnings", 0.0)
+    
+    if current_total_earnings < current_balance:
+        # Fix data inconsistency - update total_earnings to match balance
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$set": {"total_earnings": current_balance}}
+        )
+        logger.info(f"Fixed total_earnings for user {current_user['id']}: updated from {current_total_earnings} to {current_balance}")
+        current_total_earnings = current_balance
+    
     return {
         "id": current_user["id"],
         "name": current_user["name"],
         "email": current_user["email"],
         "referral_code": current_user["referral_code"],
-        "bitcoin_balance": current_user.get("bitcoin_balance", 0.0),
-        "total_earnings": current_user.get("total_earnings", 0.0),
+        "bitcoin_balance": current_balance,
+        "total_earnings": current_total_earnings,
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0),
         "total_cashed_out": current_user.get("total_cashed_out", 0.0),
         "created_at": current_user["created_at"]
