@@ -178,6 +178,18 @@ export default function PremiumBitcoinMiningApp() {
     }
   };
 
+  const loadBitcoinPrice = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/bitcoin/price`);
+      if (response.ok) {
+        const priceData = await response.json();
+        setBitcoinPrice(priceData.btc_price_usd);
+      }
+    } catch (error) {
+      console.error('Failed to load Bitcoin price:', error);
+    }
+  };
+
   const loadAppData = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
