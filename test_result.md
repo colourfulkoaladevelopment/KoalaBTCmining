@@ -393,10 +393,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Forgot Password System"
-    - "Bitcoin Withdrawal System"
-    - "Enhanced Contact Support System"
-    - "Enhanced Miners Management"
+    - "Facebook Ads Integration - Frontend"
+    - "Forgot Password UI Integration"
+    - "Withdraw BTC UI"
+    - "Enhanced Dashboard with Expired Miners Section"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
