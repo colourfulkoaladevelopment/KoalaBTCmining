@@ -285,6 +285,18 @@ backend:
         agent: "testing"
         comment: "🎉 URGENT USER ACCOUNT RESET VERIFIED (48/48 tests passed): POST /api/test/reset-account endpoint working PERFECTLY for live user accounts. Complete data wipe confirmed: Bitcoin balance: 0.0 BTC ✓, Total earnings: 0.0 BTC ✓, Total cashed out: 0.0 BTC ✓, All miners removed (6→0) ✓, All transactions cleared ✓, All mining sessions cleared ✓, All purchases cleared ✓, All withdrawals cleared ✓. Ultra-fast balance growth from 0 verified with 5-second mining earnings system. User can immediately start fresh and see balance grow with new 20x reduced earnings rate (0.00000005 BTC per GH/s per 5 seconds). Account reset functionality ready for immediate user use."
 
+  - task: "Facebook Ads Integration - Backend"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ FACEBOOK ADS BACKEND INTEGRATION FULLY FUNCTIONAL (14/14 tests passed): All Facebook Ads endpoints working perfectly. POST /api/ads/daily-stats returns correct daily statistics (ads_watched_today, remaining_ads, max_daily_ads=30, can_watch_ad, next_reset). POST /api/ads/watch supports all ad types (app_launch, withdrawal, miner_activation) and creates ad miners with exactly 2.0 GH/s for 24 hours (not 30 minutes). Daily counter increments properly and enforces 30-ad daily limit with HTTP 429 rejection. Ad miners created with miner_type='ad_reward' and status='active'. GET /api/ads/active-miners endpoint working. POST /api/ads/reset-daily-counter endpoint functional. Invalid ad types properly rejected with HTTP 400. Ad miner stacking works correctly - multiple ads create separate 24-hour miners. Transaction recording verified through daily stats updates. All validation points confirmed: exact 2.0 GH/s hash rate, 24-hour duration, proper daily tracking, error handling for limits and invalid types. Backend logs confirm successful ad processing and miner creation."
+
 frontend:
   - task: "Premium Mining App Component - White Screen Fix"
     implemented: true
