@@ -66,6 +66,8 @@ export default function PremiumBitcoinMiningApp() {
     network: 'bitcoin'
   });
   
+  const [bitcoinPrice, setBitcoinPrice] = useState(50000); // Default fallback price
+  
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
   // Calculate estimated BTC per day for a given hash rate
