@@ -1182,9 +1182,9 @@ async def withdraw_bitcoin(
         }
         transactions_collection.insert_one(transaction_record)
         
-        # TODO: Process actual Bitcoin transaction here
-        # This integrates with real Bitcoin wallet services:
+        logger.info(f"Bitcoin withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
         
+        try:
             # Process actual Bitcoin transaction from backend wallet to user address
             tx_hash = await process_bitcoin_withdrawal(address, amount, withdrawal_id)
             
