@@ -27,6 +27,16 @@ from contextlib import asynccontextmanager
 
 load_dotenv()
 
+# Bitcoin wallet configuration (add these to your .env file in production)
+BITCOIN_WALLET_TYPE = os.getenv("BITCOIN_WALLET_TYPE", "demo")  # demo, bitgo, coinbase, rpc
+BITGO_API_KEY = os.getenv("BITGO_API_KEY", "")
+BITGO_WALLET_ID = os.getenv("BITGO_WALLET_ID", "")
+BITGO_WALLET_PASSPHRASE = os.getenv("BITGO_WALLET_PASSPHRASE", "")
+COINBASE_API_KEY = os.getenv("COINBASE_API_KEY", "")
+BITCOIN_RPC_USER = os.getenv("BITCOIN_RPC_USER", "")
+BITCOIN_RPC_PASSWORD = os.getenv("BITCOIN_RPC_PASSWORD", "")
+BITCOIN_RPC_URL = os.getenv("BITCOIN_RPC_URL", "http://localhost:8332")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
