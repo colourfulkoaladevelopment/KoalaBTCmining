@@ -1377,25 +1377,6 @@ async def demo_bitcoin_transaction(address: str, amount: float, withdrawal_id: s
     except Exception as e:
         logger.error(f"Demo transaction simulation failed: {e}")
         raise e
-        
-        return {
-            "success": True,
-            "withdrawal_id": withdrawal_id,
-            "amount_btc": amount,
-            "processing_fee_btc": processing_fee,
-            "total_deducted_btc": total_deduction,
-            "usd_value": round(usd_value, 2),
-            "bitcoin_address": address,
-            "status": "pending",
-            "message": "Withdrawal request submitted successfully. Processing may take 10-60 minutes.",
-            "estimated_confirmation_time": "10-60 minutes"
-        }
-        
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
-    except Exception as e:
-        logger.error(f"Error processing Bitcoin withdrawal: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process withdrawal")
 
 # Password reset endpoints
 @app.post("/api/auth/forgot-password")
