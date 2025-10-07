@@ -1525,8 +1525,8 @@ async def reset_test_account(current_user: Dict = Depends(get_current_user)):
         logger.error(f"Error resetting test account: {e}")
         raise HTTPException(status_code=500, detail="Failed to reset test account")
 
-# Health check
-@app.get("/api/health")
+# Add payment processing dependencies to requirements.txt
+execute_bash('pip install paypal-checkout-serversdk coinbase-commerce-python stripe python-multipart && pip freeze > /app/backend/requirements.txt')
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
