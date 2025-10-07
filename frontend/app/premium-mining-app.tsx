@@ -395,32 +395,130 @@ export default function PremiumBitcoinMiningApp() {
     }
   };
 
-  const purchaseMiner = async (miner) => {
+  const handlePurchaseMiner = async (miner) => {
     try {
+      Alert.alert(
+        '💰 Purchase Miner',
+        `Purchase ${miner.name} for $${miner.price}?
+
+Mining Power: ${miner.hash_rate} GH/s
+Duration: ${miner.duration_days} days
+Daily Earning Estimate: ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Pay with PayPal', onPress: () => initiatePayPalPurchase(miner) }
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to purchase miner');
+    }
+  };
+
+  const initiatePayPalPurchase = async (miner) => {
+    try {
+      setIsLoading(true);
       const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/store/purchase`, {
+      
+      // Create PayPal order
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/payments/create-paypal-order`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...miner,
-          payment_method: 'credit_card',
-          auto_activate: true // Auto-activate as requested
+          miner_id: miner.id,
+          promo_code: '', // Could add promo code input later
+          subscription_type: 'one_time'
         })
       });
 
+      const orderData = await response.json();
+
       if (response.ok) {
-        Alert.alert('Purchase Successful! 🎉', `${miner.name} has been purchased and automatically activated!`);
-        await loadAppData();
+        // Find the approval URL from PayPal links
+        const approvalUrl = orderData.links.find(link => link.rel === 'approve')?.href;
+        
+        if (approvalUrl) {
+          // Open PayPal checkout in browser
+          await Linking.openURL(approvalUrl);
+          
+          // Show instructions to user
+          Alert.alert(
+            '🌐 PayPal Checkout',
+            'Please complete your payment in the browser. Once payment is complete, return to the app and tap "Payment Complete" to activate your miner.',
+            [
+              { 
+                text: 'Payment Complete', 
+                onPress: () => confirmPayPalPayment(orderData.order_id, miner)
+              },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        } else {
+          throw new Error('No PayPal approval URL found');
+        }
       } else {
-        const result = await response.json();
-        Alert.alert('Purchase Failed', result.detail || 'Payment processing failed');
+        throw new Error(orderData.detail || 'Failed to create PayPal order');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred');
+      Alert.alert('Payment Error', error.message || 'Failed to initiate PayPal payment');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const confirmPayPalPayment = async (orderId, miner) => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem('session_token');
+      
+      // Capture PayPal payment
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/payments/capture-paypal-order`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          order_id: orderId
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          '✅ Payment Successful!',
+          `${miner.name} purchased successfully!
+
+Payment ID: ${result.payment_id}
+Mining Power: ${result.hash_rate} GH/s
+Duration: ${result.duration_days} days
+Amount Paid: $${result.amount_paid}
+
+Your miner is now active and earning Bitcoin!`,
+          [{ text: 'OK', onPress: () => {
+            // Refresh app data to show new miner
+            loadAppData();
+          }}]
+        );
+      } else {
+        // Payment failed - show error
+        Alert.alert(
+          '❌ Payment Failed', 
+          result.detail || 'Payment could not be processed. Please try again.'
+        );
+      }
+    } catch (error) {
+      Alert.alert('Payment Error', 'Failed to confirm payment. Please contact support if you were charged.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const purchaseMiner = async (miner) => {
+    return handlePurchaseMiner(miner);
   };
 
   const renewMiner = (miner) => {
