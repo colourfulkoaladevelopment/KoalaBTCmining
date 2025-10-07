@@ -260,6 +260,15 @@ export default function PremiumBitcoinMiningApp() {
         const referralResult = await referralResponse.json();
         setReferralStats(referralResult);
       }
+
+      // Load ad stats
+      await loadAdStats();
+
+      // Trigger app launch ad (only once per session)
+      setTimeout(() => {
+        triggerAppLaunchAd();
+      }, 1000);
+
     } catch (error) {
       console.error('Error loading app data:', error);
     }
