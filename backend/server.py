@@ -27,6 +27,20 @@ from contextlib import asynccontextmanager
 
 load_dotenv()
 
+# Payment Processing Configuration
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")  # sandbox or live
+COINBASE_COMMERCE_API_KEY = os.getenv("COINBASE_COMMERCE_API_KEY", "")
+COINBASE_WEBHOOK_SECRET = os.getenv("COINBASE_WEBHOOK_SECRET", "")
+
+# Promo Codes Configuration
+PROMO_CODES = {
+    "WELCOME10": {"discount_percent": 10, "max_uses": 1000, "used": 0},
+    "CRYPTO20": {"discount_percent": 20, "max_uses": 500, "used": 0},
+    "NEWUSER15": {"discount_percent": 15, "max_uses": 2000, "used": 0}
+}
+
 # Bitcoin wallet configuration (add these to your .env file in production)
 BITCOIN_WALLET_TYPE = os.getenv("BITCOIN_WALLET_TYPE", "demo")  # demo, bitgo, coinbase, rpc
 BITGO_API_KEY = os.getenv("BITGO_API_KEY", "")
