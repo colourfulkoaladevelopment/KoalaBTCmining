@@ -2610,4 +2610,105 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  
+  // Ad Modal Styles
+  adContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  adSimulation: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  adText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginTop: 10,
+  },
+  adSubtext: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 5,
+  },
+  adTimerText: {
+    fontSize: 14,
+    color: '#FFD700',
+    fontWeight: 'bold',
+  },
+  adPreview: {
+    alignItems: 'center',
+    marginVertical: 30,
+  },
+  adPreviewText: {
+    fontSize: 16,
+    color: '#FFF',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  adRewardText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  
+  // Ad Counter Card Styles
+  adCounterCard: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 20,
+    borderRadius: 15,
+  },
+  adCounterContent: {
+    alignItems: 'center',
+  },
+  adCounterStats: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  adCounterLabel: {
+    fontSize: 14,
+    color: '#AAA',
+    marginBottom: 5,
+  },
+  adCounterValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+  adCounterProgress: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  adProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#333',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  adProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+    minWidth: 4,
+  },
+  adRemainingText: {
+    fontSize: 12,
+    color: '#AAA',
+  },
+  watchAdButton: {
+    borderRadius: 8,
+    paddingHorizontal: 20,
+  },
+  watchAdButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
 });
