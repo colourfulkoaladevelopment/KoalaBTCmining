@@ -1359,8 +1359,6 @@ async def demo_bitcoin_transaction(address: str, amount: float, withdrawal_id: s
         logger.error(f"Demo transaction simulation failed: {e}")
         raise e
         
-        logger.info(f"Bitcoin withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
-        
         return {
             "success": True,
             "withdrawal_id": withdrawal_id,
