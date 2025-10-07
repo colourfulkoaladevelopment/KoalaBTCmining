@@ -373,6 +373,18 @@ frontend:
         agent: "main"
         comment: "✅ Added bottom clearance (35px) below navigation bar for better spacing and mobile experience."
 
+  - task: "Facebook Ads Integration - Frontend"
+    implemented: true
+    working: "NA"
+    file: "premium-mining-app.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ COMPLETE FACEBOOK ADS FRONTEND INTEGRATION: Added comprehensive Facebook Ads integration with placeholder/simulated ads as requested. Features implemented: 1) App launch ad trigger (shows after login with 2-second delay, once per session), 2) Withdrawal ad trigger (optional ad before BTC withdrawal), 3) Daily ad counter display (0-30/day with progress bar and visual indicators), 4) Ad modal with 3-second simulated ad playback and proper loading states, 5) Backend integration with /api/ads/watch and /api/ads/daily-stats endpoints, 6) Ad miner rewards system (+2 GH/s for 24h per ad watched), 7) Manual 'Watch Ad' button in dashboard for miner activation ads. All ad triggers implemented with user-friendly UI, proper state management, and error handling. Fully integrated with existing app functionality and ready for testing."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
