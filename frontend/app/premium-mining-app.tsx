@@ -1185,7 +1185,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     
                     <TouchableOpacity 
                       style={styles.purchaseButton}
-                      onPress={() => purchaseMiner(miner)}
+                      onPress={() => handlePurchaseMiner(miner)}
                     >
                       <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                         <Text style={styles.purchaseButtonText}>Purchase & Activate</Text>
