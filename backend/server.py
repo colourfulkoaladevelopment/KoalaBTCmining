@@ -1124,7 +1124,7 @@ async def withdraw_bitcoin(
             btc_price = 50000.0  # fallback
             if price_response.status_code == 200:
                 btc_price = price_response.json()["bitcoin"]["usd"]
-        except:
+        except Exception:
             btc_price = 50000.0  # fallback price
         
         usd_value = amount * btc_price
