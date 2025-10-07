@@ -522,7 +522,7 @@ async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
     if current_total_earnings < current_balance:
         # Fix data inconsistency - update total_earnings to match balance
         users_collection.update_one(
-            {"_id": current_user["id"]},
+            {"_id": ObjectId(current_user["id"])},
             {"$set": {"total_earnings": current_balance}}
         )
         logger.info(f"Fixed total_earnings for user {current_user['id']}: updated from {current_total_earnings} to {current_balance}")
