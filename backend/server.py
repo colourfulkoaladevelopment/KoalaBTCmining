@@ -1199,21 +1199,21 @@ async def withdraw_bitcoin(
                     }}
                 )
                 logger.info(f"✅ Bitcoin withdrawal completed: {amount} BTC sent to {address} (TX: {tx_hash})")
+                
+                return {
+                    "success": True,
+                    "withdrawal_id": withdrawal_id,
+                    "amount_btc": amount,
+                    "processing_fee_btc": processing_fee,
+                    "total_deducted_btc": total_deduction,
+                    "usd_value": round(usd_value, 2),
+                    "bitcoin_address": address,
+                    "status": "completed",
+                    "message": "Withdrawal completed successfully.",
+                    "estimated_confirmation_time": "Completed"
+                }
             else:
                 raise Exception("Bitcoin transaction failed")
-
-            return {
-                "success": True,
-                "withdrawal_id": withdrawal_id,
-                "amount_btc": amount,
-                "processing_fee_btc": processing_fee,
-                "total_deducted_btc": total_deduction,
-                "usd_value": round(usd_value, 2),
-                "bitcoin_address": address,
-                "status": "pending",
-                "message": "Withdrawal request submitted successfully. Processing may take 10-60 minutes.",
-                "estimated_confirmation_time": "10-60 minutes"
-            }
                 
         except Exception as wallet_error:
             logger.error(f"❌ Bitcoin wallet integration error: {wallet_error}")
