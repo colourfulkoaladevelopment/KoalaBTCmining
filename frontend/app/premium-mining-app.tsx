@@ -71,6 +71,17 @@ export default function PremiumBitcoinMiningApp() {
   
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
+  // Facebook Ads state
+  const [adStats, setAdStats] = useState({
+    ads_watched_today: 0,
+    remaining_ads: 30,
+    max_daily_ads: 30,
+    can_watch_ad: true
+  });
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [currentAdType, setCurrentAdType] = useState(null);
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
+
   // Calculate estimated BTC per day for a given hash rate
   const calculateDailyEarnings = (hashRate) => {
     // Base rate: 0.000000000000083 BTC per GH/s per 5 seconds (current actual rate)
