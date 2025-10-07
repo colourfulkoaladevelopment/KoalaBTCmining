@@ -1244,19 +1244,6 @@ async def withdraw_bitcoin(
                 status_code=500, 
                 detail="Bitcoin network error occurred. Your balance has been restored. Please try again later."
             )
-
-        return {
-            "success": True,
-            "withdrawal_id": withdrawal_id,
-            "amount_btc": amount,
-            "processing_fee_btc": processing_fee,
-            "total_deducted_btc": total_deduction,
-            "usd_value": round(usd_value, 2),
-            "bitcoin_address": address,
-            "status": "pending",
-            "message": "Withdrawal request submitted successfully. Processing may take 10-60 minutes.",
-            "estimated_confirmation_time": "10-60 minutes"
-        }
         
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
