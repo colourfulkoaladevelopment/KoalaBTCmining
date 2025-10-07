@@ -1328,11 +1328,10 @@ async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) ->
 async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
     """Send Bitcoin using Coinbase Commerce API"""
     try:
-        # This would require coinbase-commerce-python package
+        # This would require coinbase-commerce package
         # pip install coinbase-commerce
         
         from coinbase_commerce.client import Client
-        from coinbase_commerce.webhook import Webhook
         
         client = Client(api_key=COINBASE_API_KEY)
         
