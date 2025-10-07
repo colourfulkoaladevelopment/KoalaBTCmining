@@ -107,6 +107,14 @@ export default function PremiumBitcoinMiningApp() {
     };
   }, [currentScreen, user]);
 
+  // Load app data and Bitcoin price when app loads
+  useEffect(() => {
+    if (currentScreen === 'app' && user) {
+      loadAppData();
+      loadBitcoinPrice(); // Load Bitcoin price when app loads
+    }
+  }, [currentScreen, user]);
+
   const checkAuthStatus = async () => {
     try {
       // Animated progress bar
