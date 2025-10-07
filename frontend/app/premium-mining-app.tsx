@@ -70,7 +70,7 @@ export default function PremiumBitcoinMiningApp() {
 
   // Calculate estimated BTC per day for a given hash rate
   const calculateDailyEarnings = (hashRate) => {
-    // Base rate: 0.000000000000083 BTC per GH/s per 5 seconds (10x lower than previous)
+    // Base rate: 0.000000000000083 BTC per GH/s per 5 seconds (current actual rate)
     const baseRate = 0.000000000000083;
     const secondsPerDay = 86400;
     const intervalSeconds = 5;
