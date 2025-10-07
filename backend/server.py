@@ -36,12 +36,21 @@ PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")  # sandbox or live
 
+# Facebook Ads Configuration
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "")
+FACEBOOK_PLACEMENT_ID = os.getenv("FACEBOOK_PLACEMENT_ID", "")
+
 # Promo Codes Configuration
 PROMO_CODES = {
     "WELCOME10": {"discount_percent": 10, "max_uses": 1000, "used": 0},
     "CRYPTO20": {"discount_percent": 20, "max_uses": 500, "used": 0},
     "NEWUSER15": {"discount_percent": 15, "max_uses": 2000, "used": 0}
 }
+
+# Ad system constants
+MAX_DAILY_ADS = 30
+AD_MINER_HASHRATE = 2.0  # 2 GH/s
+AD_MINER_DURATION_HOURS = 24  # 24 hours instead of 30 minutes
 
 # Bitcoin wallet configuration (add these to your .env file in production)
 BITCOIN_WALLET_TYPE = os.getenv("BITCOIN_WALLET_TYPE", "demo")  # demo, bitgo, coinbase, rpc
