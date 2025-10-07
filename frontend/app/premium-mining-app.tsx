@@ -1689,6 +1689,62 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
           </View>
         </Modal>
+
+        {/* Facebook Ad Modal */}
+        <Modal visible={showAdModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>🎁 Watch Ad for Rewards</Text>
+              <Text style={styles.modalSubtitle}>
+                {currentAdType === 'app_launch' && 'Welcome! Watch this ad to earn free mining power!'}
+                {currentAdType === 'withdrawal' && 'Boost your earnings before withdrawing!'}
+                {currentAdType === 'miner_activation' && 'Earn extra mining power!'}
+              </Text>
+              
+              {isWatchingAd ? (
+                <View style={styles.adContainer}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.adSimulation}>
+                    <Ionicons name="play-circle" size={64} color="#000" />
+                    <Text style={styles.adText}>Simulated Advertisement</Text>
+                    <Text style={styles.adSubtext}>This is a placeholder ad</Text>
+                    <ActivityIndicator size="large" color="#000" style={{ marginTop: 20 }} />
+                  </LinearGradient>
+                  <Text style={styles.adTimerText}>Ad playing... Please wait</Text>
+                </View>
+              ) : (
+                <View style={styles.adPreview}>
+                  <Ionicons name="television" size={48} color="#FFD700" />
+                  <Text style={styles.adPreviewText}>Ready to watch ad</Text>
+                  <Text style={styles.adRewardText}>Reward: +2 GH/s for 24 hours</Text>
+                </View>
+              )}
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={() => {
+                    setShowAdModal(false);
+                    setCurrentAdType(null);
+                  }}
+                  disabled={isWatchingAd}
+                >
+                  <Text style={styles.cancelButtonText}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.confirmButton} 
+                  onPress={handleAdWatch}
+                  disabled={isWatchingAd}
+                >
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>
+                      {isWatchingAd ? 'Watching...' : 'Watch Ad'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
       </>
     );
   }
