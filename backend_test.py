@@ -1318,6 +1318,177 @@ def test_logout():
         results.failure("Logout", str(e))
         return False
 
+def test_facebook_ads_integration():
+    """Test Facebook Ads integration backend endpoints"""
+    try:
+        if not auth_tokens:
+            results.failure("Facebook Ads Integration", "No auth tokens available")
+            return False
+            
+        headers = {"Authorization": f"Bearer {auth_tokens[0]}"}
+        
+        print("📊 Testing Daily Stats Endpoint...")
+        # Test 1: Daily stats endpoint
+        response = requests.post(f"{API_BASE}/ads/daily-stats", headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            results.failure("Facebook Ads (Daily Stats)", f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+        stats_data = response.json()
+        required_fields = ["ads_watched_today", "remaining_ads", "max_daily_ads", "can_watch_ad", "next_reset"]
+        
+        if not all(field in stats_data for field in required_fields):
+            results.failure("Facebook Ads (Daily Stats Fields)", f"Missing required fields: {required_fields}")
+            return False
+        
+        # Verify constants
+        if stats_data["max_daily_ads"] != 30:
+            results.failure("Facebook Ads (Max Daily Ads)", f"Expected 30, got {stats_data['max_daily_ads']}")
+            return False
+        
+        # For new user, should be 0 ads watched
+        if stats_data["ads_watched_today"] != 0:
+            results.failure("Facebook Ads (New User Stats)", f"Expected 0 ads watched, got {stats_data['ads_watched_today']}")
+            return False
+        
+        results.success("Facebook Ads (Daily Stats)")
+        
+        print("📺 Testing Watch Ad Endpoint...")
+        # Test 2: Watch ad endpoint with different ad types
+        ad_types = ['app_launch', 'withdrawal', 'miner_activation']
+        
+        for i, ad_type in enumerate(ad_types):
+            ad_data = {"ad_type": ad_type}
+            response = requests.post(f"{API_BASE}/ads/watch", json=ad_data, headers=headers, timeout=10)
+            
+            if response.status_code != 200:
+                results.failure(f"Facebook Ads (Watch {ad_type})", f"HTTP {response.status_code}: {response.text}")
+                continue
+                
+            watch_data = response.json()
+            required_fields = ["success", "message", "ad_miner", "daily_stats"]
+            
+            if not all(field in watch_data for field in required_fields):
+                results.failure(f"Facebook Ads (Watch {ad_type} Fields)", f"Missing required fields: {required_fields}")
+                continue
+            
+            # Verify ad miner details
+            ad_miner = watch_data["ad_miner"]
+            if ad_miner["hash_rate"] != 2.0:
+                results.failure(f"Facebook Ads (Watch {ad_type} Hash Rate)", f"Expected 2.0 GH/s, got {ad_miner['hash_rate']}")
+                continue
+            
+            if ad_miner["duration_hours"] != 24:
+                results.failure(f"Facebook Ads (Watch {ad_type} Duration)", f"Expected 24h, got {ad_miner['duration_hours']}")
+                continue
+            
+            # Verify daily stats update
+            daily_stats = watch_data["daily_stats"]
+            expected_watched = i + 1
+            
+            if daily_stats["ads_watched_today"] != expected_watched:
+                results.failure(f"Facebook Ads (Watch {ad_type} Counter)", f"Expected {expected_watched}, got {daily_stats['ads_watched_today']}")
+                continue
+            
+            results.success(f"Facebook Ads (Watch {ad_type})")
+        
+        print("🚫 Testing Invalid Ad Type...")
+        # Test 3: Invalid ad type
+        invalid_ad_data = {"ad_type": "invalid_type"}
+        response = requests.post(f"{API_BASE}/ads/watch", json=invalid_ad_data, headers=headers, timeout=10)
+        
+        if response.status_code == 400:
+            results.success("Facebook Ads (Invalid Ad Type)")
+        else:
+            results.failure("Facebook Ads (Invalid Ad Type)", f"Expected 400, got {response.status_code}")
+        
+        print("⛏️ Testing Ad Miner Creation...")
+        # Test 4: Verify ad miners were created in database
+        miners_response = requests.get(f"{API_BASE}/miners/list", headers=headers, timeout=10)
+        
+        if miners_response.status_code == 200:
+            miners_data = miners_response.json()
+            ad_miners = [m for m in miners_data.get("miners", []) if m.get("miner_type") == "ad_reward"]
+            
+            if len(ad_miners) >= 3:  # Should have at least 3 from the ad types tested
+                # Verify ad miner properties
+                for miner in ad_miners[:3]:  # Check first 3
+                    if miner["hash_rate"] != 2.0:
+                        results.failure("Facebook Ads (Ad Miner Hash Rate)", f"Expected 2.0, got {miner['hash_rate']}")
+                        break
+                    if miner["status"] != "active":
+                        results.failure("Facebook Ads (Ad Miner Status)", f"Expected active, got {miner['status']}")
+                        break
+                else:
+                    results.success("Facebook Ads (Ad Miner Creation)")
+            else:
+                results.failure("Facebook Ads (Ad Miner Creation)", f"Expected at least 3 ad miners, got {len(ad_miners)}")
+        else:
+            results.failure("Facebook Ads (Ad Miner Verification)", f"Could not get miners list: {miners_response.status_code}")
+        
+        print("🔍 Testing Active Ad Miners Endpoint...")
+        # Test 5: Active ad miners endpoint
+        response = requests.get(f"{API_BASE}/ads/active-miners", headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            active_data = response.json()
+            if "active_ad_miners" in active_data and "total_ad_hashrate" in active_data:
+                results.success("Facebook Ads (Active Miners Endpoint)")
+            else:
+                results.failure("Facebook Ads (Active Miners Endpoint)", "Missing required fields in response")
+        else:
+            results.failure("Facebook Ads (Active Miners Endpoint)", f"HTTP {response.status_code}: {response.text}")
+        
+        print("🔄 Testing Reset Daily Counter...")
+        # Test 6: Reset daily counter endpoint
+        response = requests.post(f"{API_BASE}/ads/reset-daily-counter", headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            reset_data = response.json()
+            if reset_data.get("success"):
+                results.success("Facebook Ads (Reset Daily Counter)")
+            else:
+                results.failure("Facebook Ads (Reset Daily Counter)", "Success field missing or false")
+        else:
+            results.failure("Facebook Ads (Reset Daily Counter)", f"HTTP {response.status_code}: {response.text}")
+        
+        print("⚠️ Testing Daily Limit Enforcement...")
+        # Test 7: Daily limit enforcement (watch remaining ads to hit limit)
+        current_stats_response = requests.post(f"{API_BASE}/ads/daily-stats", headers=headers, timeout=10)
+        if current_stats_response.status_code == 200:
+            current_stats = current_stats_response.json()
+            current_count = current_stats["ads_watched_today"]
+            remaining_to_limit = 30 - current_count
+            
+            # Watch ads until we hit the limit (but don't go over 10 more to avoid long test)
+            ads_to_watch = min(remaining_to_limit, 10)
+            
+            for i in range(ads_to_watch):
+                ad_data = {"ad_type": "miner_activation"}
+                response = requests.post(f"{API_BASE}/ads/watch", json=ad_data, headers=headers, timeout=10)
+                
+                if response.status_code != 200:
+                    break
+            
+            # If we watched all remaining ads, try one more (should be rejected)
+            if ads_to_watch == remaining_to_limit:
+                ad_data = {"ad_type": "miner_activation"}
+                response = requests.post(f"{API_BASE}/ads/watch", json=ad_data, headers=headers, timeout=10)
+                
+                if response.status_code == 429:
+                    results.success("Facebook Ads (Daily Limit Enforcement)")
+                else:
+                    results.failure("Facebook Ads (Daily Limit Enforcement)", f"Expected 429, got {response.status_code}")
+            else:
+                results.success("Facebook Ads (Daily Limit Partial Test)")
+        
+        return True
+        
+    except Exception as e:
+        results.failure("Facebook Ads Integration", str(e))
+        return False
+
 def run_all_tests():
     """Run all backend API tests"""
     print("🚀 Starting comprehensive backend API testing...\n")
@@ -1376,6 +1547,10 @@ def run_all_tests():
     # NEW: Test enhanced contact support system
     print("\n📧 Testing Enhanced Contact Support System...")
     test_contact_support_system()
+    
+    # NEW: Test Facebook Ads Integration
+    print("\n📺 Testing Facebook Ads Integration...")
+    test_facebook_ads_integration()
     
     # NEW: Test account reset functionality
     print("\n🔄 Testing Account Reset Functionality...")
