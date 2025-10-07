@@ -76,6 +76,8 @@ packaging==25.0
 pandas==2.3.2
 passlib==1.7.4
 pathspec==0.12.1
+paypal-checkout-serversdk==1.0.3
+paypalhttp==1.0.1
 pillow==11.3.0
 platformdirs==4.4.0
 pluggy==1.6.0
@@ -93,6 +95,7 @@ pyflakes==3.4.0
 Pygments==2.19.2
 PyJWT==2.10.1
 pymongo==4.5.0
+pyOpenSSL==25.3.0
 pyparsing==3.2.5
 pytest==8.4.2
 python-dateutil==2.9.0.post0
