@@ -1209,47 +1209,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </View>
             </LinearGradient>
 
-            {/* Daily Ad Counter */}
-            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adCounterCard}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="tv" size={24} color="#FFD700" />
-                <Text style={styles.cardTitle}>Daily Ad Rewards</Text>
-              </View>
-              <View style={styles.adCounterContent}>
-                <View style={styles.adCounterStats}>
-                  <Text style={styles.adCounterLabel}>Ads Watched Today</Text>
-                  <Text style={styles.adCounterValue}>
-                    {adStats.ads_watched_today}/{adStats.max_daily_ads}
-                  </Text>
-                </View>
-                <View style={styles.adCounterProgress}>
-                  <View style={styles.adProgressBar}>
-                    <LinearGradient 
-                      colors={['#FFD700', '#FFC000']} 
-                      style={[
-                        styles.adProgressFill, 
-                        { width: `${(adStats.ads_watched_today / adStats.max_daily_ads) * 100}%` }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={styles.adRemainingText}>
-                    {adStats.remaining_ads} ads remaining
-                  </Text>
-                </View>
-                {adStats.can_watch_ad && (
-                  <TouchableOpacity 
-                    style={styles.watchAdButton}
-                    onPress={() => watchAd('miner_activation')}
-                  >
-                    <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
-                      <Ionicons name="play-circle" size={16} color="#FFF" />
-                      <Text style={styles.watchAdButtonText}>Watch Ad (+2 GH/s)</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </LinearGradient>
-
             {/* Quick Actions */}
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.quickActionsCard}>
               <View style={styles.cardHeader}>
