@@ -652,22 +652,25 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
     }
   };
 
-  // Trigger ad on app launch (once per session)
+  // Trigger forced non-rewarded ad on app launch (once per session)
   const triggerAppLaunchAd = async () => {
     const hasSeenAppLaunchAd = await AsyncStorage.getItem('app_launch_ad_shown');
-    if (!hasSeenAppLaunchAd && adStats.can_watch_ad) {
-      // Show ad after 2 seconds delay
+    if (!hasSeenAppLaunchAd) {
+      // Show forced ad after 2 seconds delay
       setTimeout(() => {
         Alert.alert(
-          '🎁 Welcome Bonus!',
-          'Watch an ad to earn free mining power!',
+          '📺 Welcome!',
+          'Please watch this brief advertisement to continue.',
           [
-            { text: 'Skip', style: 'cancel' },
-            { text: 'Watch Ad', onPress: () => {
-              AsyncStorage.setItem('app_launch_ad_shown', 'true');
-              watchAd('app_launch');
-            }}
-          ]
+            { 
+              text: 'Continue', 
+              onPress: () => {
+                AsyncStorage.setItem('app_launch_ad_shown', 'true');
+                showForcedAd('app_launch');
+              }
+            }
+          ],
+          { cancelable: false } // Make it non-dismissible
         );
       }, 2000);
     }
