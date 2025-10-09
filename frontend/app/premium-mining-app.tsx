@@ -703,22 +703,18 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
       return;
     }
 
-    // Trigger withdrawal ad first
-    if (adStats.can_watch_ad) {
-      Alert.alert(
-        '🎁 Earn More Before Withdrawal!',
-        'Watch an ad to earn 2 GH/s mining power for 24 hours before proceeding with your withdrawal?',
-        [
-          { text: 'Skip', onPress: () => proceedWithWithdrawal() },
-          { text: 'Watch Ad', onPress: () => {
-            watchAd('withdrawal');
-            setTimeout(() => proceedWithWithdrawal(), 1000); // Small delay to allow ad to complete
-          }}
-        ]
-      );
-    } else {
-      proceedWithWithdrawal();
-    }
+    // Show forced non-rewarded ad before withdrawal
+    Alert.alert(
+      '📺 Advertisement Required',
+      'Please watch this brief advertisement before proceeding with your withdrawal.',
+      [
+        { 
+          text: 'Continue', 
+          onPress: () => showForcedAd('withdrawal')
+        }
+      ],
+      { cancelable: false } // Make it non-dismissible
+    );
   };
 
   const proceedWithWithdrawal = async () => {
