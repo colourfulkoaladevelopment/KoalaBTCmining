@@ -608,48 +608,69 @@ Your miner is now active and earning Bitcoin!`,
       // Simulate watching the ad
       await simulateAd(currentAdType);
       
-      // Process ad reward on backend
-      const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ad_type: currentAdType
-        })
-      });
+      // Only process reward for rewarded ads (miner_activation)
+      if (currentAdType === 'miner_activation') {
+        // Process ad reward on backend
+        const token = await AsyncStorage.getItem('session_token');
+        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ad_type: currentAdType
+          })
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (response.ok) {
-        Alert.alert(
-          '🎉 Ad Reward Earned!',
-          `${result.message}
+        if (response.ok) {
+          Alert.alert(
+            '🎉 Ad Reward Earned!',
+            `${result.message}
 
 Mining Power: +${result.ad_miner.hash_rate} GH/s
 Duration: ${result.ad_miner.duration_hours} hours
 Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_daily_ads}`,
-          [{ 
-            text: 'Awesome!', 
-            onPress: () => {
-              loadAppData(); // Refresh app data to show new miner
-              loadAdStats(); // Refresh ad stats
-            }
-          }]
-        );
+            [{ 
+              text: 'Awesome!', 
+              onPress: () => {
+                loadAppData(); // Refresh app data to show new miner
+                loadAdStats(); // Refresh ad stats
+              }
+            }]
+          );
+        } else {
+          Alert.alert('Error', result.detail || 'Failed to process ad reward');
+        }
       } else {
-        Alert.alert('Error', result.detail || 'Failed to process ad reward');
+        // Non-rewarded forced ads - just close modal
+        Alert.alert('Thank you!', 'Thank you for watching the advertisement.', [{
+          text: 'Continue',
+          onPress: () => {
+            // Continue with the original action if needed
+            if (currentAdType === 'withdrawal') {
+              // Proceed with withdrawal after forced ad
+              setTimeout(() => proceedWithWithdrawal(), 500);
+            }
+          }
+        }]);
       }
       
       setShowAdModal(false);
       setCurrentAdType(null);
     } catch (error) {
-      Alert.alert('Error', 'Failed to process ad reward. Please try again.');
+      Alert.alert('Error', 'Failed to process ad. Please try again.');
       setShowAdModal(false);
       setCurrentAdType(null);
     }
+  };
+
+  // Show forced non-rewarded ad
+  const showForcedAd = (adType) => {
+    setCurrentAdType(adType);
+    setShowAdModal(true);
   };
 
   // Trigger forced non-rewarded ad on app launch (once per session)
