@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 # MongoDB connection
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 client = MongoClient(MONGO_URL)
-db = client.bitcoin_mining_db
+db = client[os.getenv("DB_NAME", "bitcoin_mining_db")]
 
 # Collections
 users_collection = db.users
