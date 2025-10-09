@@ -264,6 +264,12 @@ export default function PremiumBitcoinMiningApp() {
         setReferralStats(referralResult);
       }
 
+      // Update user data with latest total_earnings and total_cashed_out
+      if (userResponse.ok) {
+        const userResult = await userResponse.json();
+        setUser(userResult);
+      }
+
       // Load ad stats
       await loadAdStats();
 
