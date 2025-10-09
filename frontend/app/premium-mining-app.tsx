@@ -214,8 +214,8 @@ export default function PremiumBitcoinMiningApp() {
     try {
       const token = await AsyncStorage.getItem('session_token');
       
-      // Load all data in parallel
-      const [walletResponse, minersResponse, storeResponse, referralResponse] = await Promise.all([
+      // Load all data in parallel including updated user info
+      const [walletResponse, minersResponse, storeResponse, referralResponse, userResponse] = await Promise.all([
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
@@ -226,6 +226,9 @@ export default function PremiumBitcoinMiningApp() {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/referrals/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
