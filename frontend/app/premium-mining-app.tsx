@@ -179,22 +179,33 @@ export default function PremiumBitcoinMiningApp() {
     }
   };
 
-  const loadWalletData = async () => {
+  const updateBalanceInRealTime = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
-      
-      // Only load wallet balance - much faster and lighter than full app data
-      const walletResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (walletResponse.ok) {
-        const walletResult = await walletResponse.json();
-        setWalletData(walletResult);
+      
+      if (response.ok) {
+        const result = await response.json();
+        setWalletData(result);
       }
     } catch (error) {
       // Silently fail for real-time updates to avoid disrupting user experience
       console.error('Balance update failed:', error);
+    }
+  };
+
+  // Update Bitcoin price periodically (every 60 seconds)
+  const updateBitcoinPricePeriodically = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/bitcoin/price`);
+      if (response.ok) {
+        const priceData = await response.json();
+        setBitcoinPrice(priceData.btc_price_usd);
+      }
+    } catch (error) {
+      console.error('Bitcoin price update failed:', error);
     }
   };
 
