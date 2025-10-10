@@ -1318,7 +1318,7 @@ async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) ->
         
         # For testing/demo environment, since BitGo Express is not set up
         # Use demo mode instead of trying to connect to BitGo
-        logger.info(f"BitGo not available in this environment - using demo withdrawal mode")
+        logger.info("BitGo not available in this environment - using demo withdrawal mode")
         return await demo_bitcoin_transaction(address, amount, withdrawal_id)
             
     except Exception as e:
