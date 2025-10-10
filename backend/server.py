@@ -1388,31 +1388,118 @@ async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) ->
         raise Exception(f"Bitcoin network error occurred. Your balance has been restored. Please try again later.")
 
 async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
-    """Send Bitcoin using Coinbase Commerce API"""
+    """Send Bitcoin using Coinbase Advanced Trade API with fee collection"""
     try:
-        # This would require coinbase-commerce package
-        # pip install coinbase-commerce
+        from coinbase.rest import RESTClient
+        import uuid
         
-        from coinbase_commerce.client import Client
+        # Check if we have Coinbase credentials configured
+        coinbase_api_key = os.getenv("COINBASE_API_KEY", "")
+        coinbase_private_key = os.getenv("COINBASE_PRIVATE_KEY", "")
         
-        client = Client(api_key=COINBASE_API_KEY)
+        if not coinbase_api_key or not coinbase_private_key:
+            logger.warning("Coinbase credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
         
-        charge_data = {
-            'name': f'Mining Withdrawal {withdrawal_id}',
-            'description': f'Bitcoin withdrawal to {address}',
-            'local_price': {
-                'amount': str(amount),
-                'currency': 'BTC'
-            },
-            'pricing_type': 'fixed_price'
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
+        # Initialize Coinbase REST client
+        client = RESTClient(api_key=coinbase_api_key, api_secret=coinbase_private_key)
+        
+        logger.info(f"Initializing Coinbase withdrawal: {amount} BTC to {address}")
+        
+        # Get BTC account UUID
+        accounts_response = client.get_accounts()
+        logger.info(f"Retrieved accounts from Coinbase")
+        
+        btc_account = None
+        if hasattr(accounts_response, 'accounts') and accounts_response.accounts:
+            for account in accounts_response.accounts:
+                if hasattr(account, 'currency') and account.currency == 'BTC':
+                    btc_account = account
+                    break
+        
+        if not btc_account:
+            logger.error("BTC account not found in Coinbase")
+            raise Exception("BTC wallet not found in your Coinbase account")
+        
+        logger.info(f"Found BTC account: {btc_account.uuid if hasattr(btc_account, 'uuid') else 'unknown'}")
+        
+        # Transaction 1: Send withdrawal amount to user's address
+        user_withdrawal_params = {
+            "amount": str(amount),
+            "currency": "BTC",
+            "crypto_address": address,
+            "destination_type": "crypto_address",
+            "idempotency_key": str(uuid.uuid4()),
+            "note": f"Mining withdrawal {withdrawal_id}"
         }
         
-        charge = client.charge.create(**charge_data)
-        return charge.id  # Return charge ID as transaction reference
+        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        
+        # Call Coinbase withdrawal endpoint
+        user_withdrawal_response = client.post(
+            "/api/v3/brokerage/withdrawals/crypto",
+            json=user_withdrawal_params
+        )
+        
+        user_tx_id = None
+        if hasattr(user_withdrawal_response, 'id'):
+            user_tx_id = user_withdrawal_response.id
+            logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+        elif isinstance(user_withdrawal_response, dict) and 'id' in user_withdrawal_response:
+            user_tx_id = user_withdrawal_response['id']
+            logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+        else:
+            logger.error(f"User withdrawal response unexpected format: {user_withdrawal_response}")
+            raise Exception("Failed to get withdrawal confirmation from Coinbase")
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
+        fee_tx_id = None
+        if processing_fee >= 0.00000001:
+            fee_withdrawal_params = {
+                "amount": str(processing_fee),
+                "currency": "BTC",
+                "crypto_address": fee_collection_address,
+                "destination_type": "crypto_address",
+                "idempotency_key": str(uuid.uuid4()),
+                "note": f"Processing fee for withdrawal {withdrawal_id}"
+            }
+            
+            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            
+            try:
+                fee_withdrawal_response = client.post(
+                    "/api/v3/brokerage/withdrawals/crypto",
+                    json=fee_withdrawal_params
+                )
+                
+                if hasattr(fee_withdrawal_response, 'id'):
+                    fee_tx_id = fee_withdrawal_response.id
+                    logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                elif isinstance(fee_withdrawal_response, dict) and 'id' in fee_withdrawal_response:
+                    fee_tx_id = fee_withdrawal_response['id']
+                    logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                else:
+                    logger.warning("Fee collection: unexpected response format")
+            except Exception as fee_error:
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"Fee collection failed (user withdrawal still succeeded): {fee_error}")
+        else:
+            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+        
+        # Return user transaction ID (primary transaction)
+        return user_tx_id
         
     except Exception as e:
-        logger.error(f"Coinbase Commerce withdrawal failed: {e}")
-        raise e
+        logger.error(f"Coinbase withdrawal failed: {e}")
+        logger.error(f"Error details: {type(e).__name__}: {str(e)}")
+        # Re-raise with a user-friendly message
+        raise Exception(f"Coinbase withdrawal error: {str(e)}")
 
 async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
     """Send Bitcoin using Blockchain.info API with fee collection"""
