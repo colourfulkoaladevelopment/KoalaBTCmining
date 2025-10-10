@@ -162,8 +162,28 @@ export default function ResetPasswordScreen() {
             />
           </View>
 
+          {/* Simple test button */}
           <TouchableOpacity
-            style={styles.resetButton}
+            style={{
+              backgroundColor: '#FF5722',
+              padding: 20,
+              borderRadius: 12,
+              marginTop: 20,
+              alignItems: 'center',
+              zIndex: 1000,
+            }}
+            onPress={() => {
+              Alert.alert('TEST', 'Simple button clicked!');
+            }}
+          >
+            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>
+              TEST BUTTON
+            </Text>
+          </TouchableOpacity>
+
+          {/* Original button with fixes */}
+          <TouchableOpacity
+            style={[styles.resetButton, { zIndex: 999 }]}
             onPress={() => {
               console.log('Reset button pressed!');
               Alert.alert('Debug', 'Button was clicked!', [
@@ -175,6 +195,7 @@ export default function ResetPasswordScreen() {
               ]);
             }}
             disabled={isLoading}
+            activeOpacity={0.7}
           >
             <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
               {isLoading ? (
