@@ -236,7 +236,7 @@ backend:
 
   - task: "Bitcoin Withdrawal System"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 2
     priority: "critical"
