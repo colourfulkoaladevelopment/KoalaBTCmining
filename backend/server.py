@@ -1497,11 +1497,14 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
         # Transaction 2: Send processing fee to fee collection address (if fee > 0)
         fee_tx_hash = None
         if processing_fee >= 0.00000001:  # Only send fee if it's above minimum (0.00000001 BTC)
+            # Use smaller network fee for fee collection (since fee amounts are typically small)
+            fee_network_fee = max(1000, min(5000, int(fee_satoshis * 0.1)))  # 10% of fee amount, min 1000, max 5000
+            
             fee_params = {
                 'password': blockchain_wallet_password,
                 'to': fee_collection_address,
                 'amount': fee_satoshis,
-                'fee': 10000,  # 10,000 satoshis network fee (0.0001 BTC)
+                'fee': fee_network_fee,  # Dynamic network fee for fee collection
                 'note': f'Processing fee for withdrawal {withdrawal_id}'
             }
             
