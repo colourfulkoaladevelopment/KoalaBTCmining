@@ -1192,7 +1192,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <Text style={styles.cardTitle}>Bitcoin Wallet</Text>
               </View>
               <Text style={styles.balance}>₿ {walletData?.total_balance?.toFixed(14) || '0.00000000000000'}</Text>
-              <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * 45000).toFixed(2)} USD</Text>
+              <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * bitcoinPrice).toFixed(2)} USD</Text>
             </LinearGradient>
 
             {/* Withdraw Button */}
