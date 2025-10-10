@@ -417,11 +417,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Facebook Ads Integration - Frontend"
+    - "Bitcoin Withdrawal System"
     - "Forgot Password UI Integration"
     - "Withdraw BTC UI"
     - "Enhanced Dashboard with Expired Miners Section"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Bitcoin Withdrawal System"
   test_all: false
   test_priority: "high_first"
 
