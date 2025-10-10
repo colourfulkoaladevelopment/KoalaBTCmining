@@ -1522,7 +1522,7 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
                 # Fee collection failed, but don't fail the entire withdrawal
                 logger.warning(f"Fee collection failed ({fee_response.status_code}): {fee_response.text}")
         else:
-            logger.info(f"Processing fee too small ({processing_fee} BTC), skipping fee collection")
+            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
         
         # Return user transaction hash (primary transaction)
         return user_tx_hash
