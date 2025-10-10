@@ -417,7 +417,6 @@ if __name__ == "__main__":
     
     # Exit with appropriate code
     sys.exit(0 if success else 1)
-    """Test API health check"""
     try:
         response = requests.get(f"{API_BASE}/health", timeout=10)
         if response.status_code == 200:
