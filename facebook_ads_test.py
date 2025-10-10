@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get backend URL from environment
-BACKEND_URL = "https://coinharvest-2.preview.emergentagent.com"
+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class FacebookAdsBackendTester:

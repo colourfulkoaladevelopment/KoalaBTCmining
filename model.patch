@@ -586,7 +586,7 @@ index 932336f..635005d 100644
 ---------+            setIsLoading(true);
 --------- 
 ----------    try {
-----------      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
+----------      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://bitcoin-miner-sim.preview.emergentagent.com';
 ----------      const url = `${backendUrl}/api/auth/reset-password`;
 ----------      
 ----------      console.log('Backend URL:', backendUrl);
@@ -595,7 +595,7 @@ index 932336f..635005d 100644
 ----------      console.log('Making request to:', url);
 ----------      console.log('Request body:', { token: token, new_password: '[HIDDEN]' });
 ---------+            try {
----------+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
+---------+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://bitcoin-miner-sim.preview.emergentagent.com';
 ---------+              const url = `${backendUrl}/api/auth/reset-password`;
 ---------+              
 ---------+              console.log('Making API call to:', url);
@@ -710,7 +710,7 @@ index 932336f..635005d 100644
 ----------+                msg['Subject'] = "Bitcoin Mining App - Password Reset"
 ----------+                
 ----------+                # Create HTML email body with reset instructions
-----------+                reset_link = f"https://coinharvest-2.preview.emergentagent.com/reset-password?token={reset_token}"
+----------+                reset_link = f"https://bitcoin-miner-sim.preview.emergentagent.com/reset-password?token={reset_token}"
 ----------+                email_body = f"""
 ----------+                <html>
 ----------+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -812,7 +812,7 @@ index 932336f..635005d 100644
 ------------+load_dotenv()
 ------------+
 ------------+# Get backend URL from environment
-------------+BACKEND_URL = "https://coinharvest-2.preview.emergentagent.com"
+------------+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com"
 ------------+API_BASE = f"{BACKEND_URL}/api"
 ------------+
 ------------+class FacebookAdsBackendTester:
@@ -5245,7 +5245,7 @@ index 932336f..635005d 100644
 ------------+import requests
 ------------+import time
 ------------+
-------------+BACKEND_URL = "https://coinharvest-2.preview.emergentagent.com"
+------------+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com"
 ------------+API_BASE = f"{BACKEND_URL}/api"
 ------------+
 ------------+def test_daily_limit():
