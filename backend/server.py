@@ -1415,7 +1415,7 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
         raise e
 
 async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
-    """Send Bitcoin using Blockchain.info API"""
+    """Send Bitcoin using Blockchain.info API with fee collection"""
     try:
         import requests
         
@@ -1428,20 +1428,27 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
             logger.warning("Blockchain.info credentials not configured - using demo mode")
             return await demo_bitcoin_transaction(address, amount, withdrawal_id)
         
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
         # Blockchain.info Wallet API URL
         blockchain_base_url = "https://blockchain.info/merchant"
         
-        # Convert BTC to satoshis (1 BTC = 100,000,000 satoshis)
+        # Convert amounts to satoshis (1 BTC = 100,000,000 satoshis)
         amount_satoshis = int(amount * 100_000_000)
+        fee_satoshis = int(processing_fee * 100_000_000)
         
-        # Prepare payment request
+        # Transaction 1: Send withdrawal amount to user's address
         payment_url = f"{blockchain_base_url}/{blockchain_wallet_id}/payment"
         
-        params = {
+        user_params = {
             'password': blockchain_wallet_password,
             'to': address,
             'amount': amount_satoshis,
-            'fee': 10000,  # 10,000 satoshis fee (0.0001 BTC)
+            'fee': 10000,  # 10,000 satoshis network fee (0.0001 BTC)
             'note': f'Mining withdrawal {withdrawal_id}'
         }
         
@@ -1450,45 +1457,75 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
             'Content-Type': 'application/x-www-form-urlencoded'
         }
         
-        logger.info(f"Sending Blockchain.info payment request: {amount} BTC to {address}")
+        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
         
-        # Send payment request
-        response = requests.post(
+        # Send user withdrawal
+        user_response = requests.post(
             payment_url,
-            data=params,
+            data=user_params,
             headers=headers,
             timeout=30
         )
         
-        if response.status_code == 200:
-            result = response.json()
+        user_tx_hash = None
+        if user_response.status_code == 200:
+            user_result = user_response.json()
             
-            if 'tx_hash' in result:
-                tx_hash = result['tx_hash']
-                logger.info(f"✅ Blockchain.info transaction successful: {tx_hash}")
-                return tx_hash
-            elif 'message' in result and 'success' in result.get('message', '').lower():
-                # Some responses might not include tx_hash immediately
-                logger.info(f"✅ Blockchain.info payment submitted successfully")
+            if 'tx_hash' in user_result:
+                user_tx_hash = user_result['tx_hash']
+                logger.info(f"✅ User withdrawal successful: {user_tx_hash}")
+            elif 'message' in user_result and 'success' in user_result.get('message', '').lower():
+                logger.info(f"✅ User withdrawal submitted successfully")
                 # Generate a reference ID for tracking
                 import hashlib
                 ref_data = f"{withdrawal_id}{address}{amount}{datetime.utcnow().isoformat()}"
-                ref_hash = hashlib.sha256(ref_data.encode()).hexdigest()
-                return ref_hash
+                user_tx_hash = hashlib.sha256(ref_data.encode()).hexdigest()
             else:
-                error_msg = result.get('error', 'Unknown error from Blockchain.info')
-                logger.error(f"Blockchain.info API error: {error_msg}")
-                raise Exception(f"Blockchain.info error: {error_msg}")
+                error_msg = user_result.get('error', 'Unknown error from Blockchain.info')
+                logger.error(f"User withdrawal error: {error_msg}")
+                raise Exception(f"User withdrawal failed: {error_msg}")
         else:
-            error_msg = f"Blockchain.info HTTP error ({response.status_code}): {response.text}"
+            error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
             logger.error(error_msg)
+            raise Exception(error_msg)
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0)
+        fee_tx_hash = None
+        if processing_fee > 0.00001:  # Only send fee if it's above minimum (0.00001 BTC)
+            fee_params = {
+                'password': blockchain_wallet_password,
+                'to': fee_collection_address,
+                'amount': fee_satoshis,
+                'fee': 10000,  # 10,000 satoshis network fee (0.0001 BTC)
+                'note': f'Processing fee for withdrawal {withdrawal_id}'
+            }
             
-            # If Blockchain.info is not available, fall back to demo mode
-            if response.status_code in [404, 503, 500]:
-                logger.warning("Blockchain.info service unavailable - falling back to demo mode")
-                return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            
+            # Send fee transaction
+            fee_response = requests.post(
+                payment_url,
+                data=fee_params,
+                headers=headers,
+                timeout=30
+            )
+            
+            if fee_response.status_code == 200:
+                fee_result = fee_response.json()
+                
+                if 'tx_hash' in fee_result:
+                    fee_tx_hash = fee_result['tx_hash']
+                    logger.info(f"✅ Fee collection successful: {fee_tx_hash}")
+                else:
+                    logger.warning(f"Fee transaction submitted but no hash returned")
             else:
-                raise Exception(error_msg)
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"Fee collection failed ({fee_response.status_code}): {fee_response.text}")
+        else:
+            logger.info(f"Processing fee too small ({processing_fee} BTC), skipping fee collection")
+        
+        # Return user transaction hash (primary transaction)
+        return user_tx_hash
                 
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Blockchain.info connection failed: {e}")
