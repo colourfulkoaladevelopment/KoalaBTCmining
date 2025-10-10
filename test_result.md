@@ -257,6 +257,9 @@ backend:
       - working: false
         agent: "main"
         comment: "🔍 ROOT CAUSE IDENTIFIED: Blockchain.info Merchant API (https://blockchain.info/merchant/{wallet_id}/payment) is DEPRECATED and returns HTTP 404 errors. This API endpoint is no longer available as of 2024-2025. Current implementation uses outdated guid/password authentication method. Credentials in .env appear to be placeholder values (bitcoin-miner-sim). API has been sunset by Blockchain.com with no direct replacement. Need to migrate to alternative Bitcoin sending solution: BitGo (already configured but requires BitGo Express), crypto exchange APIs (Binance, Coinbase), payment gateways (BitPay, CoinPayments), or own Bitcoin node with RPC."
+      - working: "NA"
+        agent: "main"
+        comment: "✅ MIGRATED TO COINBASE ADVANCED TRADE API: Replaced deprecated Blockchain.info implementation with Coinbase Exchange API. Installed coinbase-advanced-py SDK (v1.8.2). Updated .env with user-provided Coinbase API credentials (API Key: organizations/8672c/apiKeys/feecac84-6b1b-443d-a410-68fe44b9bca7, EC Private Key configured). Set BITCOIN_WALLET_TYPE=coinbase. Implemented new coinbase_send_bitcoin() function with: 1) RESTClient authentication with CDP API keys, 2) Automatic BTC account lookup via get_accounts(), 3) Crypto withdrawal to user address via /api/v3/brokerage/withdrawals/crypto endpoint, 4) 0.5% processing fee collection to fee wallet, 5) Comprehensive error handling and logging, 6) Idempotency keys for duplicate prevention. Network fees absorbed by app. Backend restarted successfully. Ready for testing with live Coinbase account."
 
   - task: "Enhanced Contact Support System"
     implemented: true
