@@ -166,7 +166,13 @@ export default function ResetPasswordScreen() {
             style={styles.resetButton}
             onPress={() => {
               console.log('Reset button pressed!');
-              handleResetPassword();
+              Alert.alert('Debug', 'Button was clicked!', [
+                { 
+                  text: 'Continue', 
+                  onPress: () => handleResetPassword() 
+                },
+                { text: 'Cancel' }
+              ]);
             }}
             disabled={isLoading}
           >
