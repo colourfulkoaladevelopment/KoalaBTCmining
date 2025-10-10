@@ -1491,7 +1491,7 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
         
         # Transaction 2: Send processing fee to fee collection address (if fee > 0)
         fee_tx_hash = None
-        if processing_fee > 0.00001:  # Only send fee if it's above minimum (0.00001 BTC)
+        if processing_fee >= 0.00000001:  # Only send fee if it's above minimum (0.00000001 BTC)
             fee_params = {
                 'password': blockchain_wallet_password,
                 'to': fee_collection_address,
