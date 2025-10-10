@@ -171,51 +171,30 @@ export default function ResetPasswordScreen() {
             />
           </View>
 
-          {/* Simple test button */}
           <TouchableOpacity
-            style={{
-              backgroundColor: '#FF5722',
+            style={[styles.resetButton, { 
+              backgroundColor: '#FFD700',
               padding: 20,
-              borderRadius: 12,
-              marginTop: 20,
               alignItems: 'center',
-              zIndex: 1000,
-            }}
-            onPress={() => {
-              Alert.alert('TEST', 'Simple button clicked!');
-            }}
-          >
-            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>
-              TEST BUTTON
-            </Text>
-          </TouchableOpacity>
-
-          {/* Original button with fixes */}
-          <TouchableOpacity
-            style={[styles.resetButton, { zIndex: 999 }]}
-            onPress={() => {
-              console.log('Reset button pressed!');
-              Alert.alert('Debug', 'Button was clicked!', [
-                { 
-                  text: 'Continue', 
-                  onPress: () => handleResetPassword() 
-                },
-                { text: 'Cancel' }
-              ]);
-            }}
+              marginTop: 20,
+              borderRadius: 12,
+              elevation: 5,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+            }]}
+            onPress={handleResetPassword}
             disabled={isLoading}
             activeOpacity={0.7}
           >
-            <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="#000" />
-                  <Text style={styles.resetButtonText}>Reset Password</Text>
-                </>
-              )}
-            </LinearGradient>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#000" />
+            ) : (
+              <Text style={[styles.resetButtonText, { color: '#000', fontSize: 18, fontWeight: 'bold' }]}>
+                Reset Password
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
