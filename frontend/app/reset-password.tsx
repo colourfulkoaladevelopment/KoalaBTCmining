@@ -161,7 +161,10 @@ export default function ResetPasswordScreen() {
 
           <TouchableOpacity
             style={styles.resetButton}
-            onPress={handleResetPassword}
+            onPress={() => {
+              console.log('Reset button pressed!');
+              handleResetPassword();
+            }}
             disabled={isLoading}
           >
             <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
