@@ -1,39 +1,31 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for Bitcoin Mining Simulator
-Tests all authentication, mining, referral, and store functionality
+Bitcoin Mining App - Coinbase Bitcoin Withdrawal Integration Re-Test
+Focus: Testing after user added BTC wallet to Coinbase account
+
+This test suite specifically tests the Coinbase Bitcoin withdrawal integration
+after the user has added a BTC wallet to their Coinbase account.
 """
 
 import requests
 import json
-import time
-import random
-import string
-from datetime import datetime, timedelta
 import os
-from dotenv import load_dotenv
+import sys
+from datetime import datetime
+import time
 
-load_dotenv()
+# Configuration
+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
+TEST_USER_EMAIL = "testuser@bitcoinminer.com"
+TEST_USER_PASSWORD = "TestPassword123!"
+TEST_USER_NAME = "Bitcoin Test User"
 
-# Get backend URL from frontend .env
-FRONTEND_ENV_PATH = "/app/frontend/.env"
-BACKEND_URL = None
+# Test Bitcoin addresses (valid format but test addresses)
+VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid Bech32 address
+INVALID_BTC_ADDRESS = "invalid_address_format"
 
-try:
-    with open(FRONTEND_ENV_PATH, 'r') as f:
-        for line in f:
-            if line.startswith('EXPO_PUBLIC_BACKEND_URL='):
-                BACKEND_URL = line.split('=', 1)[1].strip().strip('"')
-                break
-except:
-    pass
-
-if not BACKEND_URL:
-    BACKEND_URL = "http://localhost:8001"
-
-API_BASE = f"{BACKEND_URL}/api"
-
-print(f"🔧 Testing Bitcoin Mining Simulator API at: {API_BASE}")
+print(f"🚀 Bitcoin Mining App - Coinbase Integration Re-Test")
+print(f"🔧 Testing API at: {BACKEND_URL}")
 print("=" * 80)
 
 class TestResults:
