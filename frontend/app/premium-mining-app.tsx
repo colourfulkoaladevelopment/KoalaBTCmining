@@ -105,7 +105,7 @@ export default function PremiumBitcoinMiningApp() {
       // Start real-time balance updates after successful login
       intervalId = setInterval(async () => {
         try {
-          await loadWalletData(); // Only refresh wallet balance - faster and non-intrusive
+          await updateBalanceInRealTime(); // Only refresh wallet balance - faster and non-intrusive
         } catch (error) {
           console.error('Real-time balance update failed:', error);
         }
