@@ -712,6 +712,19 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
       return;
     }
 
+    const amount = parseFloat(withdrawForm.amount);
+    const minWithdrawal = 0.00001;
+
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Please enter a valid withdrawal amount');
+      return;
+    }
+
+    if (amount < minWithdrawal) {
+      Alert.alert('Minimum Withdrawal', `Minimum withdrawal amount is ₿ ${minWithdrawal.toFixed(8)}. Please enter a higher amount.`);
+      return;
+    }
+
     // Show forced non-rewarded ad before withdrawal (single confirmation)
     showForcedAd('withdrawal');
   };
