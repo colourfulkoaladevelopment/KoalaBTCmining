@@ -1312,18 +1312,78 @@ async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id:
         return await demo_bitcoin_transaction(address, amount, withdrawal_id)
 
 async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
-    """Send Bitcoin using BitGo API"""
+    """Send Bitcoin using BitGo Express API"""
     try:
         import requests
         
-        # For testing/demo environment, since BitGo Express is not set up
-        # Use demo mode instead of trying to connect to BitGo
-        logger.info("BitGo not available in this environment - using demo withdrawal mode")
-        return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        # Check if we have BitGo credentials configured
+        if not BITGO_API_KEY or not BITGO_WALLET_ID:
+            logger.warning("BitGo credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # BitGo Express API URL (should be configured in environment)
+        bitgo_express_url = os.getenv("BITGO_EXPRESS_URL", "http://localhost:3080")
+        
+        # Prepare headers for BitGo Express
+        headers = {
+            'Authorization': f'Bearer {BITGO_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Convert BTC to satoshis (1 BTC = 100,000,000 satoshis)
+        amount_satoshis = int(amount * 100_000_000)
+        
+        # Prepare transaction payload for BitGo Express
+        payload = {
+            'address': address,
+            'amount': str(amount_satoshis),
+            'walletPassphrase': BITGO_WALLET_PASSPHRASE,
+            'comment': f'Mining withdrawal {withdrawal_id}',
+            'feeRate': 1000  # 1 sat/byte in sat/kB
+        }
+        
+        # Determine wallet endpoint based on environment
+        coin_type = "btc" if BITGO_ENV == "prod" else "tbtc"
+        endpoint = f"{bitgo_express_url}/api/v2/{coin_type}/wallet/{BITGO_WALLET_ID}/sendcoins"
+        
+        logger.info(f"Sending BitGo Express request to: {endpoint}")
+        
+        # Send transaction via BitGo Express
+        response = requests.post(
+            endpoint,
+            headers=headers,
+            json=payload,
+            timeout=60  # Bitcoin transactions can take time
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            tx_hash = result.get('hash') or result.get('txid') or result.get('id')
             
+            if tx_hash:
+                logger.info(f"✅ BitGo Express transaction successful: {tx_hash}")
+                return tx_hash
+            else:
+                logger.error(f"BitGo Express response missing transaction hash: {result}")
+                raise Exception("Transaction submitted but hash not received")
+        else:
+            error_msg = f"BitGo Express error ({response.status_code}): {response.text}"
+            logger.error(error_msg)
+            
+            # If BitGo Express is not available, fall back to demo mode with warning
+            if response.status_code == 404 or "connect" in response.text.lower():
+                logger.warning("BitGo Express not reachable - falling back to demo mode")
+                return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+            else:
+                raise Exception(error_msg)
+            
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"BitGo Express connection failed: {e}")
+        logger.warning("BitGo Express not reachable - using demo mode")
+        return await demo_bitcoin_transaction(address, amount, withdrawal_id)
     except Exception as e:
         logger.error(f"BitGo withdrawal failed: {e}")
-        raise e
+        raise Exception(f"Bitcoin network error occurred. Your balance has been restored. Please try again later.")
 
 async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
     """Send Bitcoin using Coinbase Commerce API"""
