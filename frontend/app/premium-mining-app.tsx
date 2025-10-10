@@ -2647,6 +2647,9 @@ const styles = StyleSheet.create({
   faqContent: {
     flex: 1,
     marginVertical: 20,
+    ...(Platform.OS === 'web' ? {
+      overflowY: 'auto',
+    } : {}),
   },
   faqItem: {
     marginBottom: 20,
