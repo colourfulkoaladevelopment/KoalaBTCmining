@@ -1305,6 +1305,8 @@ async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id:
         return await bitgo_send_bitcoin(address, amount, withdrawal_id)
     elif BITCOIN_WALLET_TYPE == "coinbase":
         return await coinbase_send_bitcoin(address, amount, withdrawal_id)
+    elif BITCOIN_WALLET_TYPE == "blockchain":
+        return await blockchain_send_bitcoin(address, amount, withdrawal_id)
     elif BITCOIN_WALLET_TYPE == "rpc":
         return await bitcoin_rpc_send(address, amount, withdrawal_id)
     else:
