@@ -1441,11 +1441,7 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
         amount_satoshis = int(amount * 100_000_000)
         fee_satoshis = int(processing_fee * 100_000_000)
         
-        # Calculate reasonable network fee (1-5 sats/byte, ~250 bytes per transaction)
-        # For small transactions, use minimum 1000 satoshis (0.00001 BTC)
-        # For larger transactions, use proportional fee up to max 10000 satoshis
-        network_fee_satoshis = max(1000, min(10000, int(amount_satoshis * 0.01)))  # 1% of amount, min 1000, max 10000
-        
+        # No network fees - absorb them on our end
         # Transaction 1: Send withdrawal amount to user's address
         payment_url = f"{blockchain_base_url}/{blockchain_wallet_id}/payment"
         
@@ -1453,7 +1449,7 @@ async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: st
             'password': blockchain_wallet_password,
             'to': address,
             'amount': amount_satoshis,
-            'fee': network_fee_satoshis,  # Dynamic network fee
+            'fee': 0,  # No network fee - absorbed by us
             'note': f'Mining withdrawal {withdrawal_id}'
         }
         
