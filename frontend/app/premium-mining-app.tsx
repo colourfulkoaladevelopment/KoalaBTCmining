@@ -1753,11 +1753,13 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         <Modal visible={showAdModal} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>🎁 Watch Ad for Rewards</Text>
+              <Text style={styles.modalTitle}>
+                {currentAdType === 'miner_activation' ? '🎁 Watch Ad for Rewards' : '📺 Advertisement Required'}
+              </Text>
               <Text style={styles.modalSubtitle}>
-                {currentAdType === 'app_launch' && 'Welcome! Watch this ad to earn free mining power!'}
-                {currentAdType === 'withdrawal' && 'Boost your earnings before withdrawing!'}
-                {currentAdType === 'miner_activation' && 'Earn extra mining power!'}
+                {currentAdType === 'app_launch' && 'Please watch this brief advertisement to continue using the app.'}
+                {currentAdType === 'withdrawal' && 'Please watch this brief advertisement before proceeding with your withdrawal.'}
+                {currentAdType === 'miner_activation' && 'Watch this ad to earn free mining power!'}
               </Text>
               
               {isWatchingAd ? (
