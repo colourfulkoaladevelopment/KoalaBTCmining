@@ -1413,6 +1413,7 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
     except Exception as e:
         logger.error(f"Coinbase Commerce withdrawal failed: {e}")
         raise e
+
 async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
     """Send Bitcoin using Blockchain.info API"""
     try:
