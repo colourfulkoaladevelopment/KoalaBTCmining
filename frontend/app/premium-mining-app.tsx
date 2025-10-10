@@ -1766,10 +1766,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <View style={styles.adPreview}>
                   <Ionicons name="tv" size={48} color="#FFD700" />
                   <Text style={styles.adPreviewText}>Ready to watch ad</Text>
-                  {currentAdType === 'miner_activation' ? (
+                  {currentAdType === 'miner_activation' && (
                     <Text style={styles.adRewardText}>Reward: +2 GH/s for 24 hours</Text>
-                  ) : (
-                    <Text style={[styles.adRewardText, { color: '#AAA' }]}>No rewards - Required advertisement</Text>
                   )}
                 </View>
               )}
