@@ -2127,6 +2127,11 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
+    paddingBottom: 35, // Add some clearance below navigation
+    ...(Platform.OS === 'web' ? {
+      overflowY: 'auto',
+      maxHeight: '100vh',
+    } : {}),
   },
   
   // Tab Navigation
