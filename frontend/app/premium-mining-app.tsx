@@ -721,7 +721,7 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
     }
 
     if (amount < minWithdrawal) {
-      Alert.alert('Minimum Withdrawal', `Minimum withdrawal amount is ₿ ${minWithdrawal.toFixed(8)}. Please enter a higher amount.`);
+      Alert.alert('Minimum Withdrawal', `Minimum withdrawal amount is ₿ ${minWithdrawal.toFixed(5)}. Please enter a higher amount.`);
       return;
     }
 
