@@ -31,76 +31,85 @@ export default function ResetPasswordScreen() {
   }, [token]);
 
   const handleResetPassword = async () => {
-    console.log('handleResetPassword called');
-    console.log('Token:', token);
-    console.log('New Password Length:', newPassword.length);
-    
-    if (!newPassword.trim()) {
-      Alert.alert('Error', 'Please enter a new password');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (!token) {
-      Alert.alert('Error', 'Invalid reset token. Please request a new password reset.');
-      return;
-    }
-
-    setIsLoading(true);
-
     try {
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
-      const url = `${backendUrl}/api/auth/reset-password`;
+      console.log('=== RESET PASSWORD FUNCTION CALLED ===');
+      console.log('Token:', token);
+      console.log('New Password Length:', newPassword.length);
       
-      console.log('Backend URL:', backendUrl);
-      console.log('Full URL:', url);
-      
-      console.log('Making request to:', url);
-      console.log('Request body:', { token: token, new_password: '[HIDDEN]' });
+      Alert.alert('Debug', `Function called! Password length: ${newPassword.length}`, [
+        { 
+          text: 'Continue', 
+          onPress: async () => {
+            if (!newPassword.trim()) {
+              Alert.alert('Error', 'Please enter a new password');
+              return;
+            }
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+            if (newPassword.length < 6) {
+              Alert.alert('Error', 'Password must be at least 6 characters long');
+              return;
+            }
+
+            if (newPassword !== confirmPassword) {
+              Alert.alert('Error', 'Passwords do not match');
+              return;
+            }
+
+            if (!token) {
+              Alert.alert('Error', 'Invalid reset token. Please request a new password reset.');
+              return;
+            }
+
+            setIsLoading(true);
+
+            try {
+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
+              const url = `${backendUrl}/api/auth/reset-password`;
+              
+              console.log('Making API call to:', url);
+
+              const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  token: token,
+                  new_password: newPassword,
+                }),
+              });
+
+              console.log('Response status:', response.status);
+              const data = await response.json();
+              console.log('Response data:', data);
+
+              if (response.ok) {
+                Alert.alert(
+                  '✅ Password Reset Successful!',
+                  'Your password has been reset successfully. You can now log in with your new password.',
+                  [
+                    {
+                      text: 'Login Now',
+                      onPress: () => router.replace('/'),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert('Error', data.detail || 'Failed to reset password');
+              }
+            } catch (error) {
+              console.error('Reset password error:', error);
+              Alert.alert('Error', `Network error: ${error.message}`);
+            } finally {
+              setIsLoading(false);
+            }
+          }
         },
-        body: JSON.stringify({
-          token: token,
-          new_password: newPassword,
-        }),
-      });
-
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (response.ok) {
-        Alert.alert(
-          '✅ Password Reset Successful!',
-          'Your password has been reset successfully. You can now log in with your new password.',
-          [
-            {
-              text: 'Login Now',
-              onPress: () => router.replace('/'),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', data.detail || 'Failed to reset password');
-      }
+        { text: 'Cancel' }
+      ]);
     } catch (error) {
-      console.error('Reset password error:', error);
-      Alert.alert('Error', `Network error: ${error.message}. Please check your connection and try again.`);
-    } finally {
-      setIsLoading(false);
+      console.error('Function execution error:', error);
+      Alert.alert('Function Error', `Error in handleResetPassword: ${error.message}`);
     }
   };
 
