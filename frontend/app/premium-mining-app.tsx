@@ -1938,6 +1938,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 30,
+    ...(Platform.OS === 'web' ? {
+      overflowY: 'auto',
+      maxHeight: '100vh',
+    } : {}),
   },
   header: {
     alignItems: 'center',
