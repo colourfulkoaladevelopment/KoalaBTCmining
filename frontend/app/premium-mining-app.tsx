@@ -97,24 +97,37 @@ export default function PremiumBitcoinMiningApp() {
     checkAuthStatus();
   }, []);
 
-  // Real-time balance updates (1-second interval)
+  // Real-time balance updates
   useEffect(() => {
-    let intervalId;
+    let balanceIntervalId: NodeJS.Timeout;
+    let priceIntervalId: NodeJS.Timeout;
     
     if (currentScreen === 'app' && user) {
       // Start real-time balance updates after successful login
-      intervalId = setInterval(async () => {
+      balanceIntervalId = setInterval(async () => {
         try {
           await updateBalanceInRealTime(); // Only refresh wallet balance - faster and non-intrusive
         } catch (error) {
           console.error('Real-time balance update failed:', error);
         }
-      }, 1000); // Update balance every 1 second
+      }, 1000); // Update every 1 second for balance changes
+
+      // Start Bitcoin price updates (every 60 seconds)
+      priceIntervalId = setInterval(async () => {
+        try {
+          await updateBitcoinPricePeriodically();
+        } catch (error) {
+          console.error('Bitcoin price update failed:', error);
+        }
+      }, 60000); // Update every 60 seconds for price changes
     }
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+      if (balanceIntervalId) {
+        clearInterval(balanceIntervalId);
+      }
+      if (priceIntervalId) {
+        clearInterval(priceIntervalId);
       }
     };
   }, [currentScreen, user]);
