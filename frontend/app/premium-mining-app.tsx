@@ -1189,7 +1189,10 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             >
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                 <Ionicons name="send" size={20} color="#000" />
-                <Text style={styles.withdrawButtonText}>Withdraw BTC</Text>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.withdrawButtonText}>Withdraw BTC</Text>
+                  <Text style={[styles.withdrawButtonText, { fontSize: 11, marginTop: 2 }]}>Minimum withdrawal ₿ 0.00001000</Text>
+                </View>
               </LinearGradient>
             </TouchableOpacity>
 
