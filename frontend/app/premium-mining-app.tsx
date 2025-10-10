@@ -1781,7 +1781,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   }}
                   disabled={isWatchingAd}
                 >
-                  <Text style={styles.cancelButtonText}>Skip</Text>
+                  <Text style={styles.cancelButtonText}>
+                    {currentAdType === 'miner_activation' ? 'Skip' : 'Back'}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.confirmButton} 
