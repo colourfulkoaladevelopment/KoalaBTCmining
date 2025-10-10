@@ -61,6 +61,9 @@ export default function ResetPasswordScreen() {
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
       const url = `${backendUrl}/api/auth/reset-password`;
       
+      console.log('Backend URL:', backendUrl);
+      console.log('Full URL:', url);
+      
       console.log('Making request to:', url);
       console.log('Request body:', { token: token, new_password: '[HIDDEN]' });
 
