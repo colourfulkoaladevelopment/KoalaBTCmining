@@ -1437,12 +1437,89 @@ async def forgot_password(email_data: Dict[str, str]):
                 }}
             )
             
-            # In production, send email with reset link
-            # For now, just log it
+            # Send password reset email
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+                
+                # Gmail SMTP configuration (same as contact form)
+                smtp_server = "smtp.gmail.com"
+                smtp_port = 587
+                sender_email = "colourfulkoaladevelopment@gmail.com"
+                sender_password = "kwkg czgx shbd btrp"
+                
+                # Create email message
+                msg = MIMEMultipart()
+                msg['From'] = sender_email
+                msg['To'] = email
+                msg['Subject'] = "Bitcoin Mining App - Password Reset"
+                
+                # Create HTML email body with reset instructions
+                reset_link = f"https://coinharvest-2.preview.emergentagent.com/reset-password?token={reset_token}"
+                email_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 30px; text-align: center;">
+                        <h1 style="color: #FFD700; margin: 0;">🪙 Bitcoin Mining App</h1>
+                        <h2 style="color: #FFF; margin: 10px 0;">Password Reset Request</h2>
+                    </div>
+                    
+                    <div style="padding: 30px; background: #f8f9fa;">
+                        <p style="font-size: 16px; color: #333;">Hello,</p>
+                        
+                        <p style="font-size: 16px; color: #333;">
+                            You have requested a password reset for your Bitcoin Mining App account.
+                            Click the button below to reset your password:
+                        </p>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{reset_link}" style="background: linear-gradient(135deg, #FFD700 0%, #FFC000 100%); color: #000; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                                Reset My Password
+                            </a>
+                        </div>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            Or copy and paste this link into your browser:<br>
+                            <a href="{reset_link}" style="color: #007bff; word-break: break-all;">{reset_link}</a>
+                        </p>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            <strong>This link will expire in 1 hour.</strong>
+                        </p>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            If you didn't request this reset, you can safely ignore this email.
+                        </p>
+                    </div>
+                    
+                    <div style="background: #333; padding: 20px; text-align: center;">
+                        <p style="color: #AAA; font-size: 12px; margin: 0;">
+                            Bitcoin Mining App Team<br>
+                            colourfulkoaladevelopment@gmail.com
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg.attach(MIMEText(email_body, 'html'))
+                
+                # Send email using Gmail SMTP
+                server = smtplib.SMTP(smtp_server, smtp_port)
+                server.starttls()
+                server.login(sender_email, sender_password)
+                text = msg.as_string()
+                server.sendmail(sender_email, email, text)
+                server.quit()
+                
+                logger.info(f"✅ Password reset email sent successfully to {email}")
+                
+            except Exception as email_error:
+                logger.error(f"❌ Failed to send password reset email to {email}: {email_error}")
+                # Still return success to prevent email enumeration attacks
+                
             logger.info(f"Password reset requested for {email}. Reset token: {reset_token}")
-            
-            # You would send an email with a link like:
-            # https://your-app.com/reset-password?token={reset_token}
         
         return {"message": "If an account with this email exists, you will receive password reset instructions."}
         
