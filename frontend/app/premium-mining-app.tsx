@@ -712,18 +712,8 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
       return;
     }
 
-    // Show forced non-rewarded ad before withdrawal
-    Alert.alert(
-      '📺 Advertisement Required',
-      'Please watch this brief advertisement before proceeding with your withdrawal.',
-      [
-        { 
-          text: 'Continue', 
-          onPress: () => showForcedAd('withdrawal')
-        }
-      ],
-      { cancelable: false } // Make it non-dismissible
-    );
+    // Show forced non-rewarded ad before withdrawal (single confirmation)
+    showForcedAd('withdrawal');
   };
 
   const proceedWithWithdrawal = async () => {
