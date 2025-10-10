@@ -1074,37 +1074,59 @@ async def submit_contact_form(
 async def get_bitcoin_price():
     """Get current Bitcoin price in USD"""
     try:
-        # Using CoinGecko API for live Bitcoin price
         import requests
-        response = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
-            timeout=10
-        )
         
-        if response.status_code == 200:
-            data = response.json()
-            btc_price = data["bitcoin"]["usd"]
-            
-            return {
-                "btc_price_usd": btc_price,
-                "last_updated": datetime.utcnow().isoformat(),
-                "source": "CoinGecko API"
+        # Try multiple APIs for better reliability
+        apis_to_try = [
+            {
+                "url": "https://api.coinbase.com/v2/exchange-rates?currency=BTC",
+                "parser": lambda data: float(data['data']['rates']['USD']),
+                "name": "Coinbase API"
+            },
+            {
+                "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", 
+                "parser": lambda data: float(data['price']),
+                "name": "Binance API"
+            },
+            {
+                "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+                "parser": lambda data: float(data['bitcoin']['usd']),
+                "name": "CoinGecko API"
             }
-        else:
-            # Fallback price if API fails
-            return {
-                "btc_price_usd": 50000.0,  # Fallback price
-                "last_updated": datetime.utcnow().isoformat(),
-                "source": "Fallback (API unavailable)"
-            }
-            
-    except Exception as e:
-        logger.error(f"Error fetching Bitcoin price: {e}")
-        # Return fallback price
+        ]
+        
+        for api in apis_to_try:
+            try:
+                response = requests.get(api["url"], timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    btc_price = api["parser"](data)
+                    
+                    # Sanity check - Bitcoin price should be reasonable (between $10k-$500k)
+                    if 10000 <= btc_price <= 500000:
+                        return {
+                            "btc_price_usd": btc_price,
+                            "last_updated": datetime.utcnow().isoformat(),
+                            "source": api["name"]
+                        }
+            except Exception as api_error:
+                logger.warning(f"Failed to fetch from {api['name']}: {api_error}")
+                continue
+        
+        # If all APIs fail, return fallback
+        logger.error("All Bitcoin price APIs failed")
         return {
             "btc_price_usd": 50000.0,
             "last_updated": datetime.utcnow().isoformat(),
-            "source": "Fallback (Error occurred)"
+            "source": "Fallback (All APIs failed)"
+        }
+            
+    except Exception as e:
+        logger.error(f"Error in Bitcoin price endpoint: {e}")
+        return {
+            "btc_price_usd": 50000.0,
+            "last_updated": datetime.utcnow().isoformat(),
+            "source": "Fallback (Endpoint error)"
         }
 
 # Bitcoin withdrawal endpoints
