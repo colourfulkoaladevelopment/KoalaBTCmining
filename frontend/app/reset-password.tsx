@@ -31,6 +31,10 @@ export default function ResetPasswordScreen() {
   }, [token]);
 
   const handleResetPassword = async () => {
+    console.log('handleResetPassword called');
+    console.log('Token:', token);
+    console.log('New Password Length:', newPassword.length);
+    
     if (!newPassword.trim()) {
       Alert.alert('Error', 'Please enter a new password');
       return;
@@ -46,10 +50,21 @@ export default function ResetPasswordScreen() {
       return;
     }
 
+    if (!token) {
+      Alert.alert('Error', 'Invalid reset token. Please request a new password reset.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/reset-password`, {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://coinharvest-2.preview.emergentagent.com';
+      const url = `${backendUrl}/api/auth/reset-password`;
+      
+      console.log('Making request to:', url);
+      console.log('Request body:', { token: token, new_password: '[HIDDEN]' });
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +75,9 @@ export default function ResetPasswordScreen() {
         }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok) {
         Alert.alert(
@@ -78,7 +95,7 @@ export default function ResetPasswordScreen() {
       }
     } catch (error) {
       console.error('Reset password error:', error);
-      Alert.alert('Error', 'Network error. Please check your connection and try again.');
+      Alert.alert('Error', `Network error: ${error.message}. Please check your connection and try again.`);
     } finally {
       setIsLoading(false);
     }
