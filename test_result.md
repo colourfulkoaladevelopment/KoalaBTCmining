@@ -236,11 +236,11 @@ backend:
 
   - task: "Bitcoin Withdrawal System"
     implemented: true
-    working: true
+    working: false
     file: "server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    stuck_count: 1
+    priority: "critical"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -251,6 +251,12 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TOTAL_CASHED_OUT TRACKING VERIFIED: Withdrawal system correctly updates total_cashed_out field when processing withdrawals. Database update includes both balance deduction ($set bitcoin_balance) and total_cashed_out increment ($inc total_cashed_out). /api/auth/me endpoint correctly returns total_cashed_out field. New users start with total_cashed_out: 0.0. All validation working: insufficient balance, empty address, minimum amount (0.001 BTC), both Bitcoin and Lightning networks supported."
+      - working: false
+        agent: "user"
+        comment: "🚨 USER REPORTED: Withdrawal failing with 'Failed to process withdrawal' error. Live transactions not working despite previous demo mode tests being successful."
+      - working: false
+        agent: "main"
+        comment: "🔍 ROOT CAUSE IDENTIFIED: Blockchain.info Merchant API (https://blockchain.info/merchant/{wallet_id}/payment) is DEPRECATED and returns HTTP 404 errors. This API endpoint is no longer available as of 2024-2025. Current implementation uses outdated guid/password authentication method. Credentials in .env appear to be placeholder values (bitcoin-miner-sim). API has been sunset by Blockchain.com with no direct replacement. Need to migrate to alternative Bitcoin sending solution: BitGo (already configured but requires BitGo Express), crypto exchange APIs (Binance, Coinbase), payment gateways (BitPay, CoinPayments), or own Bitcoin node with RPC."
 
   - task: "Enhanced Contact Support System"
     implemented: true
