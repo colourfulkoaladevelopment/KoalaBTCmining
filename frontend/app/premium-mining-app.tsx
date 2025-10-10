@@ -1563,6 +1563,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
               <Text style={styles.modalTitle}>Withdraw Bitcoin</Text>
               <Text style={styles.modalSubtitle}>Send BTC to your wallet</Text>
+              <Text style={[styles.modalSubtitle, { fontSize: 14, color: '#FFD700', marginTop: 5 }]}>
+                Minimum withdrawal ₿ 0.00001000
+              </Text>
               
               {/* Network Selection */}
               <View style={styles.networkSelection}>
