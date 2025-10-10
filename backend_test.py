@@ -406,19 +406,17 @@ class BitcoinMiningTester:
         else:
             print("   ❌ Validation tests still failing")
 
-def generate_test_email():
-    """Generate unique test email"""
-    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"testuser_{random_suffix}@example.com"
-
-def generate_test_name():
-    """Generate test user name"""
-    names = ["Alice Johnson", "Bob Smith", "Carol Davis", "David Wilson", "Emma Brown"]
-    return random.choice(names)
-
-# Test data storage
-test_users = []
-auth_tokens = []
+if __name__ == "__main__":
+    # Load environment variables
+    from dotenv import load_dotenv
+    load_dotenv("/app/backend/.env")
+    
+    # Run tests
+    tester = BitcoinMiningTester()
+    success = tester.run_all_tests()
+    
+    # Exit with appropriate code
+    sys.exit(0 if success else 1)
 
 def test_health_check():
     """Test API health check"""
