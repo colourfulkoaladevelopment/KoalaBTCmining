@@ -919,7 +919,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             <LinearGradient colors={['#FFD700', '#FFC000', '#B8860B']} style={styles.logoGradient}>
               <Text style={styles.logo}>₿</Text>
             </LinearGradient>
-            <Text style={styles.appTitle}>Bitcoin Mining</Text>
+            <Text style={styles.appTitle}>Koala Mining</Text>
             <Text style={styles.appSubtitle}>Professional Mining Platform</Text>
           </View>
           
