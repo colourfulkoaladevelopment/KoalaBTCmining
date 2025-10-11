@@ -358,7 +358,7 @@ export default function PremiumBitcoinMiningApp() {
         await loadAppData();
         setCurrentScreen('app');
         setActiveTab('dashboard');
-        Alert.alert('Success! 🎉', isLogin ? 'Welcome back to Bitcoin Mining!' : 'Account created successfully!');
+        Alert.alert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
       } else {
         Alert.alert('Error', result.detail || 'Authentication failed');
       }
