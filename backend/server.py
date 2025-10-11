@@ -2374,7 +2374,7 @@ async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = D
         order_body = {
             "intent": "CAPTURE",
             "application_context": {
-                "brand_name": "Bitcoin Mining Simulator",
+                "brand_name": "Koala Mining",
                 "landing_page": "BILLING",
                 "user_action": "PAY_NOW",
                 "return_url": "https://bitcoin-miner-sim.preview.emergentagent.com/api/payments/paypal-return",
