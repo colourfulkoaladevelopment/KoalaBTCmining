@@ -33,7 +33,7 @@ print(f"🧪 NDAX Bitcoin Withdrawal Integration Test Suite")
 print(f"🔧 Testing API at: {BACKEND_URL}")
 print("=" * 80)
 
-class BitcoinMiningTester:
+class NDXAWithdrawalTester:
     def __init__(self):
         self.session = requests.Session()
         self.auth_token = None
