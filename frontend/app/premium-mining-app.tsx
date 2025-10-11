@@ -950,7 +950,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             <View style={styles.header}>
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.titleGradient}>
-                <Text style={styles.titleText}>Bitcoin Mining</Text>
+                <Text style={styles.titleText}>Koala Mining</Text>
               </LinearGradient>
               <Text style={styles.subtitle}>Elite Mining Platform</Text>
             </View>
