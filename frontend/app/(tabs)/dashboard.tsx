@@ -327,7 +327,7 @@ export default function Dashboard() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Bitcoin Mining</Text>
+          <Text style={styles.title}>Koala Mining</Text>
           <Text style={styles.subtitle}>Dashboard</Text>
         </View>
 
