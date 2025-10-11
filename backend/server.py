@@ -2196,6 +2196,655 @@ async def capture_paypal_order(order_data: Dict[str, Any], current_user: Dict = 
         logger.error(f"Error capturing PayPal order: {e}")
         raise HTTPException(status_code=500, detail="Failed to process payment")
 
+@app.get("/api/payments/paypal-return")
+async def paypal_return_handler(token: str = None, PayerID: str = None):
+    """Handle PayPal return after successful payment"""
+    try:
+        # PayPal redirects with token (order_id) and PayerID parameters
+        # We need to automatically capture the payment and redirect to app
+        
+        if not token:
+            # Return HTML page with error and deep link to app
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Error</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">❌</div>
+                    <h1>Payment Error</h1>
+                    <p>There was an error processing your payment.</p>
+                    <p>Please return to the app and try again.</p>
+                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+        
+        # Get stored order information
+        stored_order = db.paypal_orders.find_one({"_id": token})
+        
+        if not stored_order:
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Order Not Found</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">⚠️</div>
+                    <h1>Order Not Found</h1>
+                    <p>We couldn't find your payment order.</p>
+                    <p>Please contact support if you were charged.</p>
+                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+        
+        # Check if already processed to prevent double activation
+        if stored_order.get("status") == "completed":
+            # Already processed - redirect with success
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+                <title>Payment Already Processed</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                        animation: bounce 1s infinite;
+                    }}
+                    @keyframes bounce {{
+                        0%, 100% {{ transform: translateY(0); }}
+                        50% {{ transform: translateY(-10px); }}
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">✅</div>
+                    <h1>Payment Already Processed</h1>
+                    <p>Your {stored_order['miner_data']['name']} has already been activated!</p>
+                    <p>Redirecting you back to the app...</p>
+                    <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+                </div>
+                <script>
+                    setTimeout(function() {{
+                        window.location.href = 'exp://bitcoin-miner-sim';
+                    }}, 3000);
+                </script>
+            </body>
+            </html>
+            """)
+        
+        # Capture the payment automatically
+        try:
+            from paypalcheckoutsdk.orders import OrdersCaptureRequest
+            
+            request = OrdersCaptureRequest(token)
+            response = payment_processor.paypal_client.execute(request)
+            
+            if response.result.status == "COMPLETED":
+                # Apply promo code if used
+                if stored_order.get("promo_code"):
+                    payment_processor.apply_promo_code(stored_order["promo_code"])
+                
+                # Create and activate the miner
+                miner_data = stored_order["miner_data"]
+                new_miner = {
+                    "_id": str(uuid.uuid4()),
+                    "user_id": stored_order["user_id"],
+                    "name": miner_data["name"],
+                    "hash_rate": miner_data["hash_rate"],
+                    "miner_type": "premium",
+                    "status": "active",
+                    "duration_hours": miner_data["duration_days"] * 24,
+                    "time_remaining": miner_data["duration_days"] * 24,
+                    "total_earned": 0.0,
+                    "purchase_price": stored_order["final_price"],
+                    "payment_method": "paypal",
+                    "payment_id": response.result.id,
+                    "activated_at": datetime.utcnow(),
+                    "expires_at": datetime.utcnow() + timedelta(days=miner_data["duration_days"]),
+                    "created_at": datetime.utcnow()
+                }
+                
+                miners_collection.insert_one(new_miner)
+                
+                # Update order status
+                db.paypal_orders.update_one(
+                    {"_id": token},
+                    {"$set": {
+                        "status": "completed",
+                        "captured_at": datetime.utcnow(),
+                        "miner_id": new_miner["_id"],
+                        "payment_details": response.result.dict()
+                    }}
+                )
+                
+                # Record transaction
+                transaction_record = {
+                    "_id": str(uuid.uuid4()),
+                    "user_id": stored_order["user_id"],
+                    "transaction_type": "miner_purchase",
+                    "amount": stored_order["final_price"],
+                    "currency": "USD",
+                    "payment_method": "paypal",
+                    "payment_id": response.result.id,
+                    "miner_id": new_miner["_id"],
+                    "miner_name": miner_data["name"],
+                    "description": f"Purchased {miner_data['name']} via PayPal",
+                    "promo_code": stored_order.get("promo_code"),
+                    "discount_amount": stored_order.get("discount_amount", 0),
+                    "created_at": datetime.utcnow()
+                }
+                transactions_collection.insert_one(transaction_record)
+                
+                logger.info(f"PayPal payment captured and miner activated: {new_miner['_id']}")
+                
+                # Return success page with auto-redirect
+                return HTMLResponse(content=f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+                    <title>Payment Successful!</title>
+                    <style>
+                        body {{
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                            color: white;
+                            padding: 20px;
+                        }}
+                        .container {{
+                            background: rgba(255, 255, 255, 0.1);
+                            border: 2px solid #d4af37;
+                            border-radius: 20px;
+                            padding: 40px;
+                            max-width: 500px;
+                            text-align: center;
+                            backdrop-filter: blur(10px);
+                        }}
+                        h1 {{
+                            color: #d4af37;
+                            margin: 0 0 20px 0;
+                            font-size: 28px;
+                        }}
+                        p {{
+                            font-size: 16px;
+                            line-height: 1.6;
+                            margin: 20px 0;
+                        }}
+                        .status {{
+                            font-size: 64px;
+                            margin-bottom: 20px;
+                            animation: bounce 1s infinite;
+                        }}
+                        @keyframes bounce {{
+                            0%, 100% {{ transform: translateY(0); }}
+                            50% {{ transform: translateY(-10px); }}
+                        }}
+                        .details {{
+                            background: rgba(0, 0, 0, 0.3);
+                            border-radius: 10px;
+                            padding: 20px;
+                            margin: 20px 0;
+                            text-align: left;
+                        }}
+                        .detail-row {{
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 10px 0;
+                            padding: 8px 0;
+                            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+                        }}
+                        .detail-label {{
+                            color: #d4af37;
+                            font-weight: bold;
+                        }}
+                        .button {{
+                            display: inline-block;
+                            background: #d4af37;
+                            color: #1a1a1a;
+                            padding: 15px 30px;
+                            border-radius: 10px;
+                            text-decoration: none;
+                            font-weight: bold;
+                            margin-top: 20px;
+                            transition: transform 0.2s;
+                        }}
+                        .button:hover {{
+                            transform: scale(1.05);
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="status">🎉</div>
+                        <h1>Payment Successful!</h1>
+                        <p>Your miner has been activated and is now earning Bitcoin!</p>
+                        
+                        <div class="details">
+                            <div class="detail-row">
+                                <span class="detail-label">Miner:</span>
+                                <span>{miner_data['name']}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Hash Rate:</span>
+                                <span>{miner_data['hash_rate']} GH/s</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Duration:</span>
+                                <span>{miner_data['duration_days']} days</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Amount Paid:</span>
+                                <span>${stored_order['final_price']:.2f}</span>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Redirecting you back to the app...</strong></p>
+                        <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+                    </div>
+                    <script>
+                        // Attempt deep link redirect
+                        setTimeout(function() {{
+                            window.location.href = 'exp://bitcoin-miner-sim';
+                        }}, 3000);
+                    </script>
+                </body>
+                </html>
+                """)
+            else:
+                raise Exception("Payment capture was not completed")
+                
+        except Exception as capture_error:
+            logger.error(f"Error capturing PayPal payment on return: {capture_error}")
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Processing Error</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">⚠️</div>
+                    <h1>Processing Error</h1>
+                    <p>There was an error processing your payment.</p>
+                    <p>If you were charged, your miner will be activated shortly. Please check your account or contact support.</p>
+                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+            
+    except Exception as e:
+        logger.error(f"Error in PayPal return handler: {e}")
+        return HTMLResponse(content="""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Error</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    color: white;
+                    padding: 20px;
+                }
+                .container {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 2px solid #d4af37;
+                    border-radius: 20px;
+                    padding: 40px;
+                    max-width: 500px;
+                    text-align: center;
+                    backdrop-filter: blur(10px);
+                }
+                h1 {
+                    color: #d4af37;
+                    margin: 0 0 20px 0;
+                    font-size: 28px;
+                }
+                p {
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin: 20px 0;
+                }
+                .status {
+                    font-size: 48px;
+                    margin-bottom: 20px;
+                }
+                .button {
+                    display: inline-block;
+                    background: #d4af37;
+                    color: #1a1a1a;
+                    padding: 15px 30px;
+                    border-radius: 10px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    transition: transform 0.2s;
+                }
+                .button:hover {
+                    transform: scale(1.05);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="status">❌</div>
+                <h1>Unexpected Error</h1>
+                <p>An unexpected error occurred.</p>
+                <p>Please contact support if you were charged.</p>
+                <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+            </div>
+        </body>
+        </html>
+        """)
+
+@app.get("/api/payments/paypal-cancel")
+async def paypal_cancel_handler():
+    """Handle PayPal cancellation"""
+    return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+        <title>Payment Cancelled</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                color: white;
+                padding: 20px;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid #d4af37;
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                text-align: center;
+                backdrop-filter: blur(10px);
+            }
+            h1 {
+                color: #d4af37;
+                margin: 0 0 20px 0;
+                font-size: 28px;
+            }
+            p {
+                font-size: 16px;
+                line-height: 1.6;
+                margin: 20px 0;
+            }
+            .status {
+                font-size: 48px;
+                margin-bottom: 20px;
+            }
+            .button {
+                display: inline-block;
+                background: #d4af37;
+                color: #1a1a1a;
+                padding: 15px 30px;
+                border-radius: 10px;
+                text-decoration: none;
+                font-weight: bold;
+                margin-top: 20px;
+                transition: transform 0.2s;
+            }
+            .button:hover {
+                transform: scale(1.05);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="status">🚫</div>
+            <h1>Payment Cancelled</h1>
+            <p>Your payment was cancelled.</p>
+            <p>No charges have been made to your account.</p>
+            <p>Redirecting you back to the app...</p>
+            <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+        </div>
+        <script>
+            setTimeout(function() {
+                window.location.href = 'exp://bitcoin-miner-sim';
+            }, 3000);
+        </script>
+    </body>
+    </html>
+    """)
+
 # Facebook Ads Integration Endpoints
 
 @app.post("/api/ads/daily-stats")
