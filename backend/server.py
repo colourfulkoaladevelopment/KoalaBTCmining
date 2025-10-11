@@ -1535,28 +1535,48 @@ async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> 
         
         def generate_signature(timestamp, method, path, body=""):
             """Generate HMAC SHA256 signature for NDAX API"""
+            # NDAX requires base64-decoded secret for HMAC
+            import json
             message = f"{timestamp}{method}{path}{body}"
+            
+            try:
+                # Try base64 decoding the secret
+                decoded_secret = base64.b64decode(ndax_api_secret)
+            except:
+                # If not base64, use as-is
+                decoded_secret = ndax_api_secret.encode('utf-8')
+            
             signature = hmac.new(
-                ndax_api_secret.encode('utf-8'),
+                decoded_secret,
                 message.encode('utf-8'),
                 hashlib.sha256
-            ).hexdigest()
-            return signature
+            ).digest()
+            
+            # Return base64-encoded signature
+            return base64.b64encode(signature).decode('utf-8')
         
         # Transaction 1: Send withdrawal amount to user's address
         timestamp = str(int(time.time()))
         method = "POST"
-        path = "/api/v3/withdrawals"
+        path = "/withdrawals/requests"
         
+        # Use address directly - NDAX will auto-create withdrawal account if needed
         user_withdrawal_body = {
-            "currency": "BTC",
+            "address": address,  # Use address directly instead of withdrawal_account_id
             "amount": str(amount),
-            "address": address,
-            "tag": withdrawal_id,
-            "network": "BTC"
+            "asset": "BTC",
+            "account_group": "00NDAX"  # Default account group
         }
         
-        body_json = str(user_withdrawal_body).replace("'", '"')
+        # Add participant code if available
+        if ndax_participant_code:
+            user_withdrawal_body["participant_code"] = ndax_participant_code
+        
+        # Add client ID for tracking
+        user_withdrawal_body["client_withdrawal_request_id"] = withdrawal_id
+        
+        import json
+        body_json = json.dumps(user_withdrawal_body)
         signature = generate_signature(timestamp, method, path, body_json)
         
         headers = {
