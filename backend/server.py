@@ -1630,14 +1630,18 @@ async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> 
             timestamp_fee = str(int(time.time()))
             
             fee_withdrawal_body = {
-                "currency": "BTC",
-                "amount": str(processing_fee),
                 "address": fee_collection_address,
-                "tag": f"fee_{withdrawal_id}",
-                "network": "BTC"
+                "amount": str(processing_fee),
+                "asset": "BTC",
+                "account_group": "00NDAX",
+                "client_withdrawal_request_id": f"fee_{withdrawal_id}"
             }
             
-            body_json_fee = str(fee_withdrawal_body).replace("'", '"')
+            # Add participant code if available
+            if ndax_participant_code:
+                fee_withdrawal_body["participant_code"] = ndax_participant_code
+            
+            body_json_fee = json.dumps(fee_withdrawal_body)
             signature_fee = generate_signature(timestamp_fee, method, path, body_json_fee)
             
             headers_fee = {
