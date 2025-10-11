@@ -85,7 +85,7 @@ export default function Invites() {
 
   const shareReferralCode = async () => {
     if (referralStats?.referral_code) {
-      const message = `Join me on Bitcoin Mining Simulator and start earning Bitcoin! Use my referral code: ${referralStats.referral_code}\n\n🎁 We both get a 100 GH/s miner for 30 days when you sign up!\n\nDownload: https://bitcoinmining.app`;
+      const message = `🐨 Join me on Koala Mining and start earning Bitcoin! Use my referral code: ${referralStats.referral_code}\n\n🎁 We both get a 100 GH/s miner for 30 days when you sign up!\n\nDownload: https://koalamining.app`;
       
       try {
         await Share.share({
