@@ -304,7 +304,7 @@ export default function Profile() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Bitcoin Mining Simulator {'\n'}
+            Koala Mining {'\n'}
             Educational Mining Experience
           </Text>
         </View>
