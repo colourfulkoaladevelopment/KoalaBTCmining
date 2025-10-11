@@ -167,7 +167,7 @@ export default function AuthScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.header}>
-            <Text style={styles.title}>Bitcoin Mining</Text>
+            <Text style={styles.title}>Koala Mining</Text>
             <Text style={styles.subtitle}>Start Mining Today</Text>
           </View>
 
