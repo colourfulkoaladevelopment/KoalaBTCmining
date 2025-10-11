@@ -496,16 +496,15 @@ Daily Earning Estimate: ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`,
           // Open PayPal checkout in browser
           await Linking.openURL(approvalUrl);
           
-          // Show instructions to user
+          // Show simple instructions - automatic redirect will handle the rest
           Alert.alert(
-            '🌐 PayPal Checkout',
-            'Please complete your payment in the browser. Once payment is complete, return to the app and tap "Payment Complete" to activate your miner.',
+            '🌐 PayPal Checkout Opened',
+            'Complete your payment in the browser.\n\nAfter payment, you\'ll be automatically redirected back to the app and your miner will be activated immediately.\n\n✅ No need to click anything manually!',
             [
-              { 
-                text: 'Payment Complete', 
-                onPress: () => confirmPayPalPayment(orderData.order_id, miner)
-              },
-              { text: 'Cancel', style: 'cancel' }
+              { text: 'OK', onPress: () => {
+                // Refresh data when they come back
+                setTimeout(() => loadAppData(), 5000);
+              }}
             ]
           );
         } else {
