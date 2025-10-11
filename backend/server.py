@@ -1517,7 +1517,9 @@ async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> 
         ndax_api_key = os.getenv("NDAX_API_KEY", "")
         ndax_api_secret = os.getenv("NDAX_API_SECRET", "")
         ndax_passphrase = os.getenv("NDAX_API_PASSPHRASE", "")
-        ndax_base_url = os.getenv("NDAX_BASE_URL", "https://api.ndax.io")
+        ndax_participant_code = os.getenv("NDAX_PARTICIPANT_CODE", "")
+        ndax_withdrawal_account_id = os.getenv("NDAX_WITHDRAWAL_ACCOUNT_ID", "")
+        ndax_base_url = os.getenv("NDAX_BASE_URL", "https://api.ndax.in")
         
         if not ndax_api_key or not ndax_api_secret:
             logger.warning("NDAX credentials not configured - using demo mode")
