@@ -2041,8 +2041,8 @@ async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = D
                 "brand_name": "Bitcoin Mining Simulator",
                 "landing_page": "BILLING",
                 "user_action": "PAY_NOW",
-                "return_url": f"{os.getenv('EXPO_PUBLIC_BACKEND_URL', 'http://localhost:8001')}/api/payments/paypal-return?order_id={uuid.uuid4()}&user_id={current_user['id']}",
-                "cancel_url": f"{os.getenv('EXPO_PUBLIC_BACKEND_URL', 'http://localhost:8001')}/api/payments/paypal-cancel"
+                "return_url": "https://bitcoin-miner-sim.preview.emergentagent.com/api/payments/paypal-return",
+                "cancel_url": "https://bitcoin-miner-sim.preview.emergentagent.com/api/payments/paypal-cancel"
             },
             "purchase_units": [{
                 "reference_id": f"{miner_id}_{current_user['id']}_{uuid.uuid4()}",
