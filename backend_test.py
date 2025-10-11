@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
 """
-Bitcoin Mining App - Coinbase Bitcoin Withdrawal Integration Re-Test
-Focus: Testing after user added BTC wallet to Coinbase account
-
-This test suite specifically tests the Coinbase Bitcoin withdrawal integration
-after the user has added a BTC wallet to their Coinbase account.
+NDAX Bitcoin Withdrawal Integration Test Suite
+Tests the /api/withdraw/bitcoin endpoint with NDAX integration
+Focus: Safe validation testing without live transactions
 """
 
 import requests
 import json
 import os
 import sys
-from datetime import datetime
 import time
+import hmac
+import hashlib
+from datetime import datetime
 
-# Configuration
+# Backend URL from frontend .env
 BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
-TEST_USER_EMAIL = "testuser@bitcoinminer.com"
-TEST_USER_PASSWORD = "TestPassword123!"
-TEST_USER_NAME = "Bitcoin Test User"
 
-# Test Bitcoin addresses (valid format but test addresses)
-VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid Bech32 address
+# Test user credentials (will register if needed)
+TEST_USER = {
+    "name": "NDAX Test User",
+    "email": "ndax.test@bitcoinminer.com", 
+    "password": "SecureTestPass123!"
+}
+
+# Test Bitcoin addresses for validation
+VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid mainnet address
 INVALID_BTC_ADDRESS = "invalid_address_format"
+EMPTY_ADDRESS = ""
 
-print(f"🚀 Bitcoin Mining App - Coinbase Integration Re-Test")
+print(f"🧪 NDAX Bitcoin Withdrawal Integration Test Suite")
 print(f"🔧 Testing API at: {BACKEND_URL}")
 print("=" * 80)
 
