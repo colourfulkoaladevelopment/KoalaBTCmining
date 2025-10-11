@@ -1504,6 +1504,168 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
         # Re-raise with a user-friendly message
         raise Exception(f"Coinbase withdrawal error: {str(e)}")
 
+async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using NDAX API with fee collection"""
+    try:
+        import requests
+        import hmac
+        import hashlib
+        import base64
+        import time
+        
+        # Check if we have NDAX credentials configured
+        ndax_api_key = os.getenv("NDAX_API_KEY", "")
+        ndax_api_secret = os.getenv("NDAX_API_SECRET", "")
+        ndax_passphrase = os.getenv("NDAX_API_PASSPHRASE", "")
+        ndax_base_url = os.getenv("NDAX_BASE_URL", "https://api.ndax.io")
+        
+        if not ndax_api_key or not ndax_api_secret:
+            logger.warning("NDAX credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
+        logger.info(f"Initializing NDAX withdrawal: {amount} BTC to {address}")
+        
+        def generate_signature(timestamp, method, path, body=""):
+            """Generate HMAC SHA256 signature for NDAX API"""
+            message = f"{timestamp}{method}{path}{body}"
+            signature = hmac.new(
+                ndax_api_secret.encode('utf-8'),
+                message.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            return signature
+        
+        # Transaction 1: Send withdrawal amount to user's address
+        timestamp = str(int(time.time()))
+        method = "POST"
+        path = "/api/v3/withdrawals"
+        
+        user_withdrawal_body = {
+            "currency": "BTC",
+            "amount": str(amount),
+            "address": address,
+            "tag": withdrawal_id,
+            "network": "BTC"
+        }
+        
+        body_json = str(user_withdrawal_body).replace("'", '"')
+        signature = generate_signature(timestamp, method, path, body_json)
+        
+        headers = {
+            "X-NDAX-API-KEY": ndax_api_key,
+            "X-NDAX-SIGNED": signature,
+            "X-NDAX-TIMESTAMP": timestamp,
+            "Content-Type": "application/json"
+        }
+        
+        if ndax_passphrase:
+            headers["X-NDAX-PASSPHRASE"] = ndax_passphrase
+        
+        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        
+        # Send user withdrawal
+        user_response = requests.post(
+            f"{ndax_base_url}{path}",
+            json=user_withdrawal_body,
+            headers=headers,
+            timeout=30
+        )
+        
+        user_tx_id = None
+        if user_response.status_code == 200 or user_response.status_code == 201:
+            user_result = user_response.json()
+            
+            # NDAX returns withdrawal ID in various possible fields
+            if 'id' in user_result:
+                user_tx_id = str(user_result['id'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            elif 'withdrawal_id' in user_result:
+                user_tx_id = str(user_result['withdrawal_id'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            elif 'ticket_number' in user_result:
+                user_tx_id = str(user_result['ticket_number'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            else:
+                logger.info(f"✅ User withdrawal submitted: {user_result}")
+                # Generate reference ID if no ID returned
+                import hashlib
+                ref_data = f"{withdrawal_id}{address}{amount}{datetime.utcnow().isoformat()}"
+                user_tx_id = hashlib.sha256(ref_data.encode()).hexdigest()[:16]
+        else:
+            error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
+        fee_tx_id = None
+        if processing_fee >= 0.00000001:
+            timestamp_fee = str(int(time.time()))
+            
+            fee_withdrawal_body = {
+                "currency": "BTC",
+                "amount": str(processing_fee),
+                "address": fee_collection_address,
+                "tag": f"fee_{withdrawal_id}",
+                "network": "BTC"
+            }
+            
+            body_json_fee = str(fee_withdrawal_body).replace("'", '"')
+            signature_fee = generate_signature(timestamp_fee, method, path, body_json_fee)
+            
+            headers_fee = {
+                "X-NDAX-API-KEY": ndax_api_key,
+                "X-NDAX-SIGNED": signature_fee,
+                "X-NDAX-TIMESTAMP": timestamp_fee,
+                "Content-Type": "application/json"
+            }
+            
+            if ndax_passphrase:
+                headers_fee["X-NDAX-PASSPHRASE"] = ndax_passphrase
+            
+            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            
+            try:
+                fee_response = requests.post(
+                    f"{ndax_base_url}{path}",
+                    json=fee_withdrawal_body,
+                    headers=headers_fee,
+                    timeout=30
+                )
+                
+                if fee_response.status_code == 200 or fee_response.status_code == 201:
+                    fee_result = fee_response.json()
+                    
+                    if 'id' in fee_result:
+                        fee_tx_id = str(fee_result['id'])
+                        logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    elif 'withdrawal_id' in fee_result:
+                        fee_tx_id = str(fee_result['withdrawal_id'])
+                        logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    else:
+                        logger.info(f"✅ Fee collection submitted")
+                else:
+                    logger.warning(f"Fee collection failed ({fee_response.status_code}): {fee_response.text}")
+            except Exception as fee_error:
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"Fee collection failed (user withdrawal still succeeded): {fee_error}")
+        else:
+            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+        
+        # Return user transaction ID (primary transaction)
+        return user_tx_id
+        
+    except Exception as e:
+        logger.error(f"NDAX withdrawal failed: {e}")
+        logger.error(f"Error details: {type(e).__name__}: {str(e)}")
+        # Re-raise with a user-friendly message
+        raise Exception(f"NDAX withdrawal error: {str(e)}")
+
 async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
     """Send Bitcoin using Blockchain.info API with fee collection"""
     try:
