@@ -666,8 +666,11 @@ Your miner is now active and earning Bitcoin!`,
       // Show Facebook Ad
       const adWatched = await showFacebookAd(currentAdType);
       
+      // Hide modal after ad
+      setShowAdModal(false);
+      
       // Only process reward for rewarded ads (miner_activation)
-      if (currentAdType === 'miner_activation') {
+      if (adWatched && currentAdType === 'miner_activation') {
         // Process ad reward on backend
         const token = await AsyncStorage.getItem('session_token');
         const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
