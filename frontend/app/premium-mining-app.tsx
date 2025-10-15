@@ -609,16 +609,40 @@ Your miner is now active and earning Bitcoin!`,
     }
   };
 
-  const simulateAd = (adType) => {
-    return new Promise((resolve) => {
+  const showFacebookAd = async (adType) => {
+    try {
+      // Import Facebook Ads dynamically
+      const { showInterstitialAd, showRewardedVideoAd, setupFacebookAds } = require('../utils/facebookAds');
+      
+      // Initialize Facebook Ads (test mode for now - set false for production)
+      setupFacebookAds(true);
+      
       setIsWatchingAd(true);
       
-      // Simulate ad duration (3 seconds)
-      setTimeout(() => {
-        setIsWatchingAd(false);
-        resolve(true);
-      }, 3000);
-    });
+      let success = false;
+      
+      if (adType === 'miner_activation') {
+        // Rewarded video ad
+        const result = await showRewardedVideoAd();
+        success = result.rewarded;
+      } else {
+        // Interstitial ad (app_launch or withdrawal)
+        const adCategory = adType === 'app_launch' ? 'app_launch' : 'withdrawal';
+        success = await showInterstitialAd(adCategory);
+      }
+      
+      setIsWatchingAd(false);
+      return success;
+      
+    } catch (error) {
+      console.error('Facebook Ad error:', error);
+      setIsWatchingAd(false);
+      
+      // Fallback: simulate ad if Facebook Ads fail
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(true), 2000);
+      });
+    }
   };
 
   const watchAd = async (adType) => {
