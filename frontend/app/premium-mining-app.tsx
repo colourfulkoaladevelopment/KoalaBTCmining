@@ -641,9 +641,11 @@ Your miner is now active and earning Bitcoin!`,
         WITHDRAWAL: '813994837846321_817034827542322'
       };
       
-      // Enable test mode
+      // Enable test mode (wrap in try-catch as it may not work on all platforms)
       try {
-        AdSettings.addTestDevice(AdSettings.currentDeviceHash);
+        if (AdSettings && AdSettings.addTestDevice && AdSettings.currentDeviceHash) {
+          AdSettings.addTestDevice(AdSettings.currentDeviceHash);
+        }
       } catch (e) {
         console.log('Could not set test device:', e);
       }
