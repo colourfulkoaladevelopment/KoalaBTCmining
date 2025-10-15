@@ -611,11 +611,22 @@ Your miner is now active and earning Bitcoin!`,
 
   const showFacebookAd = async (adType) => {
     try {
-      // Import Facebook Ads dynamically
-      const { showInterstitialAd, showRewardedVideoAd, setupFacebookAds } = require('../utils/facebookAds');
+      // Import Facebook Ads SDK
+      const { 
+        AdSettings, 
+        InterstitialAdManager,
+        RewardedVideoAdManager 
+      } = await import('expo-ads-facebook');
       
-      // Initialize Facebook Ads (test mode for now - set false for production)
-      setupFacebookAds(true);
+      // Facebook Placement IDs
+      const PLACEMENT_IDS = {
+        APP_LAUNCH: '813994837846321_817034327542372',
+        MINER: '813994837846321_817034650875673',
+        WITHDRAWAL: '813994837846321_817034827542322'
+      };
+      
+      // Enable test mode
+      AdSettings.addTestDevice(AdSettings.currentDeviceHash);
       
       setIsWatchingAd(true);
       
@@ -623,12 +634,29 @@ Your miner is now active and earning Bitcoin!`,
       
       if (adType === 'miner_activation') {
         // Rewarded video ad
-        const result = await showRewardedVideoAd();
-        success = result.rewarded;
+        try {
+          await RewardedVideoAdManager.showAd(PLACEMENT_IDS.MINER);
+          success = true;
+          console.log('Rewarded video ad completed');
+        } catch (adError) {
+          console.log('Rewarded video ad error:', adError.message);
+          if (adError.message?.includes('canceled')) {
+            success = false; // User closed ad early - no reward
+          } else {
+            success = true; // Other errors - give benefit of doubt
+          }
+        }
       } else {
         // Interstitial ad (app_launch or withdrawal)
-        const adCategory = adType === 'app_launch' ? 'app_launch' : 'withdrawal';
-        success = await showInterstitialAd(adCategory);
+        const placementId = adType === 'app_launch' ? PLACEMENT_IDS.APP_LAUNCH : PLACEMENT_IDS.WITHDRAWAL;
+        try {
+          await InterstitialAdManager.showAd(placementId);
+          success = true;
+          console.log('Interstitial ad shown');
+        } catch (adError) {
+          console.log('Interstitial ad error:', adError.message);
+          success = true; // Still consider it successful for non-rewarded ads
+        }
       }
       
       setIsWatchingAd(false);
