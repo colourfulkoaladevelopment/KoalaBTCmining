@@ -652,8 +652,10 @@ Your miner is now active and earning Bitcoin!`,
         return;
       }
 
+      // Directly show Facebook ad without modal
       setCurrentAdType(adType);
-      setShowAdModal(true);
+      await handleAdWatch();
+      
     } catch (error) {
       Alert.alert('Error', 'Failed to load ad. Please try again.');
     }
