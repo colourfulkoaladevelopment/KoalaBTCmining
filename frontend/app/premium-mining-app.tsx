@@ -661,8 +661,8 @@ Your miner is now active and earning Bitcoin!`,
 
   const handleAdWatch = async () => {
     try {
-      // Simulate watching the ad
-      await simulateAd(currentAdType);
+      // Show Facebook Ad
+      const adWatched = await showFacebookAd(currentAdType);
       
       // Only process reward for rewarded ads (miner_activation)
       if (currentAdType === 'miner_activation') {
