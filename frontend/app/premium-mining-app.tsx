@@ -611,12 +611,28 @@ Your miner is now active and earning Bitcoin!`,
 
   const showFacebookAd = async (adType) => {
     try {
+      // Check if running on native platform (Facebook Ads only work on iOS/Android)
+      if (Platform.OS === 'web') {
+        console.log('Facebook Ads not supported on web - using simulation');
+        setIsWatchingAd(true);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        setIsWatchingAd(false);
+        return true;
+      }
+      
       // Import Facebook Ads SDK
-      const { 
-        AdSettings, 
-        InterstitialAdManager,
-        RewardedVideoAdManager 
-      } = await import('expo-ads-facebook');
+      const facebookAds = await import('expo-ads-facebook');
+      
+      // Check if modules loaded correctly
+      if (!facebookAds.AdSettings || !facebookAds.InterstitialAdManager || !facebookAds.RewardedVideoAdManager) {
+        console.log('Facebook Ads SDK not available - using simulation');
+        setIsWatchingAd(true);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        setIsWatchingAd(false);
+        return true;
+      }
+      
+      const { AdSettings, InterstitialAdManager, RewardedVideoAdManager } = facebookAds;
       
       // Facebook Placement IDs
       const PLACEMENT_IDS = {
@@ -626,7 +642,11 @@ Your miner is now active and earning Bitcoin!`,
       };
       
       // Enable test mode
-      AdSettings.addTestDevice(AdSettings.currentDeviceHash);
+      try {
+        AdSettings.addTestDevice(AdSettings.currentDeviceHash);
+      } catch (e) {
+        console.log('Could not set test device:', e);
+      }
       
       setIsWatchingAd(true);
       
@@ -639,8 +659,8 @@ Your miner is now active and earning Bitcoin!`,
           success = true;
           console.log('Rewarded video ad completed');
         } catch (adError) {
-          console.log('Rewarded video ad error:', adError.message);
-          if (adError.message?.includes('canceled')) {
+          console.log('Rewarded video ad error:', adError?.message || adError);
+          if (adError?.message?.includes('canceled')) {
             success = false; // User closed ad early - no reward
           } else {
             success = true; // Other errors - give benefit of doubt
@@ -654,7 +674,7 @@ Your miner is now active and earning Bitcoin!`,
           success = true;
           console.log('Interstitial ad shown');
         } catch (adError) {
-          console.log('Interstitial ad error:', adError.message);
+          console.log('Interstitial ad error:', adError?.message || adError);
           success = true; // Still consider it successful for non-rewarded ads
         }
       }
@@ -667,9 +687,14 @@ Your miner is now active and earning Bitcoin!`,
       setIsWatchingAd(false);
       
       // Fallback: simulate ad if Facebook Ads fail
-      return new Promise((resolve) => {
-        setTimeout(() => resolve(true), 2000);
-      });
+      console.log('Using ad simulation fallback');
+      Alert.alert(
+        '📱 Ad Simulation',
+        'Facebook Ads only work on real iOS/Android devices. This is a simulated ad for testing purposes.',
+        [{ text: 'OK' }]
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return true;
     }
   };
 
