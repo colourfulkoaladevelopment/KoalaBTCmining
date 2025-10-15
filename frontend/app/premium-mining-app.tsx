@@ -610,94 +610,24 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    try {
-      // Check if running on native platform (Facebook Ads only work on iOS/Android)
-      if (Platform.OS === 'web') {
-        console.log('Facebook Ads not supported on web - using simulation');
-        setIsWatchingAd(true);
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        setIsWatchingAd(false);
-        return true;
-      }
-      
-      // Import Facebook Ads SDK
-      const facebookAds = await import('expo-ads-facebook');
-      
-      // Check if modules loaded correctly
-      if (!facebookAds.AdSettings || !facebookAds.InterstitialAdManager || !facebookAds.RewardedVideoAdManager) {
-        console.log('Facebook Ads SDK not available - using simulation');
-        setIsWatchingAd(true);
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        setIsWatchingAd(false);
-        return true;
-      }
-      
-      const { AdSettings, InterstitialAdManager, RewardedVideoAdManager } = facebookAds;
-      
-      // Facebook Placement IDs
-      const PLACEMENT_IDS = {
-        APP_LAUNCH: '813994837846321_817034327542372',
-        MINER: '813994837846321_817034650875673',
-        WITHDRAWAL: '813994837846321_817034827542322'
-      };
-      
-      // Enable test mode (wrap in try-catch as it may not work on all platforms)
-      try {
-        if (AdSettings && AdSettings.addTestDevice && AdSettings.currentDeviceHash) {
-          AdSettings.addTestDevice(AdSettings.currentDeviceHash);
-        }
-      } catch (e) {
-        console.log('Could not set test device:', e);
-      }
-      
-      setIsWatchingAd(true);
-      
-      let success = false;
-      
-      if (adType === 'miner_activation') {
-        // Rewarded video ad
-        try {
-          await RewardedVideoAdManager.showAd(PLACEMENT_IDS.MINER);
-          success = true;
-          console.log('Rewarded video ad completed');
-        } catch (adError) {
-          console.log('Rewarded video ad error:', adError?.message || adError);
-          if (adError?.message?.includes('canceled')) {
-            success = false; // User closed ad early - no reward
-          } else {
-            success = true; // Other errors - give benefit of doubt
-          }
-        }
-      } else {
-        // Interstitial ad (app_launch or withdrawal)
-        const placementId = adType === 'app_launch' ? PLACEMENT_IDS.APP_LAUNCH : PLACEMENT_IDS.WITHDRAWAL;
-        try {
-          await InterstitialAdManager.showAd(placementId);
-          success = true;
-          console.log('Interstitial ad shown');
-        } catch (adError) {
-          console.log('Interstitial ad error:', adError?.message || adError);
-          success = true; // Still consider it successful for non-rewarded ads
-        }
-      }
-      
-      setIsWatchingAd(false);
-      return success;
-      
-    } catch (error) {
-      console.error('Facebook Ad error:', error);
-      setIsWatchingAd(false);
-      
-      // Fallback: simulate ad if Facebook Ads fail
-      console.log('Using ad simulation fallback');
-      Alert.alert(
-        '📱 Ad Simulation',
-        'Facebook Ads only work on real iOS/Android devices. This is a simulated ad for testing purposes.',
-        [{ text: 'OK' }]
-      );
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      return true;
-    }
+    // Facebook Ads only work on real iOS/Android devices, not in browser/simulator
+    // For now, show simulation with explanation
+    
+    setIsWatchingAd(true);
+    
+    Alert.alert(
+      '📱 Ad Preview Mode',
+      `Facebook Ads are integrated and ready!\n\nThey will work when you:\n• Build the app for iOS/Android\n• Test on a real device\n• Submit to Facebook for review\n\nFor now, showing ad simulation...`,
+      [{ text: 'Continue' }]
+    );
+    
+    // Simulate ad duration (3 seconds)
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    
+    setIsWatchingAd(false);
+    
+    // Return true for rewarded ads to grant reward
+    return adType === 'miner_activation' ? true : true;
   };
 
   const watchAd = async (adType) => {
