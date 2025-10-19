@@ -23,6 +23,7 @@
       }
     },
     "android": {
+      "package": "com.koalamining.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
