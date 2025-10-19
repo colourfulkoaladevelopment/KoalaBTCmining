@@ -309,7 +309,7 @@ index 1d3a48e..e69de29 100644
 -----+from datetime import datetime
 -----+
 -----+# Backend URL
------+BASE_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
+-----+BASE_URL = "https://koala-crypto.preview.emergentagent.com/api"
 -----+
 -----+def test_coinbase_withdrawal():
 -----+    """Test Coinbase withdrawal with detailed error reporting"""
@@ -484,7 +484,7 @@ index 1d3a48e..e69de29 100644
 -----+load_dotenv("/app/backend/.env")
 -----+
 -----+# Backend URL
------+BASE_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
+-----+BASE_URL = "https://koala-crypto.preview.emergentagent.com/api"
 -----+
 -----+class CoinbaseWithdrawalTester:
 -----+    def __init__(self):
@@ -1424,7 +1424,7 @@ index 1d3a48e..e69de29 100644
 ---------------+            setIsLoading(true);
 --------------- 
 ----------------    try {
-----------------      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://bitcoin-miner-sim.preview.emergentagent.com';
+----------------      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://koala-crypto.preview.emergentagent.com';
 ----------------      const url = `${backendUrl}/api/auth/reset-password`;
 ----------------      
 ----------------      console.log('Backend URL:', backendUrl);
@@ -1433,7 +1433,7 @@ index 1d3a48e..e69de29 100644
 ----------------      console.log('Making request to:', url);
 ----------------      console.log('Request body:', { token: token, new_password: '[HIDDEN]' });
 ---------------+            try {
----------------+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://bitcoin-miner-sim.preview.emergentagent.com';
+---------------+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://koala-crypto.preview.emergentagent.com';
 ---------------+              const url = `${backendUrl}/api/auth/reset-password`;
 ---------------+              
 ---------------+              console.log('Making API call to:', url);
@@ -1548,7 +1548,7 @@ index 1d3a48e..e69de29 100644
 ----------------+                msg['Subject'] = "Bitcoin Mining App - Password Reset"
 ----------------+                
 ----------------+                # Create HTML email body with reset instructions
-----------------+                reset_link = f"https://bitcoin-miner-sim.preview.emergentagent.com/reset-password?token={reset_token}"
+----------------+                reset_link = f"https://koala-crypto.preview.emergentagent.com/reset-password?token={reset_token}"
 ----------------+                email_body = f"""
 ----------------+                <html>
 ----------------+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1650,7 +1650,7 @@ index 1d3a48e..e69de29 100644
 ------------------+load_dotenv()
 ------------------+
 ------------------+# Get backend URL from environment
-------------------+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com"
+------------------+BACKEND_URL = "https://koala-crypto.preview.emergentagent.com"
 ------------------+API_BASE = f"{BACKEND_URL}/api"
 ------------------+
 ------------------+class FacebookAdsBackendTester:
@@ -6083,7 +6083,7 @@ index 1d3a48e..e69de29 100644
 ------------------+import requests
 ------------------+import time
 ------------------+
-------------------+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com"
+------------------+BACKEND_URL = "https://koala-crypto.preview.emergentagent.com"
 ------------------+API_BASE = f"{BACKEND_URL}/api"
 ------------------+
 ------------------+def test_daily_limit():
@@ -6274,7 +6274,7 @@ index 1d3a48e..e69de29 100644
 ---+from datetime import datetime
 ---+
 ---+# Backend URL from frontend .env
----+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
+---+BACKEND_URL = "https://koala-crypto.preview.emergentagent.com/api"
 ---+
 ---+# Test user credentials
 ---+TEST_USER = {
@@ -6649,7 +6649,7 @@ index 1d3a48e..e69de29 100644
 ---+from datetime import datetime
 ---+
 ---+# Backend URL from frontend .env
----+BACKEND_URL = "https://bitcoin-miner-sim.preview.emergentagent.com/api"
+---+BACKEND_URL = "https://koala-crypto.preview.emergentagent.com/api"
 ---+
 ---+# Test user credentials (will register if needed)
 ---+TEST_USER = {

@@ -1,0 +1,90 @@
+<analysis>
+The AI engineer's work, now passed to me, details the ongoing development of the Koala Mining mobile app. The initial focus was on fixing a Blockchain.info API 404 error, which led to a series of crypto withdrawal API migrations: from Blockchain.info (deprecated) to Coinbase (found unsuited for withdrawals), then NDAX (required IP whitelisting), and finally to Kraken API. Kraken integration and configuration with the provided credentials are now complete. Alongside this, the PayPal payment flow was refined to ensure automatic capture and proper redirection after payment, resolving double payment issues. The app underwent a rebranding to Koala Mining with a new logo across the frontend and some backend messages. Lastly, the Facebook Audience Network was integrated directly, without a mediation platform, with provided credentials. The system includes a fallback for Expo Go environments. The immediate task involves generating a production APK via EAS Build, which currently faces issues with GitHub integration. The AI engineer is now tasked with using a directly provided Expo Access Token to trigger the EAS build.
+</analysis>
+
+<product_requirements>
+The Koala Mining application is a Bitcoin mining simulator with real financial integrations. It features a dashboard (simulated BTC, hash rate, miners), 4-tab navigation, free/ad miners, an in-app store, a referral system, and a profile section. Authentication is via Google/email. Key enhancements include a black marble and gold theme, Forgot Password flow, real BTC withdrawals (min 0.00001 BTC, 0.5% fee absorbed network fees), auto-activating purchased miners, and a loading progress bar. Real-time balance updates (1-second), accurate Total Earned/Total Cashed Out, and 14-decimal display for BTC amounts are crucial. Monetization involves real Bitcoin withdrawals (currently via Kraken API) and PayPal for miner purchases, with Facebook Ads integrated for app launch, ad miners, and withdrawal clicks (0-30 daily ad counter, non-rewarded for launch/withdrawal). User feedback has driven refinements in ad logic, dashboard layout, withdrawal process (now 0.5% fee to a specified address), and live BTC pricing. The app has recently been rebranded to Koala Mining with a new logo.
+</product_requirements>
+
+<key_technical_concepts>
+- **Frameworks**: Expo (React Native), FastAPI (Python backend).
+- **Database**: MongoDB.
+- **Navigation**: .
+- **UI**: , .
+- **Backend Comms**: REST APIs (FastAPI), .
+- **Payment & Crypto**: PayPal SDK, Kraken API (for withdrawals),  Python library.
+- **Ads**: Facebook Audience Network SDK ().
+- **Build System**: EAS Build.
+</key_technical_concepts>
+
+<code_architecture>
+The application follows a client-server architecture, with an Expo (React Native) frontend communicating with a FastAPI backend, both interacting with a MongoDB database. Routing in the frontend is file-based using .
+
+
+
+- ****
+    - **Importance**: Contains all backend API endpoints for authentication, user management, miner operations, earnings tracking, referrals, contact forms, payment processing, and Bitcoin withdrawals.
+    - **Changes**:
+        -  and  functions were replaced/removed due to API deprecation or lack of withdrawal support.
+        -  was implemented and later abandoned due to IP whitelisting requirements.
+        - ****: Newly added for Bitcoin withdrawals, handling API calls, authentication (key/secret), and fee collection (0.5% to ).
+        - **PayPal Endpoints**: Modified  to include  and  for automatic post-payment redirection. Added  and  to handle these redirects and capture payments.
+        - **Facebook Ads Endpoints**: Existing , ,  are ready for real ad integration.
+        - Rebranding: Updated various user-facing strings from Bitcoin Mining to Koala Mining.
+- ****
+    - **Importance**: Stores environment variables for MongoDB, JWT, Gmail, PayPal, and various cryptocurrency APIs.
+    - **Changes**:
+        - , ,  are effectively deprecated.
+        - , , , ,  were added and later removed/unused.
+        - ****, ****: Added for Kraken API integration.
+        - ****: Confirmed .
+        - ****, ****, ****, ****: Added for Facebook Audience Network.
+        - ****: Confirmed as .
+- ****
+    - **Importance**: Lists Python package dependencies.
+    - **Changes**: Added  for Kraken API interaction.
+- ****
+    - **Importance**: The main screen of the application, encompassing dashboard, store, invites, and profile.
+    - **Changes**:
+        - **PayPal Flow**: Removed manual user alerts for payment completion, relying on backend redirects.
+        - **Facebook Ads**: Integrated  for real ad calls. Removed a custom React Native  component that caused a double popup with Facebook Ads. Implemented  checks to simulate ads for web/Expo Go previews and use native  on physical devices.
+        - **Rebranding**: Updated numerous text elements to Koala Mining.
+- ****
+    - **Importance**: Expo application manifest.
+    - **Changes**: Updated  to Koala Mining,  to . Added , , and  for EAS builds and Facebook Ads SDK.
+- ****
+    - **Importance**: The new application icon and logo.
+    - **Changes**: Downloaded and set as the app icon.
+- ****
+    - **Importance**: A new utility file to encapsulate Facebook Ads logic.
+    - **Changes**: Created to handle  initialization, loading, and display of interstitial and rewarded ads. Includes logic for test ad IDs and platform-specific fallback.
+- ****
+    - **Importance**: Configuration file for Expo Application Services (EAS) builds.
+    - **Changes**: Manually created to define build profiles (e.g., ).
+</code_architecture>
+
+<pending_tasks>
+- Finalize miner logic for expired miners (moving to a dedicated section, renewal prompts).
+- Add extra padding below the navigation bar.
+- Implement the ads on app launch trigger for Facebook Ads (needs final check and device testing).
+- Implement the ad on withdraw click trigger for Facebook Ads (needs final check and device testing).
+- Implement the ad counter (0-30/day) and daily reset logic for ad miners on the frontend.
+</pending_tasks>
+
+<current_work>
+Immediately before this summary request, the AI engineer was focused on preparing the application for a production build using Expo Application Services (EAS). This was necessary because Facebook Ads, now integrated, require a native build (APK/IPA) and do not function in the Expo Go preview app.
+
+The user initially requested a production APK. After attempts to trigger An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username directly from the environment failed due to the project not being registered with Expo, the AI engineer successfully pushed the entire frontend codebase to a GitHub repository provided by the user () using a GitHub Personal Access Token.
+
+However, the user reported that the Import from GitHub button on the Expo.dev website was grayed out and unresponsive. To circumvent this, the user then provided a new Expo Access Token ().
+
+The current state is that the code for the Koala Mining app, including the Kraken API for BTC withdrawals, PayPal payment flow fixes, and Facebook Ads integration, is ready. The frontend code is committed and pushed to GitHub. The AI engineer has the necessary Expo Access Token to initiate a production APK build directly via the EAS CLI, bypassing the web UI issues.
+</current_work>
+
+<optional_next_step>
+Trigger a production Android APK build via EAS CLI using the latest Expo access token to enable real Facebook Ads testing on a physical device.
+</optional_next_step>
+

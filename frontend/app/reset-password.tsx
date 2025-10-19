@@ -63,7 +63,7 @@ export default function ResetPasswordScreen() {
             setIsLoading(true);
 
             try {
-              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://bitcoin-miner-sim.preview.emergentagent.com';
+              const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://koala-crypto.preview.emergentagent.com';
               const url = `${backendUrl}/api/auth/reset-password`;
               
               console.log('Making API call to:', url);

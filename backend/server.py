@@ -2057,7 +2057,7 @@ async def forgot_password(email_data: Dict[str, str]):
                 msg['Subject'] = "Bitcoin Mining App - Password Reset"
                 
                 # Create HTML email body with reset instructions
-                reset_link = f"https://bitcoin-miner-sim.preview.emergentagent.com/reset.html?token={reset_token}"
+                reset_link = f"https://koala-crypto.preview.emergentagent.com/reset.html?token={reset_token}"
                 email_body = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -2377,8 +2377,8 @@ async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = D
                 "brand_name": "Koala Mining",
                 "landing_page": "BILLING",
                 "user_action": "PAY_NOW",
-                "return_url": "https://bitcoin-miner-sim.preview.emergentagent.com/api/payments/paypal-return",
-                "cancel_url": "https://bitcoin-miner-sim.preview.emergentagent.com/api/payments/paypal-cancel"
+                "return_url": "https://koala-crypto.preview.emergentagent.com/api/payments/paypal-return",
+                "cancel_url": "https://koala-crypto.preview.emergentagent.com/api/payments/paypal-cancel"
             },
             "purchase_units": [{
                 "reference_id": f"{miner_id}_{current_user['id']}_{uuid.uuid4()}",
