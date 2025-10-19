@@ -740,23 +740,11 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
         return;
       }
       
-      // Show forced ad after 2 seconds delay
+      // Auto-play ad after 2 seconds delay without confirmation
       setTimeout(() => {
-        Alert.alert(
-          '📺 Welcome!',
-          'Please watch this brief advertisement to continue.',
-          [
-            { 
-              text: 'Continue', 
-              onPress: () => {
-                // Mark as shown for this session
-                AsyncStorage.setItem('app_launch_ad_shown', 'true');
-                showForcedAd('app_launch');
-              }
-            }
-          ],
-          { cancelable: false } // Make it non-dismissible
-        );
+        // Mark as shown for this session
+        AsyncStorage.setItem('app_launch_ad_shown', 'true');
+        showForcedAd('app_launch');
       }, 2000);
     } catch (error) {
       console.error('Error triggering app launch ad:', error);
