@@ -611,18 +611,12 @@ Your miner is now active and earning Bitcoin!`,
 
   const showFacebookAd = async (adType) => {
     // Facebook Ads SDK temporarily removed from build due to compatibility issues
-    // Will be re-integrated in next update with alternative SDK
+    // Silently handle ad display without showing alerts to user
     
     setIsWatchingAd(true);
     
-    Alert.alert(
-      '📱 Ad System',
-      `Facebook Ads integration is being updated for better compatibility.\n\nFor now, you can still use the app normally. Ads will be re-enabled in the next update!`,
-      [{ text: 'Continue' }]
-    );
-    
-    // Simulate ad duration (2 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Simulate brief ad duration without user interruption
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     
     setIsWatchingAd(false);
     return true; // Always return true to not block user
