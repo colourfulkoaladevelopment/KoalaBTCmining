@@ -821,8 +821,15 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
       return;
     }
 
-    // Show forced non-rewarded ad before withdrawal (single confirmation)
-    showForcedAd('withdrawal');
+    // Check if user can watch more ads today
+    if (adStats.can_watch_ad) {
+      // Show forced non-rewarded ad before withdrawal
+      showForcedAd('withdrawal');
+    } else {
+      // Daily limit reached, proceed directly to withdrawal
+      console.log('Daily ad limit reached, skipping withdrawal ad');
+      proceedWithWithdrawal();
+    }
   };
 
   const proceedWithWithdrawal = async () => {
