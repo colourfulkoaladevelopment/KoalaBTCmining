@@ -942,6 +942,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             });
             await AsyncStorage.removeItem('session_token');
             await AsyncStorage.removeItem('user_data');
+            await AsyncStorage.removeItem('app_launch_ad_shown'); // Clear app launch ad flag
             setUser(null);
             setWalletData(null);
             setMiners([]);
