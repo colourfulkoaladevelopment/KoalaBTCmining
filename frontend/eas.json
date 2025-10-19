@@ -18,8 +18,7 @@
     },
     "production": {
       "android": {
-        "buildType": "apk",
-        "credentialsSource": "local"
+        "buildType": "apk"
       },
       "ios": {
         "buildConfiguration": "Release"
