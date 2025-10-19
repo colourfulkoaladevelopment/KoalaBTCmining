@@ -1,36 +1,25 @@
 #!/usr/bin/env python3
 """
-NDAX Bitcoin Withdrawal Integration Test Suite
-Tests the /api/withdraw/bitcoin endpoint with NDAX integration
-Focus: Safe validation testing without live transactions
+Comprehensive Backend Testing for Facebook Ads Integration
+Testing all Facebook Ads endpoints after frontend integration updates
 """
 
 import requests
 import json
-import os
-import sys
 import time
-import hmac
-import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
 
-# Backend URL from frontend .env
-BACKEND_URL = "https://koala-crypto.preview.emergentagent.com/api"
+# Load environment variables
+load_dotenv()
 
-# Test user credentials (will register if needed)
-TEST_USER = {
-    "name": "NDAX Test User",
-    "email": "ndax.test@bitcoinminer.com", 
-    "password": "SecureTestPass123!"
-}
+# Get backend URL from frontend .env
+BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://koala-crypto.preview.emergentagent.com")
+API_BASE = f"{BACKEND_URL}/api"
 
-# Test Bitcoin addresses for validation
-VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid mainnet address
-INVALID_BTC_ADDRESS = "invalid_address_format"
-EMPTY_ADDRESS = ""
-
-print(f"🧪 NDAX Bitcoin Withdrawal Integration Test Suite")
-print(f"🔧 Testing API at: {BACKEND_URL}")
+print(f"🧪 Facebook Ads Backend Integration Test Suite")
+print(f"🔧 Testing API at: {API_BASE}")
 print("=" * 80)
 
 class NDXAWithdrawalTester:
