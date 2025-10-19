@@ -414,6 +414,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "✅ COMPLETE FACEBOOK ADS FRONTEND INTEGRATION: Added comprehensive Facebook Ads integration with placeholder/simulated ads as requested. Features implemented: 1) App launch ad trigger (shows after login with 2-second delay, once per session), 2) Withdrawal ad trigger (optional ad before BTC withdrawal), 3) Daily ad counter display (0-30/day with progress bar and visual indicators), 4) Ad modal with 3-second simulated ad playback and proper loading states, 5) Backend integration with /api/ads/watch and /api/ads/daily-stats endpoints, 6) Ad miner rewards system (+2 GH/s for 24h per ad watched), 7) Manual 'Watch Ad' button in dashboard for miner activation ads. All ad triggers implemented with user-friendly UI, proper state management, and error handling. Fully integrated with existing app functionality and ready for testing."
+      - working: "NA"
+        agent: "main"
+        comment: "✅ ENHANCED FACEBOOK ADS INTEGRATION: Updated all three ad triggers to properly track in backend and respect daily limits. Changes: 1) Updated showFacebookAd() to use real Facebook SDK on iOS/Android devices (imports facebookAds.ts utilities dynamically), falls back to simulation on web/Expo Go. 2) Modified handleAdWatch() to call /api/ads/watch backend endpoint for ALL ad types (app_launch, withdrawal, miner_activation) to properly increment daily counter. 3) Updated triggerAppLaunchAd() to check daily ad limit before showing ad. 4) Updated handleWithdraw() to check daily limit and skip ad if limit reached. 5) Added app_launch_ad_shown flag clearing on logout for proper session tracking. All ad types now properly integrated with backend tracking system and respect 0-30 daily limit."
 
 metadata:
   created_by: "main_agent"
