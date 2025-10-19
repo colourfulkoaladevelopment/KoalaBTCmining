@@ -10,6 +10,7 @@
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.koalamining.app",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app uses ads to provide free mining bonuses.",
         "SKAdNetworkItems": [
