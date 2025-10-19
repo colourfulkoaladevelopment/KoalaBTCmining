@@ -766,8 +766,19 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
 
   // Trigger forced non-rewarded ad on app launch (once per session)
   const triggerAppLaunchAd = async () => {
-    const hasSeenAppLaunchAd = await AsyncStorage.getItem('app_launch_ad_shown');
-    if (!hasSeenAppLaunchAd) {
+    try {
+      // Check if already shown in this session
+      const hasSeenAppLaunchAd = await AsyncStorage.getItem('app_launch_ad_shown');
+      if (hasSeenAppLaunchAd) {
+        return; // Already shown in this session
+      }
+      
+      // Check if user has reached daily ad limit
+      if (!adStats.can_watch_ad) {
+        console.log('Daily ad limit reached, skipping app launch ad');
+        return;
+      }
+      
       // Show forced ad after 2 seconds delay
       setTimeout(() => {
         Alert.alert(
@@ -777,6 +788,7 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
             { 
               text: 'Continue', 
               onPress: () => {
+                // Mark as shown for this session
                 AsyncStorage.setItem('app_launch_ad_shown', 'true');
                 showForcedAd('app_launch');
               }
@@ -785,6 +797,8 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
           { cancelable: false } // Make it non-dismissible
         );
       }, 2000);
+    } catch (error) {
+      console.error('Error triggering app launch ad:', error);
     }
   };
 
