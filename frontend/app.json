@@ -47,16 +47,7 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
-      [
-        "expo-ads-facebook",
-        {
-          "userTrackingPermission": "This app uses ads to provide free mining bonuses.",
-          "advertiserIDCollectionEnabled": true,
-          "facebookAppId": "813994837846321",
-          "facebookDisplayName": "Koala Mining"
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
