@@ -610,55 +610,22 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    // Check if running on actual device (not web/Expo Go)
-    const isRealDevice = Platform.OS === 'ios' || Platform.OS === 'android';
+    // Facebook Ads SDK temporarily removed from build due to compatibility issues
+    // Will be re-integrated in next update with alternative SDK
     
     setIsWatchingAd(true);
     
-    try {
-      if (isRealDevice) {
-        // Real device - attempt to show actual Facebook Ad
-        console.log(`Showing real Facebook ad: ${adType}`);
-        
-        // Dynamically import Facebook Ads utilities
-        const { showInterstitialAd, showRewardedVideoAd } = await import('../utils/facebookAds');
-        
-        let adResult = false;
-        
-        if (adType === 'miner_activation') {
-          // Rewarded video ad
-          const result = await showRewardedVideoAd();
-          adResult = result.watched && result.rewarded;
-        } else {
-          // Interstitial ad (app_launch or withdrawal)
-          adResult = await showInterstitialAd(adType as 'app_launch' | 'withdrawal');
-        }
-        
-        setIsWatchingAd(false);
-        return adResult;
-        
-      } else {
-        // Web/Expo Go - show simulation
-        Alert.alert(
-          '📱 Ad Preview Mode',
-          `Facebook Ads are integrated and ready!\n\nThey will work when you:\n• Build the app for iOS/Android\n• Test on a real device\n\nFor now, showing ad simulation...`,
-          [{ text: 'Continue' }]
-        );
-        
-        // Simulate ad duration (3 seconds)
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        
-        setIsWatchingAd(false);
-        return true; // Always return true in simulation mode
-      }
-    } catch (error) {
-      console.error('Error showing Facebook ad:', error);
-      setIsWatchingAd(false);
-      
-      // Fallback - still return true to not block user
-      Alert.alert('Ad Unavailable', 'Ad could not be loaded. Continuing...');
-      return true;
-    }
+    Alert.alert(
+      '📱 Ad System',
+      `Facebook Ads integration is being updated for better compatibility.\n\nFor now, you can still use the app normally. Ads will be re-enabled in the next update!`,
+      [{ text: 'Continue' }]
+    );
+    
+    // Simulate ad duration (2 seconds)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    setIsWatchingAd(false);
+    return true; // Always return true to not block user
   };
 
   const watchAd = async (adType) => {
