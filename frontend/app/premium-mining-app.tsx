@@ -685,24 +685,34 @@ Your miner is now active and earning Bitcoin!`,
       // Hide modal after ad
       setShowAdModal(false);
       
-      // Only process reward for rewarded ads (miner_activation)
-      if (adWatched && currentAdType === 'miner_activation') {
-        // Process ad reward on backend
-        const token = await AsyncStorage.getItem('session_token');
-        const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ad_type: currentAdType
-          })
-        });
+      if (!adWatched) {
+        Alert.alert('Ad Canceled', 'You must watch the ad to continue.');
+        setCurrentAdType(null);
+        return;
+      }
 
-        const result = await response.json();
+      // Process ad view on backend for ALL ad types (to track counter)
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ad_type: currentAdType
+        })
+      });
 
-        if (response.ok) {
+      const result = await response.json();
+
+      if (response.ok) {
+        // Refresh ad stats after watching any ad
+        await loadAdStats();
+        
+        // Handle based on ad type
+        if (currentAdType === 'miner_activation') {
+          // Rewarded ad - show reward details
           Alert.alert(
             '🎉 Ad Reward Earned!',
             `${result.message}
@@ -714,30 +724,34 @@ Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_dail
               text: 'Awesome!', 
               onPress: () => {
                 loadAppData(); // Refresh app data to show new miner
-                loadAdStats(); // Refresh ad stats
               }
             }]
           );
-        } else {
-          Alert.alert('Error', result.detail || 'Failed to process ad reward');
-        }
-      } else {
-        // Non-rewarded forced ads - just close modal
-        Alert.alert('Thank you!', 'Thank you for watching the advertisement.', [{
-          text: 'Continue',
-          onPress: () => {
-            // Continue with the original action if needed
-            if (currentAdType === 'withdrawal') {
-              // Proceed with withdrawal after forced ad
+        } else if (currentAdType === 'withdrawal') {
+          // Withdrawal ad - proceed with withdrawal
+          Alert.alert('Thank you!', 'Thank you for watching. Proceeding with withdrawal...', [{
+            text: 'Continue',
+            onPress: () => {
               setTimeout(() => proceedWithWithdrawal(), 500);
             }
-          }
-        }]);
+          }]);
+        } else if (currentAdType === 'app_launch') {
+          // App launch ad - just thank user
+          Alert.alert('Welcome!', 'Thank you for watching. Enjoy mining!');
+        }
+      } else {
+        // Handle backend errors (e.g., daily limit reached)
+        if (response.status === 429) {
+          Alert.alert('Daily Limit Reached', result.detail || 'You have watched the maximum number of ads for today.');
+        } else {
+          Alert.alert('Error', result.detail || 'Failed to process ad view');
+        }
       }
       
       setShowAdModal(false);
       setCurrentAdType(null);
     } catch (error) {
+      console.error('Error handling ad watch:', error);
       Alert.alert('Error', 'Failed to process ad. Please try again.');
       setShowAdModal(false);
       setCurrentAdType(null);
