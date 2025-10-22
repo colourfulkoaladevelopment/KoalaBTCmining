@@ -610,16 +610,41 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    // Facebook Ads SDK temporarily removed from build due to compatibility issues
-    // Silently handle ad display without showing alerts to user
+    // Use real AdMob ads on device, silent fallback on web
+    const isRealDevice = Platform.OS === 'ios' || Platform.OS === 'android';
     
     setIsWatchingAd(true);
     
-    // Simulate brief ad duration without user interruption
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    setIsWatchingAd(false);
-    return true; // Always return true to not block user
+    try {
+      if (isRealDevice) {
+        // Load AdMob utility dynamically
+        const { showRewardedAd, showInterstitialAd } = await import('../utils/adMobAds');
+        
+        let adResult = false;
+        
+        if (adType === 'miner_activation') {
+          // Rewarded ad for miner activation
+          const result = await showRewardedAd();
+          adResult = result.watched && result.rewarded;
+        } else {
+          // Interstitial ad for app_launch and withdrawal
+          adResult = await showInterstitialAd();
+        }
+        
+        setIsWatchingAd(false);
+        return adResult;
+      } else {
+        // Web/Expo Go - silent fallback
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setIsWatchingAd(false);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error showing ad:', error);
+      setIsWatchingAd(false);
+      // Fallback - don't block user
+      return true;
+    }
   };
 
   const watchAd = async (adType) => {
