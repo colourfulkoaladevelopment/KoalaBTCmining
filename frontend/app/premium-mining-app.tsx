@@ -610,25 +610,25 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    // Use real AdMob ads on device, silent fallback on web
+    // Use real Facebook Audience Network ads on device
     const isRealDevice = Platform.OS === 'ios' || Platform.OS === 'android';
     
     setIsWatchingAd(true);
     
     try {
       if (isRealDevice) {
-        // Load AdMob utility dynamically
-        const { showRewardedAd, showInterstitialAd } = await import('../utils/adMobAds');
+        // Load Facebook Ads utility dynamically
+        const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/facebookAds');
         
         let adResult = false;
         
         if (adType === 'miner_activation') {
-          // Rewarded ad for miner activation
-          const result = await showRewardedAd();
+          // Rewarded video ad for miner activation
+          const result = await showRewardedVideoAd();
           adResult = result.watched && result.rewarded;
         } else {
           // Interstitial ad for app_launch and withdrawal
-          adResult = await showInterstitialAd();
+          adResult = await showInterstitialAd(adType);
         }
         
         setIsWatchingAd(false);
@@ -640,7 +640,7 @@ Your miner is now active and earning Bitcoin!`,
         return true;
       }
     } catch (error) {
-      console.error('Error showing ad:', error);
+      console.error('Error showing Facebook ad:', error);
       setIsWatchingAd(false);
       // Fallback - don't block user
       return true;
