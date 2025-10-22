@@ -2377,8 +2377,8 @@ async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = D
                 "brand_name": "Koala Mining",
                 "landing_page": "BILLING",
                 "user_action": "PAY_NOW",
-                "return_url": "https://koala-crypto.preview.emergentagent.com/api/payments/paypal-return",
-                "cancel_url": "https://koala-crypto.preview.emergentagent.com/api/payments/paypal-cancel"
+                "return_url": "koalamining://paypal/success",
+                "cancel_url": "koalamining://paypal/cancel"
             },
             "purchase_units": [{
                 "reference_id": f"{miner_id}_{current_user['id']}_{uuid.uuid4()}",
