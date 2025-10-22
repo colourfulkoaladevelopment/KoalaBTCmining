@@ -1024,41 +1024,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
     );
   };
 
-  const resetTestAccount = async () => {
-    Alert.alert(
-      '🔄 Reset Test Account',
-      'This will reset your account balance to 0, remove all miners, and clear all transaction history. This action cannot be undone.\n\nContinue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset Account', style: 'destructive', onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem('session_token');
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/test/reset-account`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-              Alert.alert('✅ Account Reset Complete', 'Your test account has been reset successfully. All balances, miners, and history have been cleared.');
-              // Refresh all data to show the reset state
-              await loadAppData();
-            } else {
-              Alert.alert('❌ Reset Failed', result.detail || 'Failed to reset test account');
-            }
-          } catch (error) {
-            Alert.alert('❌ Error', 'Network error occurred while resetting account');
-            console.error('Reset error:', error);
-          }
-        }}
-      ]
-    );
-  };
-
   // Loading Screen with Progress Bar
   if (currentScreen === 'loading') {
     return (
