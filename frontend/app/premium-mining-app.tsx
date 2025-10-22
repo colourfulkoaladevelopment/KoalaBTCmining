@@ -97,6 +97,44 @@ export default function PremiumBitcoinMiningApp() {
     checkAuthStatus();
   }, []);
 
+  // Handle deep links for PayPal returns
+  useEffect(() => {
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('Deep link received:', url);
+      
+      if (url.includes('koalamining://paypal/success')) {
+        // PayPal payment successful - refresh data
+        Alert.alert(
+          '✅ Payment Successful!',
+          'Your miner has been activated and is now generating Bitcoin!',
+          [{ text: 'Great!', onPress: () => loadAppData() }]
+        );
+      } else if (url.includes('koalamining://paypal/cancel')) {
+        // PayPal payment cancelled
+        Alert.alert(
+          'Payment Cancelled',
+          'Your payment was cancelled. No charges were made.',
+          [{ text: 'OK' }]
+        );
+      }
+    };
+
+    // Listen for deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Check if app was opened with a deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
   // Real-time balance updates
   useEffect(() => {
     let balanceIntervalId: NodeJS.Timeout;
