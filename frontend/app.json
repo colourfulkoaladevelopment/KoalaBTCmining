@@ -54,10 +54,12 @@
       "expo-font",
       "expo-web-browser",
       [
-        "react-native-google-mobile-ads",
+        "expo-ads-facebook",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+          "userTrackingPermission": "This app uses ads to provide free mining rewards and bonuses.",
+          "advertiserIDCollectionEnabled": true,
+          "facebookAppId": "813994837846321",
+          "facebookDisplayName": "Koala Mining"
         }
       ]
     ],
