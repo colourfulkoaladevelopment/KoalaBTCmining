@@ -1716,14 +1716,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.supportButton} onPress={resetTestAccount}>
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
-                <Ionicons name="refresh" size={20} color="#FF5722" />
-                <Text style={styles.supportButtonText}>Reset Test Account</Text>
-                <Ionicons name="chevron-forward" size={16} color="#666" />
-              </LinearGradient>
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
               <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
                 <Ionicons name="log-out" size={20} color="#FFF" />
