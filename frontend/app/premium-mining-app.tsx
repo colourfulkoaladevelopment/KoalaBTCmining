@@ -494,7 +494,7 @@ export default function PremiumBitcoinMiningApp() {
 
 Mining Power: ${miner.hash_rate} GH/s
 Duration: ${miner.duration_days} days
-Daily Earning Estimate: ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`,
+Daily Earning Estimate: est. ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Pay with PayPal', onPress: () => initiatePayPalPurchase(miner) }
