@@ -2801,11 +2801,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#FFD700',
   },
+  faqQuestionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   faqQuestion: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFD700',
-    marginBottom: 8,
+    flex: 1,
   },
   faqAnswer: {
     fontSize: 14,
