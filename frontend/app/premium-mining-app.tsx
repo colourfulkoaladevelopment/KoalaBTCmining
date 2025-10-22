@@ -1845,40 +1845,76 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.modalTitle}>Frequently Asked Questions</Text>
               
               <ScrollView style={styles.faqContent}>
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>🚀 How does the mining simulation work?</Text>
-                  <Text style={styles.faqAnswer}>Our platform simulates Bitcoin mining using cloud computing power. You rent virtual mining hardware that generates Bitcoin rewards over time based on hash rates and mining difficulty.</Text>
-                </View>
+                {/* FAQ Item 1 */}
+                <TouchableOpacity 
+                  style={styles.faqItem} 
+                  onPress={() => setExpandedFAQ(expandedFAQ === 0 ? null : 0)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.faqQuestionRow}>
+                    <Text style={styles.faqQuestion}>What is Bitcoin Mining?</Text>
+                    <Ionicons 
+                      name={expandedFAQ === 0 ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color="#FFD700" 
+                    />
+                  </View>
+                  {expandedFAQ === 0 && (
+                    <Text style={styles.faqAnswer}>
+                      Bitcoin Mining refers to the process of earning rewards by using computing power to process and verify transactions and secure the blockchain network. The term "Mining" is used as an analogy to gold mining, because it is through this process that new BTC is minted.
+                    </Text>
+                  )}
+                </TouchableOpacity>
                 
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>💰 How do I start earning Bitcoin?</Text>
-                  <Text style={styles.faqAnswer}>Begin with the free daily miner (1 GH/s for 24 hours), watch ads for mining boosts, or purchase premium miners from our store for higher earning potential.</Text>
-                </View>
+                {/* FAQ Item 2 */}
+                <TouchableOpacity 
+                  style={styles.faqItem} 
+                  onPress={() => setExpandedFAQ(expandedFAQ === 1 ? null : 1)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.faqQuestionRow}>
+                    <Text style={styles.faqQuestion}>How does Bitcoin Mining work?</Text>
+                    <Ionicons 
+                      name={expandedFAQ === 1 ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color="#FFD700" 
+                    />
+                  </View>
+                  {expandedFAQ === 1 && (
+                    <Text style={styles.faqAnswer}>
+                      Bitcoin has been designed to be fully decentralized, operating in all countries with no individual having control over the network, by using a network of nodes hosted by individual people, corporations, and governments. Anybody can become a Bitcoin miner by running Bitcoin mining software and/or hardware, which listens for transactions on the network and performs appropriate tasks to process them. Miners do this because they earn transaction fees for the transaction processing time. Faster times require more computing power, resulting in higher fees. This means that the higher your computing power, the more fees you can earn.
+                    </Text>
+                  )}
+                </TouchableOpacity>
                 
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>🎯 Are the Bitcoin earnings real?</Text>
-                  <Text style={styles.faqAnswer}>This is an educational mining simulation. While the app teaches real mining concepts, all transactions are simulated for learning purposes.</Text>
-                </View>
-                
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>👥 How does the referral system work?</Text>
-                  <Text style={styles.faqAnswer}>Share your unique referral code with friends. When they sign up, both of you receive a 100 GH/s bonus miner for 30 days. Plus, you earn 10% commission on their purchases!</Text>
-                </View>
-                
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>💸 How do withdrawals work?</Text>
-                  <Text style={styles.faqAnswer}>Use the Withdraw BTC feature to send Bitcoin to any wallet address via Bitcoin Network or Lightning Network. Processing typically takes a few minutes.</Text>
-                </View>
-                
-                <View style={styles.faqItem}>
-                  <Text style={styles.faqQuestion}>📱 Can I use this on multiple devices?</Text>
-                  <Text style={styles.faqAnswer}>Yes! Your account syncs across all devices. Just log in with the same credentials to access your miners and earnings anywhere.</Text>
-                </View>
+                {/* FAQ Item 3 */}
+                <TouchableOpacity 
+                  style={styles.faqItem} 
+                  onPress={() => setExpandedFAQ(expandedFAQ === 2 ? null : 2)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.faqQuestionRow}>
+                    <Text style={styles.faqQuestion}>So what is Koala Mining?</Text>
+                    <Ionicons 
+                      name={expandedFAQ === 2 ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color="#FFD700" 
+                    />
+                  </View>
+                  {expandedFAQ === 2 && (
+                    <Text style={styles.faqAnswer}>
+                      Koala Mining is what is referred to as a Mining Pool. A mining pool is a group of miners who have shared their hashing resources to solve blocks together and the rewards are then distributed amongst the members. What this means is that the hash rate of all Koala Miners are tied together to produce greater rewards, which are then distributed back to the Miners based on the hash rate they contributed.
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </ScrollView>
               
               <TouchableOpacity 
                 style={styles.closeButton} 
-                onPress={() => setShowFAQ(false)}
+                onPress={() => {
+                  setShowFAQ(false);
+                  setExpandedFAQ(null);
+                }}
               >
                 <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                   <Text style={styles.closeButtonText}>Close</Text>
