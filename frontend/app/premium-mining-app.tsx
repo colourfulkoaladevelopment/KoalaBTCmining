@@ -51,6 +51,7 @@ export default function PremiumBitcoinMiningApp() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   
   // Form states
