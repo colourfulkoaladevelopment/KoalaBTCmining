@@ -191,11 +191,11 @@ backend:
 
   - task: "Enhanced Store System"
     implemented: true
-    working: true
+    working: "NA"
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -203,6 +203,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ Store system working correctly. 10 different miners available with proper pricing. Purchase system working. Referral commission miners created on purchases."
+      - working: "NA"
+        agent: "main"
+        comment: "✅ STORE PAGE UPDATES (Issues #9-11): Updated store miners with new specifications: 1) Added legend bubble above Premium Miners showing hash rate to BTC/day conversion rates (100 MH/s through 10 TH/s), 2) Updated all 9 premium miners with new prices ($7.99-$999.99), hash rates (100GH-20TH), and daily rewards (backend only, not displayed), 3) Removed EST B xx.xx per day display from miner cards. Backend now returns daily_reward field for each miner for internal calculations. Updated color tiers and icons to match new hash rate ranges (Standard through Mythical). Store miners: Standard ($7.99, 100GH), Advanced ($14.99, 200GH), Pro ($29.99, 400GH), Elite ($79.99, 1TH), Master ($159.99, 2TH), Supreme ($299.99, 4TH), Ultimate ($449.99, 10TH), Legendary ($749.99, 15TH), Mythical ($999.99, 20TH). Ready for backend testing to verify API returns correct miner data."
 
   - task: "Background Tasks & Scheduler"
     implemented: true
