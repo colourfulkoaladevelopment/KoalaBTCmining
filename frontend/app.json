@@ -65,12 +65,10 @@
         }
       ],
       [
-        "expo-ads-facebook",
+        "react-native-google-mobile-ads",
         {
-          "userTrackingPermission": "This app uses ads to provide free mining rewards and bonuses.",
-          "advertiserIDCollectionEnabled": true,
-          "facebookAppId": "813994837846321",
-          "facebookDisplayName": "Koala Mining"
+          "androidAppId": "ca-app-pub-5648720019902247~5985575029",
+          "iosAppId": "ca-app-pub-5648720019902247~5985575029"
         }
       ]
     ],
