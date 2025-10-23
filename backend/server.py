@@ -3315,24 +3315,32 @@ async def watch_ad(
         new_ads_watched = ads_watched + 1
         remaining_ads = MAX_DAILY_ADS - new_ads_watched
         
-        logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded 2 GH/s ad miner for 24h")
-        
-        return {
+        # Prepare response based on ad type
+        response_data = {
             "success": True,
-            "message": "Ad watched successfully! Earned 2 GH/s mining power for 24 hours.",
-            "ad_miner": {
-                "id": ad_miner_id,
-                "name": ad_miner["name"],
-                "hash_rate": AD_MINER_HASHRATE,
-                "duration_hours": AD_MINER_DURATION_HOURS,
-                "expires_at": expires_at.isoformat()
-            },
             "daily_stats": {
                 "ads_watched_today": new_ads_watched,
                 "remaining_ads": remaining_ads,
                 "max_daily_ads": MAX_DAILY_ADS
             }
         }
+        
+        # Only include miner data for rewarded ads
+        if ad_type == 'miner_activation' and ad_miner:
+            logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded 2 GH/s ad miner for 24h")
+            response_data["message"] = "Ad watched successfully! Earned 2 GH/s mining power for 24 hours."
+            response_data["ad_miner"] = {
+                "id": ad_miner_id,
+                "name": ad_miner["name"],
+                "hash_rate": AD_MINER_HASHRATE,
+                "duration_hours": AD_MINER_DURATION_HOURS,
+                "expires_at": expires_at.isoformat()
+            }
+        else:
+            logger.info(f"User {current_user['id']} watched {ad_type} ad (non-rewarded)")
+            response_data["message"] = "Thank you for watching!"
+        
+        return response_data
         
     except HTTPException:
         raise
