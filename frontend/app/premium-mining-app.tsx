@@ -96,6 +96,20 @@ export default function PremiumBitcoinMiningApp() {
     return (hashRate * baseRate * cyclesPerDay).toFixed(14);
   };
 
+  // Calculate time until daily reset (midnight UTC)
+  const getTimeUntilReset = () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    tomorrow.setUTCHours(0, 0, 0, 0);
+    
+    const diff = tomorrow.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours}h ${minutes}m`;
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
