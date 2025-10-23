@@ -1939,12 +1939,10 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               
               {isWatchingAd ? (
                 <View style={styles.adContainer}>
-                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.adSimulation}>
-                    <Ionicons name="play-circle" size={64} color="#000" />
-                    <Text style={styles.adText}>Simulated Advertisement</Text>
-                    <Text style={styles.adSubtext}>This is a placeholder ad</Text>
-                    <ActivityIndicator size="large" color="#000" style={{ marginTop: 20 }} />
-                  </LinearGradient>
+                  <View style={styles.adSimulation}>
+                    <ActivityIndicator size="large" color="#FFD700" style={{ marginBottom: 10 }} />
+                    <Text style={styles.adText}>Loading Advertisement...</Text>
+                  </View>
                   <Text style={styles.adTimerText}>Ad playing... Please wait</Text>
                 </View>
               ) : (
