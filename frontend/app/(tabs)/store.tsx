@@ -152,30 +152,39 @@ export default function Store() {
   };
 
   const getMinerIcon = (hashRate: number): string => {
-    if (hashRate >= 10000) return 'diamond';
-    if (hashRate >= 5000) return 'star';
-    if (hashRate >= 1000) return 'trophy';
-    if (hashRate >= 500) return 'medal';
-    if (hashRate >= 200) return 'ribbon';
-    return 'hardware-chip';
+    if (hashRate >= 20000) return 'diamond'; // Mythical 20TH
+    if (hashRate >= 15000) return 'star';    // Legendary 15TH
+    if (hashRate >= 10000) return 'trophy';  // Ultimate 10TH
+    if (hashRate >= 4000) return 'medal';    // Supreme 4TH
+    if (hashRate >= 2000) return 'ribbon';   // Master 2TH
+    if (hashRate >= 1000) return 'flash';    // Elite 1TH
+    if (hashRate >= 400) return 'flame';     // Pro 400GH
+    if (hashRate >= 200) return 'sparkles';  // Advanced 200GH
+    return 'hardware-chip'; // Standard 100GH
   };
 
   const getMinerColor = (hashRate: number): string => {
-    if (hashRate >= 10000) return '#E91E63'; // Pink - Mythic
-    if (hashRate >= 5000) return '#9C27B0';  // Purple - Legendary
-    if (hashRate >= 1000) return '#FF5722';  // Deep Orange - Elite
-    if (hashRate >= 500) return '#FF9800';   // Orange - Pro
-    if (hashRate >= 200) return '#2196F3';   // Blue - Advanced
-    return '#4CAF50'; // Green - Basic
+    if (hashRate >= 20000) return '#E91E63'; // Pink - Mythical
+    if (hashRate >= 15000) return '#9C27B0'; // Purple - Legendary
+    if (hashRate >= 10000) return '#673AB7'; // Deep Purple - Ultimate
+    if (hashRate >= 4000) return '#FF5722';  // Deep Orange - Supreme
+    if (hashRate >= 2000) return '#FF9800';  // Orange - Master
+    if (hashRate >= 1000) return '#FFC107';  // Amber - Elite
+    if (hashRate >= 400) return '#2196F3';   // Blue - Pro
+    if (hashRate >= 200) return '#00BCD4';   // Cyan - Advanced
+    return '#4CAF50'; // Green - Standard
   };
 
   const getTierName = (hashRate: number): string => {
-    if (hashRate >= 10000) return 'MYTHIC';
-    if (hashRate >= 5000) return 'LEGENDARY';
+    if (hashRate >= 20000) return 'MYTHICAL';
+    if (hashRate >= 15000) return 'LEGENDARY';
+    if (hashRate >= 10000) return 'ULTIMATE';
+    if (hashRate >= 4000) return 'SUPREME';
+    if (hashRate >= 2000) return 'MASTER';
     if (hashRate >= 1000) return 'ELITE';
-    if (hashRate >= 500) return 'PRO';
+    if (hashRate >= 400) return 'PRO';
     if (hashRate >= 200) return 'ADVANCED';
-    return 'BASIC';
+    return 'STANDARD';
   };
 
   if (isLoading) {

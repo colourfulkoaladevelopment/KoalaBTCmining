@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get backend URL from frontend .env
-BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://koala-crypto.preview.emergentagent.com")
+BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://mine-simulator.preview.emergentagent.com")
 API_BASE = f"{BACKEND_URL}/api"
 
 class FacebookAdsBackendTester:

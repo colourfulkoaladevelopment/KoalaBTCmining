@@ -2057,7 +2057,7 @@ async def forgot_password(email_data: Dict[str, str]):
                 msg['Subject'] = "Bitcoin Mining App - Password Reset"
                 
                 # Create HTML email body with reset instructions
-                reset_link = f"https://koala-crypto.preview.emergentagent.com/reset.html?token={reset_token}"
+                reset_link = f"https://mine-simulator.preview.emergentagent.com/reset.html?token={reset_token}"
                 email_body = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
