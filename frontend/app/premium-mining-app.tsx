@@ -110,6 +110,21 @@ export default function PremiumBitcoinMiningApp() {
     return `${hours}h ${minutes}m`;
   };
 
+  // Format time remaining in days, hours, minutes
+  const formatTimeRemaining = (hours) => {
+    const days = Math.floor(hours / 24);
+    const remainingHours = Math.floor(hours % 24);
+    const minutes = Math.floor((hours % 1) * 60);
+    
+    if (days > 0) {
+      return `${days}d ${remainingHours}h ${minutes}m`;
+    } else if (remainingHours > 0) {
+      return `${remainingHours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
