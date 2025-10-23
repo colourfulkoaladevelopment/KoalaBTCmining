@@ -419,6 +419,46 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  premiumHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 5,
+  },
+  premiumTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textAlign: 'center',
+  },
+  legendCard: {
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  legendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  legendTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginLeft: 8,
+  },
+  legendContent: {
+    paddingLeft: 8,
+  },
+  legendText: {
+    fontSize: 13,
+    color: '#CCC',
+    marginBottom: 6,
+    fontFamily: 'monospace',
+  },
   minersGrid: {
     paddingHorizontal: 15,
   },
