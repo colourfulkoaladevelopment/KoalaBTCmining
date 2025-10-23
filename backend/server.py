@@ -830,15 +830,15 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
 async def get_store_miners():
     """Get available miners for purchase"""
     store_miners = [
-        {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30},
-        {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30},
-        {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30},
-        {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30},
-        {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30},
-        {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30},
-        {"id": "miner_6th", "name": "Ultimate Miner", "hash_rate": 6000.0, "price": 449.99, "duration_days": 30},
-        {"id": "miner_8th", "name": "Legendary Miner", "hash_rate": 8000.0, "price": 599.99, "duration_days": 30},
-        {"id": "miner_10th", "name": "Mythical Miner", "hash_rate": 10000.0, "price": 999.99, "duration_days": 30}
+        {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
+        {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
+        {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
+        {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
+        {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
+        {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
+        {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 10000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
+        {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 15000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
+        {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 20000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
     ]
     
     return {"miners": store_miners}
