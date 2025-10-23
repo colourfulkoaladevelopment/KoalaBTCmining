@@ -1406,6 +1406,10 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.miningIndicator} />
                 )}
               </View>
+              <View style={styles.hashRateContainer}>
+                <Text style={styles.hashRateLabel}>Total Daily Bitcoin</Text>
+                <Text style={styles.hashRate}>₿ {calculateTotalDailyEarnings()}/day</Text>
+              </View>
             </LinearGradient>
 
             {/* Quick Actions */}
