@@ -2766,6 +2766,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginBottom: 4,
   },
+  userSubtitle: {
+    fontSize: 14,
+    color: '#FFD700',
+    marginBottom: 4,
+  },
   userEmail: {
     fontSize: 16,
     color: '#AAA',
