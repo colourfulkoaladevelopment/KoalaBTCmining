@@ -1,30 +1,30 @@
 /**
- * Facebook Audience Network Integration for Koala Mining
- * Uses expo-ads-facebook for rewarded and interstitial ads
+ * Google AdMob Integration for Koala Mining
+ * Handles rewarded and interstitial ads
  */
 
 import { Platform } from 'react-native';
-import * as Facebook from 'expo-ads-facebook';
 
-// Your Facebook Placement IDs from Facebook Monetization Manager
-const PLACEMENT_IDS = {
-  app_launch: '813994837846321_817034327542372',
-  miner_activation: '813994837846321_817034650875673',
-  withdrawal: '813994837846321_817034827542322',
+// Your AdMob Ad Unit IDs
+const AD_UNIT_IDS = {
+  android: {
+    app_launch: 'ca-app-pub-5648720019902247/6941016749',
+    miner_activation: 'ca-app-pub-5648720019902247/6632442285',
+    withdrawal: 'ca-app-pub-5648720019902247/5324682749',
+  },
+  ios: {
+    app_launch: 'ca-app-pub-5648720019902247/6941016749',
+    miner_activation: 'ca-app-pub-5648720019902247/6632442285',
+    withdrawal: 'ca-app-pub-5648720019902247/5324682749',
+  }
 };
 
 /**
- * Initialize Facebook Audience Network
- * Call this once at app startup
+ * Get the appropriate ad unit ID based on platform and ad type
  */
-export const initializeFacebookAds = async () => {
-  try {
-    await Facebook.AdSettings.addTestDevice(Facebook.AdSettings.currentDeviceHash);
-    await Facebook.initializeAsync('813994837846321');
-    console.log('Facebook Ads initialized successfully');
-  } catch (error) {
-    console.error('Error initializing Facebook Ads:', error);
-  }
+const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') => {
+  const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+  return AD_UNIT_IDS[platform][adType];
 };
 
 /**
@@ -33,32 +33,47 @@ export const initializeFacebookAds = async () => {
  */
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
-    const placementId = PLACEMENT_IDS.miner_activation;
+    const { RewardedAd, RewardedAdEventType } = await import('react-native-google-mobile-ads');
+    
+    const adUnitId = getAdUnitId('miner_activation');
+    const rewarded = RewardedAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    });
     
     return new Promise((resolve) => {
       let adWatched = false;
       let rewardEarned = false;
 
-      // Load the ad
-      Facebook.RewardedVideoAd.loadAsync(placementId)
-        .then(() => {
-          console.log('Rewarded video ad loaded');
-          // Show the ad
-          return Facebook.RewardedVideoAd.showAsync(placementId);
-        })
-        .then((didClick) => {
-          console.log('Rewarded video ad shown, clicked:', didClick);
+      const unsubscribeLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        console.log('Rewarded ad loaded');
+        rewarded.show();
+      });
+
+      const unsubscribeEarned = rewarded.addAdEventListener(
+        RewardedAdEventType.EARNED_REWARD,
+        (reward) => {
+          console.log('User earned reward:', reward);
           adWatched = true;
           rewardEarned = true;
+        }
+      );
+
+      const unsubscribeDismissed = rewarded.addAdEventListener(
+        RewardedAdEventType.DISMISSED,
+        () => {
+          console.log('Rewarded ad dismissed');
+          unsubscribeLoaded();
+          unsubscribeEarned();
+          unsubscribeDismissed();
           resolve({ watched: adWatched, rewarded: rewardEarned });
-        })
-        .catch((error) => {
-          console.error('Error with rewarded video ad:', error);
-          resolve({ watched: false, rewarded: false });
-        });
+        }
+      );
+
+      // Load the ad
+      rewarded.load();
     });
   } catch (error) {
-    console.error('Error showing rewarded video ad:', error);
+    console.error('Error showing rewarded ad:', error);
     return { watched: false, rewarded: false };
   }
 };
@@ -69,24 +84,28 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
  */
 export const showInterstitialAd = async (adType: 'app_launch' | 'withdrawal'): Promise<boolean> => {
   try {
-    const placementId = PLACEMENT_IDS[adType];
+    const { InterstitialAd, AdEventType } = await import('react-native-google-mobile-ads');
+    
+    const adUnitId = getAdUnitId(adType);
+    const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    });
     
     return new Promise((resolve) => {
+      const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+        console.log(`Interstitial ad (${adType}) loaded`);
+        interstitial.show();
+      });
+
+      const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+        console.log(`Interstitial ad (${adType}) closed`);
+        unsubscribeLoaded();
+        unsubscribeClosed();
+        resolve(true);
+      });
+
       // Load the ad
-      Facebook.InterstitialAdManager.loadAsync(placementId)
-        .then(() => {
-          console.log(`Interstitial ad (${adType}) loaded`);
-          // Show the ad
-          return Facebook.InterstitialAdManager.showAsync(placementId);
-        })
-        .then((didClick) => {
-          console.log(`Interstitial ad (${adType}) shown, clicked:`, didClick);
-          resolve(true);
-        })
-        .catch((error) => {
-          console.error(`Error with interstitial ad (${adType}):`, error);
-          resolve(false);
-        });
+      interstitial.load();
     });
   } catch (error) {
     console.error('Error showing interstitial ad:', error);
