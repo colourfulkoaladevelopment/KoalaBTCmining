@@ -29,7 +29,8 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000"
+        "backgroundColor": "#000000",
+        "monochromeImage": "./assets/images/adaptive-icon.png"
       },
       "permissions": [
         "INTERNET",
