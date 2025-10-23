@@ -3229,7 +3229,7 @@ async def watch_ad(
     ad_data: Dict[str, Any],
     current_user: Dict = Depends(get_current_user)
 ):
-    """Process ad watch and reward user with 2 GH/s for 24 hours"""
+    """Process ad watch - only reward for miner_activation type"""
     try:
         ad_type = ad_data.get("ad_type")  # 'app_launch', 'miner_activation', 'withdrawal'
         
@@ -3262,45 +3262,51 @@ async def watch_ad(
                 detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
             )
         
-        # Create ad miner (2 GH/s for 24 hours)
-        ad_miner_id = str(uuid.uuid4())
-        now = datetime.utcnow()
-        expires_at = now + timedelta(hours=AD_MINER_DURATION_HOURS)
+        # Only create ad miner for miner_activation type (rewarded ad)
+        ad_miner = None
+        ad_miner_id = None
         
-        ad_miner = {
-            "_id": ad_miner_id,
-            "user_id": current_user["id"],
-            "name": f"Ad Miner ({ad_type.replace('_', ' ').title()})",
-            "hash_rate": AD_MINER_HASHRATE,
-            "miner_type": "ad_reward",
-            "status": "active",
-            "duration_hours": AD_MINER_DURATION_HOURS,
-            "time_remaining": AD_MINER_DURATION_HOURS,
-            "total_earned": 0.0,
-            "ad_type": ad_type,
-            "activated_at": now,
-            "expires_at": expires_at,
-            "created_at": now
-        }
+        if ad_type == 'miner_activation':
+            # Create ad miner (2 GH/s for 24 hours) - REWARDED AD
+            ad_miner_id = str(uuid.uuid4())
+            now = datetime.utcnow()
+            expires_at = now + timedelta(hours=AD_MINER_DURATION_HOURS)
+            
+            ad_miner = {
+                "_id": ad_miner_id,
+                "user_id": current_user["id"],
+                "name": f"Ad Miner ({ad_type.replace('_', ' ').title()})",
+                "hash_rate": AD_MINER_HASHRATE,
+                "miner_type": "ad_reward",
+                "status": "active",
+                "duration_hours": AD_MINER_DURATION_HOURS,
+                "time_remaining": AD_MINER_DURATION_HOURS,
+                "total_earned": 0.0,
+                "ad_type": ad_type,
+                "activated_at": now,
+                "expires_at": expires_at,
+                "created_at": now
+            }
+            
+            miners_collection.insert_one(ad_miner)
         
-        miners_collection.insert_one(ad_miner)
-        
-        # Update daily counter
+        # Update daily counter for ALL ad types
         db.daily_ad_counters.update_one(
             {"user_id": current_user["id"], "date": today.isoformat()},
             {"$inc": {"ads_watched": 1}, "$set": {"updated_at": datetime.utcnow()}}
         )
         
         # Record ad view transaction
+        now = datetime.utcnow()
         ad_transaction = {
             "_id": str(uuid.uuid4()),
             "user_id": current_user["id"],
-            "transaction_type": "ad_reward",
+            "transaction_type": "ad_view" if ad_type in ['app_launch', 'withdrawal'] else "ad_reward",
             "ad_type": ad_type,
-            "miner_id": ad_miner_id,
-            "hash_rate_awarded": AD_MINER_HASHRATE,
-            "duration_hours": AD_MINER_DURATION_HOURS,
-            "description": f"Watched {ad_type.replace('_', ' ')} ad - earned 2 GH/s for 24h",
+            "miner_id": ad_miner_id if ad_miner else None,
+            "hash_rate_awarded": AD_MINER_HASHRATE if ad_miner else 0,
+            "duration_hours": AD_MINER_DURATION_HOURS if ad_miner else 0,
+            "description": f"Watched {ad_type.replace('_', ' ')} ad" + (f" - earned 2 GH/s for 24h" if ad_miner else ""),
             "created_at": now
         }
         transactions_collection.insert_one(ad_transaction)
