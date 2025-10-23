@@ -1439,70 +1439,98 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </View>
             </LinearGradient>
 
-            {/* Your Miners */}
+            {/* Your Miners - Collapsible */}
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
-              <View style={styles.cardHeader}>
+              <TouchableOpacity 
+                style={styles.cardHeader} 
+                onPress={() => setShowActiveMiners(!showActiveMiners)}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="hardware-chip" size={24} color="#FFD700" />
                 <Text style={styles.cardTitle}>Your Miners ({miners.length})</Text>
-              </View>
+                <Ionicons 
+                  name={showActiveMiners ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color="#FFD700" 
+                  style={{ marginLeft: 'auto' }}
+                />
+              </TouchableOpacity>
               
-              {miners.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="hardware-chip" size={48} color="#666" />
-                  <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
-                  <Text style={styles.emptyStateSubtitle}>Activate your free daily miner to get started</Text>
-                </View>
-              ) : (
-                miners.map((miner) => (
-                  <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
-                    <View style={styles.minerHeader}>
-                      <Text style={styles.minerName}>{miner.name}</Text>
-                      <LinearGradient 
-                        colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
-                        style={styles.minerStatus}
-                      >
-                        <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
-                      </LinearGradient>
+              {showActiveMiners && (
+                <>
+                  {miners.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Ionicons name="hardware-chip" size={48} color="#666" />
+                      <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
+                      <Text style={styles.emptyStateSubtitle}>Activate your free daily miner to get started</Text>
                     </View>
-                    
-                    <View style={styles.minerStats}>
-                      <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
-                      <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
-                      <Text style={styles.minerStat}>Est. Daily: est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day</Text>
-                      <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
-                    </View>
+                  ) : (
+                    miners.map((miner) => (
+                      <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                        <View style={styles.minerHeader}>
+                          <Text style={styles.minerName}>{miner.name}</Text>
+                          <LinearGradient 
+                            colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                            style={styles.minerStatus}
+                          >
+                            <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                          </LinearGradient>
+                        </View>
+                        
+                        <View style={styles.minerStats}>
+                          <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                          <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
+                          <Text style={styles.minerStat}>Est. Daily: est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day</Text>
+                          <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
+                        </View>
 
-                    {miner.miner_type === 'premium' && miner.status === 'expired' && (
-                      <TouchableOpacity 
-                        style={styles.renewButton}
-                        onPress={() => renewMiner(miner)}
-                      >
-                        <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
-                          <Text style={styles.renewButtonText}>Renew for 30 Days</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    )}
-                  </LinearGradient>
-                ))
+                        {miner.miner_type === 'premium' && miner.status === 'expired' && (
+                          <TouchableOpacity 
+                            style={styles.renewButton}
+                            onPress={() => renewMiner(miner)}
+                          >
+                            <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                              <Text style={styles.renewButtonText}>Renew for 30 Days</Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        )}
+                      </LinearGradient>
+                    ))
+                  )}
+                </>
               )}
             </LinearGradient>
 
-            {/* Expired Miners Section */}
+            {/* Expired Miners Section - Collapsible */}
             {expiredMiners.length > 0 && (
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.expiredMinersCard}>
-                <View style={styles.cardHeader}>
+                <TouchableOpacity 
+                  style={styles.cardHeader}
+                  onPress={() => setShowExpiredMiners(!showExpiredMiners)}
+                  activeOpacity={0.7}
+                >
                   <Ionicons name="time" size={24} color="#666" />
                   <Text style={styles.cardTitle}>Expired Miners ({expiredMiners.length})</Text>
-                </View>
+                  <Ionicons 
+                    name={showExpiredMiners ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#666" 
+                    style={{ marginLeft: 'auto' }}
+                  />
+                </TouchableOpacity>
                 
-                {expiredMiners.map((miner) => (
-                  <View key={miner.id} style={styles.expiredMinerItem}>
-                    <Text style={styles.expiredMinerName}>{miner.name}</Text>
-                    <Text style={styles.expiredMinerDetails}>
-                      Earned: ₿ {miner.total_earned?.toFixed(14)} | {miner.hash_rate} GH/s | est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day
-                    </Text>
-                  </View>
-                ))}
+                {showExpiredMiners && (
+                  <>
+                    {expiredMiners.map((miner) => (
+                      <View key={miner.id} style={styles.expiredMinerItem}>
+                        <Text style={styles.expiredMinerName}>{miner.name}</Text>
+                        <Text style={styles.expiredMinerDetails}>
+                          Earned: ₿ {miner.total_earned?.toFixed(14)} | {miner.hash_rate} GH/s | est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
               </LinearGradient>
             )}
           </ScrollView>
