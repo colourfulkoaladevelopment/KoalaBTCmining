@@ -1507,8 +1507,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                         <View style={styles.minerStats}>
                           <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
                           <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
-                          <Text style={styles.minerStat}>Est. Daily: est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day</Text>
-                          <Text style={styles.minerStat}>Time Left: {miner.time_remaining?.toFixed(1)}h</Text>
+                          <Text style={styles.minerStat}>Est. Daily: ₿ {calculateDailyEarnings(miner.hash_rate)}/day</Text>
+                          <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
                         </View>
 
                         {miner.miner_type === 'premium' && miner.status === 'expired' && (
