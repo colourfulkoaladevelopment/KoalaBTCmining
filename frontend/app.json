@@ -53,7 +53,26 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0"
+          }
+        }
+      ],
+      [
+        "expo-ads-facebook",
+        {
+          "userTrackingPermission": "This app uses ads to provide free mining rewards and bonuses.",
+          "advertiserIDCollectionEnabled": true,
+          "facebookAppId": "813994837846321",
+          "facebookDisplayName": "Koala Mining"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
