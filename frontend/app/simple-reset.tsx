@@ -37,7 +37,13 @@ export default function SimpleResetPasswordScreen() {
     }
 
     try {
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://koala-crypto.preview.emergentagent.com';
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        Alert.alert('Error', 'Backend URL not configured');
+        setIsLoading(false);
+        return;
+      }
+      
       const url = `${backendUrl}/api/auth/reset-password`;
 
       const response = await fetch(url, {
