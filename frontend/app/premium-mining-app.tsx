@@ -712,8 +712,9 @@ Your miner is now active and earning Bitcoin!`,
     } catch (error) {
       console.error('Error showing AdMob ad:', error);
       setIsWatchingAd(false);
-      // Fallback - don't block user
-      return true;
+      // Don't give reward if ad fails
+      Alert.alert('Ad Unavailable', 'Unable to load advertisement. Please try again later.');
+      return false;
     }
   };
 
