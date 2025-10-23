@@ -1702,9 +1702,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
               
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user?.name}</Text>
-                <Text style={styles.userEmail}>{user?.email}</Text>
-                <Text style={styles.userCode}>Code: {user?.referral_code}</Text>
+                <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">{user?.name}</Text>
+                <Text style={styles.userSubtitle} numberOfLines={1} ellipsizeMode="tail">Koala BTC Mining</Text>
+                <Text style={styles.userCode} numberOfLines={1} ellipsizeMode="tail">Referral Code: {user?.referral_code}</Text>
               </View>
             </LinearGradient>
 
