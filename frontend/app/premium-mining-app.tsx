@@ -125,6 +125,20 @@ export default function PremiumBitcoinMiningApp() {
     }
   };
 
+  // Calculate total daily earnings from all active miners
+  const calculateTotalDailyEarnings = () => {
+    if (!miners || miners.length === 0) return '0.00000000000000';
+    
+    const totalHashRate = miners.reduce((sum, miner) => {
+      if (miner.status === 'active') {
+        return sum + (miner.hash_rate || 0);
+      }
+      return sum;
+    }, 0);
+    
+    return calculateDailyEarnings(totalHashRate);
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
