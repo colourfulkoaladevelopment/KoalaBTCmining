@@ -76,8 +76,11 @@ export default function Store() {
   const formatHashRate = (hashRate: number): string => {
     if (hashRate >= 1000) {
       return `${(hashRate / 1000).toFixed(1)} TH/s`;
+    } else if (hashRate >= 1) {
+      return `${hashRate} GH/s`;
+    } else {
+      return `${hashRate * 1000} MH/s`;
     }
-    return `${hashRate} GH/s`;
   };
 
   const purchaseMiner = (miner: StoreMiner) => {
