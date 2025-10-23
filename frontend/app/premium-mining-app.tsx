@@ -1368,31 +1368,29 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.quickActionsCard}>
               <View style={styles.cardHeader}>
                 <Ionicons name="rocket" size={24} color="#FFD700" />
-                <Text style={styles.cardTitle}>Quick Start</Text>
+                <Text style={styles.cardTitle}>Daily Free Miner</Text>
               </View>
               
-              <TouchableOpacity style={styles.actionButton} onPress={activateFreeMiner}>
-                <LinearGradient colors={['#1B4332', '#2D5A3D']} style={styles.actionButtonGradient}>
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={activateFreeMiner}
+                disabled={!adStats.can_watch_ad}
+              >
+                <LinearGradient 
+                  colors={adStats.can_watch_ad ? ['#1B4332', '#2D5A3D'] : ['#444', '#333']} 
+                  style={styles.actionButtonGradient}
+                >
                   <View style={styles.actionButtonContent}>
-                    <Ionicons name="gift" size={24} color="#4CAF50" />
+                    <Ionicons name="gift" size={24} color={adStats.can_watch_ad ? "#4CAF50" : "#666"} />
                     <View style={styles.actionButtonText}>
-                      <Text style={styles.actionButtonTitle}>Free Daily Miner</Text>
-                      <Text style={styles.actionButtonSubtitle}>1 GH/s for 24 hours</Text>
+                      <Text style={[styles.actionButtonTitle, !adStats.can_watch_ad && { color: '#666' }]}>
+                        Activate Daily Free Miner
+                      </Text>
+                      <Text style={[styles.actionButtonSubtitle, !adStats.can_watch_ad && { color: '#666' }]}>
+                        {adStats.can_watch_ad ? '1 GH/s for 24 hours' : 'Available in ' + getTimeUntilReset()}
+                      </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#4CAF50" />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionButton} onPress={watchAdForMining}>
-                <LinearGradient colors={['#331C1C', '#4A2728']} style={styles.actionButtonGradient}>
-                  <View style={styles.actionButtonContent}>
-                    <Ionicons name="play-circle" size={24} color="#FF5722" />
-                    <View style={styles.actionButtonText}>
-                      <Text style={styles.actionButtonTitle}>Watch Ad for Boost</Text>
-                      <Text style={styles.actionButtonSubtitle}>2 GH/s for 30 minutes</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#FF5722" />
+                    <Ionicons name="chevron-forward" size={20} color={adStats.can_watch_ad ? "#4CAF50" : "#666"} />
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
