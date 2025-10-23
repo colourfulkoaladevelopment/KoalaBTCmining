@@ -5,17 +5,17 @@
 
 import { Platform } from 'react-native';
 
-// Your AdMob Ad Unit IDs
+// Get AdMob Ad Unit IDs from environment variables
 const AD_UNIT_IDS = {
   android: {
-    app_launch: 'ca-app-pub-5648720019902247/6941016749',
-    miner_activation: 'ca-app-pub-5648720019902247/6632442285',
-    withdrawal: 'ca-app-pub-5648720019902247/5324682749',
+    app_launch: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_LAUNCH || '',
+    miner_activation: process.env.EXPO_PUBLIC_ADMOB_ANDROID_MINER_ACTIVATION || '',
+    withdrawal: process.env.EXPO_PUBLIC_ADMOB_ANDROID_WITHDRAWAL || '',
   },
   ios: {
-    app_launch: 'ca-app-pub-5648720019902247/6941016749',
-    miner_activation: 'ca-app-pub-5648720019902247/6632442285',
-    withdrawal: 'ca-app-pub-5648720019902247/5324682749',
+    app_launch: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_LAUNCH || '',
+    miner_activation: process.env.EXPO_PUBLIC_ADMOB_IOS_MINER_ACTIVATION || '',
+    withdrawal: process.env.EXPO_PUBLIC_ADMOB_IOS_WITHDRAWAL || '',
   }
 };
 
