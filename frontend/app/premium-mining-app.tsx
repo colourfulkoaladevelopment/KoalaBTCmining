@@ -1419,21 +1419,18 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <View style={styles.adCounterStats}>
                   <Text style={styles.adCounterLabel}>Ads Watched Today</Text>
                   <Text style={styles.adCounterValue}>
-                    {adStats.ads_watched_today}/{adStats.max_daily_ads}
+                    {adStats.ads_watched_today} ads watched
                   </Text>
                 </View>
                 <View style={styles.adCounterProgress}>
                   <View style={styles.adProgressBar}>
                     <LinearGradient 
                       colors={['#FFD700', '#FFC000']} 
-                      style={[
-                        styles.adProgressFill, 
-                        { width: `${(adStats.ads_watched_today / adStats.max_daily_ads) * 100}%` }
-                      ]} 
+                      style={[styles.adProgressFill]} 
                     />
                   </View>
                   <Text style={styles.adRemainingText}>
-                    {adStats.remaining_ads} ads remaining
+                    Keep watching to earn more miners!
                   </Text>
                 </View>
                 {adStats.can_watch_ad && (
