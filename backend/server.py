@@ -1398,9 +1398,19 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
         from coinbase.rest import RESTClient
         import uuid
         
+        logger.info(f"=" * 80)
+        logger.info(f"COINBASE WITHDRAWAL DIAGNOSTICS - ID: {withdrawal_id}")
+        logger.info(f"=" * 80)
+        
         # Check if we have Coinbase credentials configured
         coinbase_api_key = os.getenv("COINBASE_API_KEY", "")
         coinbase_private_key = os.getenv("COINBASE_PRIVATE_KEY", "")
+        
+        logger.info(f"Step 1: Checking Coinbase credentials...")
+        logger.info(f"  - API Key present: {bool(coinbase_api_key)}")
+        logger.info(f"  - API Key length: {len(coinbase_api_key) if coinbase_api_key else 0}")
+        logger.info(f"  - Private Key present: {bool(coinbase_private_key)}")
+        logger.info(f"  - Private Key length: {len(coinbase_private_key) if coinbase_private_key else 0}")
         
         if not coinbase_api_key or not coinbase_private_key:
             logger.warning("Coinbase credentials not configured - using demo mode")
@@ -1412,27 +1422,64 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
         # Calculate fee (0.5% of withdrawal amount)
         processing_fee = amount * 0.005
         
-        # Initialize Coinbase REST client
-        client = RESTClient(api_key=coinbase_api_key, api_secret=coinbase_private_key)
+        logger.info(f"Step 2: Withdrawal details...")
+        logger.info(f"  - Destination address: {address}")
+        logger.info(f"  - Amount: {amount} BTC")
+        logger.info(f"  - Processing fee (0.5%): {processing_fee} BTC")
         
-        logger.info(f"Initializing Coinbase withdrawal: {amount} BTC to {address}")
+        # Initialize Coinbase REST client
+        logger.info(f"Step 3: Initializing Coinbase REST client...")
+        try:
+            client = RESTClient(api_key=coinbase_api_key, api_secret=coinbase_private_key)
+            logger.info(f"  ✅ Client initialized successfully")
+        except Exception as init_error:
+            logger.error(f"  ❌ Client initialization failed: {init_error}")
+            raise
+        
+        logger.info(f"Step 4: Fetching BTC account from Coinbase...")
         
         # Get BTC account UUID
-        accounts_response = client.get_accounts()
-        logger.info(f"Retrieved accounts from Coinbase")
+        try:
+            accounts_response = client.get_accounts()
+            logger.info(f"  ✅ Accounts retrieved successfully")
+            logger.info(f"  - Response type: {type(accounts_response)}")
+            logger.info(f"  - Has accounts attribute: {hasattr(accounts_response, 'accounts')}")
+            
+            if hasattr(accounts_response, 'accounts'):
+                logger.info(f"  - Number of accounts: {len(accounts_response.accounts) if accounts_response.accounts else 0}")
+        except Exception as account_error:
+            logger.error(f"  ❌ Failed to retrieve accounts: {account_error}")
+            logger.error(f"  - Error type: {type(account_error).__name__}")
+            logger.error(f"  - Error details: {str(account_error)}")
+            
+            # Check if it's a 401 error
+            if "401" in str(account_error) or "Unauthorized" in str(account_error):
+                logger.error(f"  🔒 AUTHENTICATION FAILED - Possible causes:")
+                logger.error(f"     1. API Key or Secret is invalid")
+                logger.error(f"     2. IP whitelisting is still enabled on Coinbase")
+                logger.error(f"     3. API Key doesn't have required permissions")
+                logger.error(f"     4. Private key format is incorrect")
+            raise
         
         btc_account = None
         if hasattr(accounts_response, 'accounts') and accounts_response.accounts:
-            for account in accounts_response.accounts:
+            logger.info(f"Step 5: Searching for BTC account...")
+            for idx, account in enumerate(accounts_response.accounts):
+                currency = account.currency if hasattr(account, 'currency') else 'unknown'
+                logger.info(f"  - Account {idx + 1}: {currency}")
                 if hasattr(account, 'currency') and account.currency == 'BTC':
                     btc_account = account
+                    logger.info(f"  ✅ Found BTC account!")
                     break
         
         if not btc_account:
-            logger.error("BTC account not found in Coinbase")
+            logger.error("  ❌ BTC account not found in Coinbase")
             raise Exception("BTC wallet not found in your Coinbase account")
         
-        logger.info(f"Found BTC account: {btc_account.uuid if hasattr(btc_account, 'uuid') else 'unknown'}")
+        logger.info(f"Step 6: BTC Account details...")
+        logger.info(f"  - Account UUID: {btc_account.uuid if hasattr(btc_account, 'uuid') else 'unknown'}")
+        if hasattr(btc_account, 'available_balance'):
+            logger.info(f"  - Available balance: {btc_account.available_balance}")
         
         # Transaction 1: Send withdrawal amount to user's address
         user_withdrawal_params = {
@@ -1444,23 +1491,31 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
             "note": f"Mining withdrawal {withdrawal_id}"
         }
         
-        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        logger.info(f"Step 7: Initiating user withdrawal...")
+        logger.info(f"  - Params: {user_withdrawal_params}")
         
         # Call Coinbase withdrawal endpoint
-        user_withdrawal_response = client.post(
-            "/api/v3/brokerage/withdrawals/crypto",
-            json=user_withdrawal_params
-        )
+        try:
+            user_withdrawal_response = client.post(
+                "/api/v3/brokerage/withdrawals/crypto",
+                json=user_withdrawal_params
+            )
+            logger.info(f"  ✅ User withdrawal API call completed")
+            logger.info(f"  - Response type: {type(user_withdrawal_response)}")
+        except Exception as withdrawal_error:
+            logger.error(f"  ❌ User withdrawal failed: {withdrawal_error}")
+            logger.error(f"  - Error type: {type(withdrawal_error).__name__}")
+            raise
         
         user_tx_id = None
         if hasattr(user_withdrawal_response, 'id'):
             user_tx_id = user_withdrawal_response.id
-            logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
         elif isinstance(user_withdrawal_response, dict) and 'id' in user_withdrawal_response:
             user_tx_id = user_withdrawal_response['id']
-            logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
         else:
-            logger.error(f"User withdrawal response unexpected format: {user_withdrawal_response}")
+            logger.error(f"  ❌ User withdrawal response unexpected format: {user_withdrawal_response}")
             raise Exception("Failed to get withdrawal confirmation from Coinbase")
         
         # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
@@ -1475,7 +1530,9 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
                 "note": f"Processing fee for withdrawal {withdrawal_id}"
             }
             
-            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            logger.info(f"Step 8: Sending processing fee...")
+            logger.info(f"  - Amount: {processing_fee} BTC")
+            logger.info(f"  - Destination: {fee_collection_address}")
             
             try:
                 fee_withdrawal_response = client.post(
@@ -1485,24 +1542,33 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
                 
                 if hasattr(fee_withdrawal_response, 'id'):
                     fee_tx_id = fee_withdrawal_response.id
-                    logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    logger.info(f"  ✅ Fee collection successful: {fee_tx_id}")
                 elif isinstance(fee_withdrawal_response, dict) and 'id' in fee_withdrawal_response:
                     fee_tx_id = fee_withdrawal_response['id']
-                    logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    logger.info(f"  ✅ Fee collection successful: {fee_tx_id}")
                 else:
-                    logger.warning("Fee collection: unexpected response format")
+                    logger.warning("  ⚠️  Fee collection: unexpected response format")
             except Exception as fee_error:
                 # Fee collection failed, but don't fail the entire withdrawal
-                logger.warning(f"Fee collection failed (user withdrawal still succeeded): {fee_error}")
+                logger.warning(f"  ⚠️  Fee collection failed (user withdrawal still succeeded): {fee_error}")
         else:
-            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+            logger.info(f"Step 8: Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping")
+        
+        logger.info(f"=" * 80)
+        logger.info(f"COINBASE WITHDRAWAL COMPLETED SUCCESSFULLY")
+        logger.info(f"  - User TX ID: {user_tx_id}")
+        logger.info(f"  - Fee TX ID: {fee_tx_id or 'N/A'}")
+        logger.info(f"=" * 80)
         
         # Return user transaction ID (primary transaction)
         return user_tx_id
         
     except Exception as e:
-        logger.error(f"Coinbase withdrawal failed: {e}")
-        logger.error(f"Error details: {type(e).__name__}: {str(e)}")
+        logger.error(f"=" * 80)
+        logger.error(f"COINBASE WITHDRAWAL FAILED - ID: {withdrawal_id}")
+        logger.error(f"  - Error type: {type(e).__name__}")
+        logger.error(f"  - Error message: {str(e)}")
+        logger.error(f"=" * 80)
         # Re-raise with a user-friendly message
         raise Exception(f"Coinbase withdrawal error: {str(e)}")
 
