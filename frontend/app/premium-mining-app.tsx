@@ -351,6 +351,19 @@ export default function PremiumBitcoinMiningApp() {
         const minersResult = await minersResponse.json();
         const allMiners = minersResult.miners;
         
+        // Check if free miner was activated today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const hasFreeMinerToday = allMiners.some(miner => {
+          if (miner.miner_type === 'free' && miner.status === 'active') {
+            const createdDate = new Date(miner.created_at);
+            createdDate.setHours(0, 0, 0, 0);
+            return createdDate.getTime() === today.getTime();
+          }
+          return false;
+        });
+        setCanActivateFreeMiner(!hasFreeMinerToday);
+        
         // Separate active/inactive and expired miners
         const activeMiners = allMiners.filter(miner => 
           miner.status !== 'expired' || miner.miner_type === 'premium'
