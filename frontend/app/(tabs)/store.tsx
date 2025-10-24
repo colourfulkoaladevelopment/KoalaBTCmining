@@ -248,9 +248,14 @@ export default function Store() {
         {/* Premium Miners Header */}
         <View style={styles.premiumHeader}>
           <Text style={styles.premiumTitle}>Premium Miners</Text>
+          <Text style={{color: '#FFD700', fontSize: 12, textAlign: 'center', marginTop: 4}}>v2.1 - Build Test</Text>
         </View>
 
-        {/* Hash Rate Legend */}
+        {/* Hash Rate Legend - MUST BE VISIBLE */}
+        <View style={{backgroundColor: '#FFD700', padding: 20, margin: 15}}>
+          <Text style={{color: '#000', fontWeight: 'bold', fontSize: 18}}>LEGEND TEST - IF YOU SEE THIS, LEGEND WORKS</Text>
+        </View>
+
         <View style={styles.legendCard}>
           <View style={styles.legendHeader}>
             <Ionicons name="information-circle" size={20} color="#FFD700" />
