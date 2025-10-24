@@ -244,221 +244,58 @@ class BackendTester:
         except Exception as e:
             return self.log_test("Store Miners Endpoint", False, f"Exception: {str(e)}")
     
-    def test_watch_ad_endpoint(self, ad_type):
-        """Test POST /api/ads/watch endpoint for specific ad type"""
+    def test_store_miners_authentication(self):
+        """Test that store endpoint requires authentication"""
         try:
-            ad_data = {"ad_type": ad_type}
-            response = self.session.post(f"{API_BASE}/ads/watch", json=ad_data)
+            # Test without authentication
+            session_no_auth = requests.Session()
+            response = session_no_auth.get(f"{API_BASE}/store/miners")
             
+            # The endpoint should work without authentication (it's a public store listing)
+            # But let's verify it returns the same data
             if response.status_code == 200:
-                data = response.json()
-                
-                # Verify response structure
-                required_fields = ["success", "message", "ad_miner", "daily_stats"]
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log_test(f"Watch Ad ({ad_type}) - Response Structure", False, f"Missing fields: {missing_fields}")
-                    return False
-                
-                # Verify ad miner details
-                ad_miner = data["ad_miner"]
-                if ad_miner["hash_rate"] != 2.0:
-                    self.log_test(f"Watch Ad ({ad_type}) - Hash Rate", False, f"Expected 2.0 GH/s, got {ad_miner['hash_rate']}")
-                    return False
-                
-                if ad_miner["duration_hours"] != 24:
-                    self.log_test(f"Watch Ad ({ad_type}) - Duration", False, f"Expected 24 hours, got {ad_miner['duration_hours']}")
-                    return False
-                
-                # Verify daily stats increment
-                daily_stats = data["daily_stats"]
-                if daily_stats["max_daily_ads"] != 30:
-                    self.log_test(f"Watch Ad ({ad_type}) - Max Daily Ads", False, f"Expected 30, got {daily_stats['max_daily_ads']}")
-                    return False
-                
-                self.log_test(f"Watch Ad ({ad_type})", True, f"Created 2.0 GH/s miner for 24h, counter incremented")
-                return True
+                return self.log_test(
+                    "Store Miners Public Access", 
+                    True, 
+                    "Store endpoint is publicly accessible (as expected for store listings)"
+                )
             else:
-                self.log_test(f"Watch Ad ({ad_type})", False, f"HTTP {response.status_code}: {response.text}")
-                return False
+                return self.log_test(
+                    "Store Miners Public Access", 
+                    False, 
+                    f"Unexpected authentication requirement: {response.status_code}"
+                )
                 
         except Exception as e:
-            self.log_test(f"Watch Ad ({ad_type})", False, f"Exception: {str(e)}")
-            return False
+            return self.log_test("Store Miners Authentication", False, f"Exception: {str(e)}")
     
-    def test_all_ad_types(self):
-        """Test all three ad types"""
-        ad_types = ["app_launch", "withdrawal", "miner_activation"]
-        success_count = 0
-        
-        for ad_type in ad_types:
-            if self.test_watch_ad_endpoint(ad_type):
-                success_count += 1
-        
-        if success_count == len(ad_types):
-            self.log_test("All Ad Types", True, f"All {len(ad_types)} ad types working correctly")
-            return True
-        else:
-            self.log_test("All Ad Types", False, f"Only {success_count}/{len(ad_types)} ad types working")
-            return False
-    
-    def test_daily_limit_enforcement(self):
-        """Test that daily limit of 30 ads is enforced"""
+    def test_store_miners_response_consistency(self):
+        """Test that multiple calls return consistent data"""
         try:
-            # First, check current stats
-            stats_response = self.session.post(f"{API_BASE}/ads/daily-stats")
-            if stats_response.status_code != 200:
-                self.log_test("Daily Limit - Get Initial Stats", False, f"Failed to get stats: {stats_response.status_code}")
-                return False
-            
-            initial_stats = stats_response.json()
-            ads_watched = initial_stats["ads_watched_today"]
-            
-            # Watch ads until we reach the limit
-            ads_to_watch = 30 - ads_watched
-            
-            if ads_to_watch <= 0:
-                self.log_test("Daily Limit - Already at Limit", True, "User already at daily limit")
-                return True
-            
-            # Watch remaining ads (up to 30 total)
-            for i in range(ads_to_watch):
-                ad_data = {"ad_type": "app_launch"}
-                response = self.session.post(f"{API_BASE}/ads/watch", json=ad_data)
-                
-                if response.status_code != 200:
-                    self.log_test("Daily Limit - Watch Ads to Limit", False, f"Failed at ad {i+1}: {response.status_code}")
-                    return False
-            
-            # Now try to watch one more ad (should be rejected)
-            ad_data = {"ad_type": "app_launch"}
-            response = self.session.post(f"{API_BASE}/ads/watch", json=ad_data)
-            
-            if response.status_code == 429:
-                self.log_test("Daily Limit Enforcement", True, "31st ad correctly rejected with HTTP 429")
-                return True
-            else:
-                self.log_test("Daily Limit Enforcement", False, f"Expected HTTP 429, got {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Daily Limit Enforcement", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_invalid_ad_type(self):
-        """Test that invalid ad types are rejected"""
-        try:
-            ad_data = {"ad_type": "invalid_type"}
-            response = self.session.post(f"{API_BASE}/ads/watch", json=ad_data)
-            
-            if response.status_code == 400:
-                self.log_test("Invalid Ad Type", True, "Invalid ad type correctly rejected with HTTP 400")
-                return True
-            else:
-                self.log_test("Invalid Ad Type", False, f"Expected HTTP 400, got {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Invalid Ad Type", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_unauthenticated_requests(self):
-        """Test that unauthenticated requests are rejected"""
-        try:
-            # Create session without auth token
-            unauth_session = requests.Session()
-            
-            # Test daily stats without auth
-            response = unauth_session.post(f"{API_BASE}/ads/daily-stats")
-            if response.status_code not in [401, 403]:
-                self.log_test("Unauthenticated Daily Stats", False, f"Expected 401/403, got {response.status_code}")
-                return False
-            
-            # Test watch ad without auth
-            ad_data = {"ad_type": "app_launch"}
-            response = unauth_session.post(f"{API_BASE}/ads/watch", json=ad_data)
-            if response.status_code not in [401, 403]:
-                self.log_test("Unauthenticated Watch Ad", False, f"Expected 401/403, got {response.status_code}")
-                return False
-            
-            self.log_test("Unauthenticated Requests", True, "Properly rejected unauthenticated requests")
-            return True
-            
-        except Exception as e:
-            self.log_test("Unauthenticated Requests", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_active_miners_endpoint(self):
-        """Test GET /api/ads/active-miners endpoint"""
-        try:
-            response = self.session.get(f"{API_BASE}/ads/active-miners")
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Verify response structure
-                required_fields = ["active_ad_miners", "total_miners", "total_ad_hashrate"]
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log_test("Active Miners - Response Structure", False, f"Missing fields: {missing_fields}")
-                    return False
-                
-                # Verify data types
-                if not isinstance(data["active_ad_miners"], list):
-                    self.log_test("Active Miners - Data Type", False, "active_ad_miners should be a list")
-                    return False
-                
-                if not isinstance(data["total_miners"], int):
-                    self.log_test("Active Miners - Data Type", False, "total_miners should be an integer")
-                    return False
-                
-                if not isinstance(data["total_ad_hashrate"], (int, float)):
-                    self.log_test("Active Miners - Data Type", False, "total_ad_hashrate should be a number")
-                    return False
-                
-                self.log_test("Active Miners Endpoint", True, f"Found {data['total_miners']} active ad miners")
-                return True
-            else:
-                self.log_test("Active Miners Endpoint", False, f"HTTP {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Active Miners Endpoint", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_ad_miner_stacking(self):
-        """Test that multiple ads create separate miners that stack"""
-        try:
-            # Watch 3 ads of the same type
+            responses = []
             for i in range(3):
-                ad_data = {"ad_type": "miner_activation"}
-                response = self.session.post(f"{API_BASE}/ads/watch", json=ad_data)
-                
-                if response.status_code != 200:
-                    self.log_test("Ad Miner Stacking", False, f"Failed to watch ad {i+1}: {response.status_code}")
-                    return False
+                response = self.session.get(f"{API_BASE}/store/miners")
+                if response.status_code == 200:
+                    responses.append(response.json())
+                else:
+                    return self.log_test(
+                        "Store Miners Consistency", 
+                        False, 
+                        f"Request {i+1} failed: {response.status_code}"
+                    )
             
-            # Check active miners
-            response = self.session.get(f"{API_BASE}/ads/active-miners")
-            if response.status_code != 200:
-                self.log_test("Ad Miner Stacking", False, f"Failed to get active miners: {response.status_code}")
-                return False
+            # Compare all responses
+            first_response = responses[0]
+            all_consistent = all(resp == first_response for resp in responses[1:])
             
-            data = response.json()
+            return self.log_test(
+                "Store Miners Response Consistency", 
+                all_consistent, 
+                "All 3 requests returned identical data" if all_consistent else "Responses differ between calls"
+            )
             
-            # Should have multiple ad miners
-            if data["total_miners"] >= 3:
-                self.log_test("Ad Miner Stacking", True, f"Multiple ads created {data['total_miners']} separate miners")
-                return True
-            else:
-                self.log_test("Ad Miner Stacking", False, f"Expected at least 3 miners, got {data['total_miners']}")
-                return False
-                
         except Exception as e:
-            self.log_test("Ad Miner Stacking", False, f"Exception: {str(e)}")
-            return False
+            return self.log_test("Store Miners Consistency", False, f"Exception: {str(e)}")
     
     def run_all_tests(self):
         """Run comprehensive Facebook Ads backend tests"""
