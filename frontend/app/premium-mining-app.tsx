@@ -734,10 +734,13 @@ Your miner is now active and earning Bitcoin!`,
         
         if (adType === 'miner_activation') {
           // Rewarded video ad for miner activation
+          console.log('Attempting to show rewarded video ad...');
           const result = await showRewardedVideoAd();
+          console.log('Rewarded video ad result:', result);
           adResult = result.watched && result.rewarded;
         } else {
           // Interstitial ad for app_launch and withdrawal
+          console.log('Attempting to show interstitial ad for:', adType);
           adResult = await showInterstitialAd(adType);
         }
         
@@ -745,6 +748,7 @@ Your miner is now active and earning Bitcoin!`,
         return adResult;
       } else {
         // Web/Expo Go - silent fallback
+        console.log('Web/Expo Go detected, using silent fallback');
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setIsWatchingAd(false);
         return true;
@@ -752,8 +756,9 @@ Your miner is now active and earning Bitcoin!`,
     } catch (error) {
       console.error('Error showing AdMob ad:', error);
       setIsWatchingAd(false);
-      // Don't give reward if ad fails
-      Alert.alert('Ad Unavailable', 'Unable to load advertisement. Please try again later.');
+      // Show user-friendly error message
+      const errorMessage = error.message || 'Unable to load advertisement';
+      Alert.alert('Ad Unavailable', `${errorMessage}. Please try again later.`);
       return false;
     }
   };
