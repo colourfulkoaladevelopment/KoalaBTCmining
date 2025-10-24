@@ -14,6 +14,7 @@
       "bundleIdentifier": "com.koalamining.app",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app uses ads to provide free mining bonuses.",
+        "GADApplicationIdentifier": "ca-app-pub-5648720019902247~5985575029",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
