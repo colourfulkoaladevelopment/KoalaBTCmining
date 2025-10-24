@@ -465,7 +465,8 @@ export default function PremiumBitcoinMiningApp() {
         Alert.alert('Error', result.detail || 'Authentication failed');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred');
+      console.error('Login/Register error:', error);
+      Alert.alert('Network Error', `Unable to connect to server. Please check your internet connection.\n\nError: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
