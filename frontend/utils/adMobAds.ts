@@ -32,6 +32,12 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
  * Returns object with watched and rewarded status
  */
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
+  // Skip ads on web platform
+  if (Platform.OS === 'web') {
+    console.log('Ads not supported on web platform');
+    return { watched: true, rewarded: true };
+  }
+
   try {
     const mobileAds = await import('react-native-google-mobile-ads');
     const { RewardedAd, RewardedAdEventType } = mobileAds;
