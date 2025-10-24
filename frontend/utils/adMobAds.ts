@@ -103,6 +103,12 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
  * Returns promise when ad completes
  */
 export const showInterstitialAd = async (adType: 'app_launch' | 'withdrawal'): Promise<boolean> => {
+  // Skip ads on web platform
+  if (Platform.OS === 'web') {
+    console.log('Ads not supported on web platform');
+    return true;
+  }
+
   try {
     const { InterstitialAd, AdEventType } = await import('react-native-google-mobile-ads');
     
