@@ -409,6 +409,18 @@ frontend:
         agent: "main"
         comment: "✅ Added bottom clearance (35px) below navigation bar for better spacing and mobile experience."
 
+  - task: "Store Page UI Enhancements"
+    implemented: true
+    working: "NA"
+    file: "store.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ STORE PAGE UI UPDATES (Issues #9-11): Implemented three key enhancements to store page: 1) Added legend bubble above 'Premium Miners' section displaying hash rate to BTC/day conversion rates (100 MH/s = Est. B 0.00000000054350/day through 10 TH/s = Est. B 0.00005435000000/day) with gold styling and info icon, 2) Removed any EST B xx.xx per day display from individual miner cards (none existed, confirmed), 3) Updated formatHashRate() function to support MH/s display for hash rates below 1 GH/s. Updated color tiers and icons to reflect new hash rate ranges: Standard (100GH, Green), Advanced (200GH, Cyan), Pro (400GH, Blue), Elite (1TH, Amber), Master (2TH, Orange), Supreme (4TH, Deep Orange), Ultimate (10TH, Deep Purple), Legendary (15TH, Purple), Mythical (20TH, Pink). Added 'Premium Miners' header with gold styling for better section organization. Ready for frontend testing on mobile device to verify legend display and miner card updates."
+
   - task: "Facebook Ads Integration - Frontend"
     implemented: true
     working: "NA"
