@@ -33,7 +33,8 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
  */
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
-    const { RewardedAd, RewardedAdEventType, TestIds } = await import('react-native-google-mobile-ads');
+    const mobileAds = await import('react-native-google-mobile-ads');
+    const { RewardedAd, RewardedAdEventType } = mobileAds;
     
     const adUnitId = getAdUnitId('miner_activation');
     console.log('Loading rewarded ad with unit ID:', adUnitId);
@@ -69,13 +70,15 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
         }
       );
 
-      const unsubscribeClosed = rewarded.addAdEventListener(RewardedAdEventType.CLOSED, () => {
-        console.log('Rewarded ad closed, watched:', adWatched, 'rewarded:', adRewarded);
+      // Use DISMISSED instead of CLOSED (correct event type)
+      const unsubscribeDismissed = rewarded.addAdEventListener('dismissed', () => {
+        console.log('Rewarded ad dismissed, watched:', adWatched, 'rewarded:', adRewarded);
         unsubscribeAll();
         resolve({ watched: adWatched, rewarded: adRewarded });
       });
       
-      const unsubscribeError = rewarded.addAdEventListener(RewardedAdEventType.ERROR, (error) => {
+      // Use error event as string
+      const unsubscribeError = rewarded.addAdEventListener('error', (error) => {
         console.error('Rewarded ad error:', error);
         clearTimeout(loadTimeout);
         unsubscribeAll();
@@ -85,7 +88,7 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
       const unsubscribeAll = () => {
         unsubscribeLoaded();
         unsubscribeEarned();
-        unsubscribeClosed();
+        unsubscribeDismissed();
         unsubscribeError();
       };
 
