@@ -1729,7 +1729,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
             {/* Build Version */}
             <View style={styles.buildVersionContainer}>
-              <Text style={styles.buildVersionText}>Build Version: 1.0.0 (1)</Text>
+              <Text style={styles.buildVersionText}>
+                Build ID: {Constants.expoConfig?.extra?.eas?.id || 'Development'}
+              </Text>
             </View>
 
             <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
