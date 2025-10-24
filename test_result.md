@@ -447,7 +447,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Enhanced Store System"
     - "Store Page UI Enhancements"
   stuck_tasks: []
   test_all: false
