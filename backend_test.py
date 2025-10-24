@@ -22,7 +22,7 @@ TEST_USER_EMAIL = f"storetest_{uuid.uuid4().hex[:8]}@example.com"
 TEST_USER_PASSWORD = "TestPassword123!"
 TEST_USER_NAME = "Store Test User"
 
-class FacebookAdsBackendTester:
+class BackendTester:
     def __init__(self):
         self.session = requests.Session()
         self.auth_token = None
@@ -32,54 +32,53 @@ class FacebookAdsBackendTester:
     def log_test(self, test_name, success, details=""):
         """Log test result"""
         status = "✅ PASS" if success else "❌ FAIL"
-        result = f"{status}: {test_name}"
-        if details:
-            result += f" - {details}"
-        print(result)
-        self.test_results.append({
+        result = {
             "test": test_name,
             "success": success,
             "details": details,
             "timestamp": datetime.now().isoformat()
-        })
-        
-    def register_and_login(self):
-        """Register a new test user and login"""
+        }
+        self.test_results.append(result)
+        print(f"{status}: {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        return success
+    
+    def register_test_user(self):
+        """Register a test user for authentication"""
         try:
-            # Generate unique test user
-            timestamp = int(time.time())
-            test_email = f"fbads_test_{timestamp}@test.com"
-            test_password = "TestPass123!"
-            test_name = f"FB Ads Tester {timestamp}"
-            
-            # Register user
-            register_data = {
-                "name": test_name,
-                "email": test_email,
-                "password": test_password
+            payload = {
+                "name": TEST_USER_NAME,
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD
             }
             
-            response = self.session.post(f"{API_BASE}/auth/register", json=register_data)
+            response = self.session.post(f"{API_BASE}/auth/register", json=payload)
             
             if response.status_code == 200:
                 data = response.json()
-                self.auth_token = data["access_token"]
-                self.user_id = data["user"]["id"]
+                self.auth_token = data.get("access_token")
+                self.user_id = data.get("user", {}).get("id")
                 
                 # Set authorization header for future requests
                 self.session.headers.update({
                     "Authorization": f"Bearer {self.auth_token}"
                 })
                 
-                self.log_test("User Registration & Login", True, f"User ID: {self.user_id}")
-                return True
+                return self.log_test(
+                    "User Registration", 
+                    True, 
+                    f"User registered successfully with ID: {self.user_id}"
+                )
             else:
-                self.log_test("User Registration & Login", False, f"HTTP {response.status_code}: {response.text}")
-                return False
+                return self.log_test(
+                    "User Registration", 
+                    False, 
+                    f"Registration failed: {response.status_code} - {response.text}"
+                )
                 
         except Exception as e:
-            self.log_test("User Registration & Login", False, f"Exception: {str(e)}")
-            return False
+            return self.log_test("User Registration", False, f"Exception: {str(e)}")
     
     def test_daily_stats_endpoint(self):
         """Test POST /api/ads/daily-stats endpoint"""
