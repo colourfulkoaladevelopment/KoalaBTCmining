@@ -924,10 +924,18 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
   };
 
   const proceedWithWithdrawal = async () => {
+    console.log('=== WITHDRAWAL PROCESS STARTED ===');
     const amount = parseFloat(withdrawForm.amount);
     const processingFee = amount * 0.005; // 0.5% fee
     const totalDeduction = amount + processingFee;
     const usdValue = amount * bitcoinPrice;
+
+    console.log('Withdrawal details:', {
+      amount,
+      processingFee,
+      totalDeduction,
+      address: withdrawForm.address
+    });
 
     Alert.alert(
       '🪙 Confirm Bitcoin Withdrawal',
@@ -940,26 +948,42 @@ Address: ${withdrawForm.address}
 
 This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => {
+          console.log('Withdrawal canceled by user');
+        }},
         { text: 'Confirm Withdrawal', onPress: async () => {
+          console.log('User confirmed withdrawal, starting API call...');
           setIsWithdrawing(true);
           try {
             const token = await AsyncStorage.getItem('session_token');
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/withdraw/bitcoin`, {
+            console.log('Session token retrieved:', token ? 'Present' : 'Missing');
+            
+            const apiUrl = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/withdraw/bitcoin`;
+            console.log('Calling API:', apiUrl);
+            
+            const requestBody = {
+              address: withdrawForm.address,
+              amount: amount
+            };
+            console.log('Request body:', requestBody);
+            
+            const response = await fetch(apiUrl, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({
-                address: withdrawForm.address,
-                amount: amount
-              })
+              body: JSON.stringify(requestBody)
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+
             const result = await response.json();
+            console.log('Response body:', result);
 
             if (response.ok) {
+              console.log('✅ Withdrawal successful');
               Alert.alert(
                 '✅ Withdrawal Submitted!',
                 `${result.message}
@@ -977,12 +1001,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 }}]
               );
             } else {
+              console.error('❌ Withdrawal failed:', result.detail);
               Alert.alert('❌ Withdrawal Failed', result.detail || 'Failed to process withdrawal');
             }
           } catch (error) {
-            Alert.alert('❌ Error', 'Network error occurred. Please try again.');
+            console.error('❌ Withdrawal error:', error);
+            console.error('Error type:', error.constructor.name);
+            console.error('Error message:', error.message);
+            Alert.alert('❌ Error', `Network error occurred: ${error.message}\n\nPlease try again.`);
           } finally {
             setIsWithdrawing(false);
+            console.log('=== WITHDRAWAL PROCESS ENDED ===');
           }
         }}
       ]
