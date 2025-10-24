@@ -158,10 +158,10 @@ export default function PremiumBitcoinMiningApp() {
           [{ text: 'Great!', onPress: () => loadAppData() }]
         );
       } else if (url.includes('koalamining://paypal/cancel')) {
-        // PayPal payment cancelled
+        // PayPal payment canceled
         Alert.alert(
-          'Payment Cancelled',
-          'Your payment was cancelled. No charges were made.',
+          'Payment Canceled',
+          'Your payment was canceled. No charges were made.',
           [{ text: 'OK' }]
         );
       }
