@@ -444,12 +444,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bitcoin Withdrawal System"
-    - "Forgot Password UI Integration"
-    - "Withdraw BTC UI"
-    - "Enhanced Dashboard with Expired Miners Section"
-  stuck_tasks:
-    - "Bitcoin Withdrawal System"
+    - "Enhanced Store System"
+    - "Store Page UI Enhancements"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
