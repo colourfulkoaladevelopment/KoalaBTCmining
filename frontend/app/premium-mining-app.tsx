@@ -442,7 +442,10 @@ export default function PremiumBitcoinMiningApp() {
             referral_code: formData.referralCode || null
           };
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}${endpoint}`, {
+      const apiUrl = `${process.env.EXPO_PUBLIC_BACKEND_URL}${endpoint}`;
+      console.log('Making auth request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
