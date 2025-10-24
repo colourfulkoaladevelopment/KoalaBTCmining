@@ -298,66 +298,78 @@ class BackendTester:
             return self.log_test("Store Miners Consistency", False, f"Exception: {str(e)}")
     
     def run_all_tests(self):
-        """Run comprehensive Facebook Ads backend tests"""
-        print("🚀 Starting Facebook Ads Backend Integration Tests")
-        print("=" * 60)
+        """Run all store system tests"""
+        print("=" * 80)
+        print("🚀 BACKEND TESTING: Enhanced Store System (Issues #9-11)")
+        print("=" * 80)
+        print(f"Backend URL: {API_BASE}")
+        print(f"Test User: {TEST_USER_EMAIL}")
+        print(f"Timestamp: {datetime.now().isoformat()}")
+        print("=" * 80)
         
-        # Authentication
-        if not self.register_and_login():
-            print("❌ Authentication failed - cannot continue tests")
+        # Step 1: Setup authentication
+        if not self.register_test_user():
+            print("\n❌ CRITICAL: Cannot proceed without authentication")
             return False
         
-        # Core endpoint tests
-        self.test_daily_stats_endpoint()
-        self.test_all_ad_types()
-        self.test_active_miners_endpoint()
-        self.test_ad_miner_stacking()
+        print("\n" + "=" * 40)
+        print("🏪 STORE MINERS ENDPOINT TESTING")
+        print("=" * 40)
         
-        # Security and validation tests
-        self.test_invalid_ad_type()
-        self.test_unauthenticated_requests()
+        # Step 2: Test store miners endpoint
+        store_success = self.test_store_miners_endpoint()
         
-        # Daily limit test (run last as it consumes many ads)
-        self.test_daily_limit_enforcement()
+        # Step 3: Test authentication requirements
+        auth_success = self.test_store_miners_authentication()
+        
+        # Step 4: Test response consistency
+        consistency_success = self.test_store_miners_response_consistency()
         
         # Summary
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 80)
         print("📊 TEST SUMMARY")
-        print("=" * 60)
+        print("=" * 80)
         
-        passed = sum(1 for result in self.test_results if result["success"])
-        total = len(self.test_results)
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        failed_tests = total_tests - passed_tests
         
-        for result in self.test_results:
-            status = "✅" if result["success"] else "❌"
-            print(f"{status} {result['test']}")
-            if result["details"]:
-                print(f"   └─ {result['details']}")
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         
-        print(f"\n🎯 RESULTS: {passed}/{total} tests passed")
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"  - {result['test']}: {result['details']}")
         
-        if passed == total:
-            print("🎉 ALL FACEBOOK ADS BACKEND TESTS PASSED!")
-            return True
+        overall_success = store_success and auth_success and consistency_success
+        
+        print(f"\n🎯 OVERALL RESULT: {'✅ SUCCESS' if overall_success else '❌ FAILURE'}")
+        
+        if overall_success:
+            print("\n🎉 Enhanced Store System is working correctly!")
+            print("✅ All 9 miners present with correct specifications")
+            print("✅ Hash rates match: 100GH → 20TH progression")
+            print("✅ Prices match: $7.99 → $999.99 range")
+            print("✅ Daily rewards calculated with 14-decimal precision")
+            print("✅ All miners have 30-day duration")
+            print("✅ JSON structure includes required fields")
         else:
-            print(f"⚠️  {total - passed} tests failed - see details above")
-            return False
+            print("\n⚠️  Issues found in Enhanced Store System")
+            print("Please review failed tests above for details")
+        
+        return overall_success
 
 def main():
     """Main test execution"""
-    print(f"🧪 Facebook Ads Backend Integration Test Suite")
-    print(f"🔧 Testing API at: {API_BASE}")
-    print("=" * 80)
-    
-    tester = FacebookAdsBackendTester()
+    tester = BackendTester()
     success = tester.run_all_tests()
     
-    if success:
-        print("\n✅ Facebook Ads backend integration is fully functional!")
-    else:
-        print("\n❌ Facebook Ads backend integration has issues that need attention!")
-    
-    return success
+    # Exit with appropriate code
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
     main()
