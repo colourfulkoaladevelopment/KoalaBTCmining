@@ -953,19 +953,28 @@ This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
         }},
         { text: 'Confirm Withdrawal', onPress: async () => {
           console.log('User confirmed withdrawal, starting API call...');
+          
+          // Collect debug info
+          let debugInfo = '=== DEBUG INFO ===\n\n';
+          
           setIsWithdrawing(true);
           try {
             const token = await AsyncStorage.getItem('session_token');
+            debugInfo += `Session Token: ${token ? 'Present (' + token.substring(0, 20) + '...)' : 'MISSING'}\n`;
             console.log('Session token retrieved:', token ? 'Present' : 'Missing');
             
             const apiUrl = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/withdraw/bitcoin`;
+            debugInfo += `API URL: ${apiUrl}\n`;
             console.log('Calling API:', apiUrl);
             
             const requestBody = {
               address: withdrawForm.address,
               amount: amount
             };
+            debugInfo += `Request Body: ${JSON.stringify(requestBody, null, 2)}\n`;
             console.log('Request body:', requestBody);
+            
+            debugInfo += '\n--- Sending Request ---\n';
             
             const response = await fetch(apiUrl, {
               method: 'POST',
@@ -976,10 +985,13 @@ This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
               body: JSON.stringify(requestBody)
             });
 
+            debugInfo += `Response Status: ${response.status}\n`;
+            debugInfo += `Response OK: ${response.ok}\n`;
             console.log('Response status:', response.status);
             console.log('Response ok:', response.ok);
 
             const result = await response.json();
+            debugInfo += `Response Body: ${JSON.stringify(result, null, 2)}\n`;
             console.log('Response body:', result);
 
             if (response.ok) {
@@ -1002,16 +1014,52 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               );
             } else {
               console.error('❌ Withdrawal failed:', result.detail);
-              Alert.alert('❌ Withdrawal Failed', result.detail || 'Failed to process withdrawal');
+              debugInfo += '\n=== FAILURE ===\n';
+              debugInfo += `Error: ${result.detail}\n`;
+              
+              // Show debug info
+              Alert.alert(
+                '❌ Withdrawal Failed',
+                result.detail || 'Failed to process withdrawal',
+                [
+                  { text: 'Show Debug Info', onPress: () => {
+                    Alert.alert('Debug Information', debugInfo, [
+                      { text: 'Close' }
+                    ]);
+                  }},
+                  { text: 'Close' }
+                ]
+              );
             }
           } catch (error) {
             console.error('❌ Withdrawal error:', error);
             console.error('Error type:', error.constructor.name);
             console.error('Error message:', error.message);
-            Alert.alert('❌ Error', `Network error occurred: ${error.message}\n\nPlease try again.`);
+            
+            debugInfo += '\n=== ERROR CAUGHT ===\n';
+            debugInfo += `Error Type: ${error.constructor.name}\n`;
+            debugInfo += `Error Message: ${error.message}\n`;
+            if (error.stack) {
+              debugInfo += `Stack Trace: ${error.stack}\n`;
+            }
+            
+            // Show error with debug option
+            Alert.alert(
+              '❌ Network Error',
+              `An error occurred while processing your withdrawal.\n\nError: ${error.message}`,
+              [
+                { text: 'Show Debug Info', onPress: () => {
+                  Alert.alert('Debug Information', debugInfo, [
+                    { text: 'Close' }
+                  ]);
+                }},
+                { text: 'Close' }
+              ]
+            );
           } finally {
             setIsWithdrawing(false);
             console.log('=== WITHDRAWAL PROCESS ENDED ===');
+            console.log(debugInfo);
           }
         }}
       ]
