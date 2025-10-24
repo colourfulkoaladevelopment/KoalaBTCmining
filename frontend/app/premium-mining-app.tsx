@@ -1435,23 +1435,23 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <TouchableOpacity 
                 style={styles.actionButton} 
                 onPress={activateFreeMiner}
-                disabled={!adStats.can_watch_ad}
+                disabled={!canActivateFreeMiner}
               >
                 <LinearGradient 
-                  colors={adStats.can_watch_ad ? ['#1B4332', '#2D5A3D'] : ['#444', '#333']} 
+                  colors={canActivateFreeMiner ? ['#1B4332', '#2D5A3D'] : ['#444', '#333']} 
                   style={styles.actionButtonGradient}
                 >
                   <View style={styles.actionButtonContent}>
-                    <Ionicons name="gift" size={24} color={adStats.can_watch_ad ? "#4CAF50" : "#666"} />
+                    <Ionicons name="gift" size={24} color={canActivateFreeMiner ? "#4CAF50" : "#666"} />
                     <View style={styles.actionButtonText}>
-                      <Text style={[styles.actionButtonTitle, !adStats.can_watch_ad && { color: '#666' }]}>
+                      <Text style={[styles.actionButtonTitle, !canActivateFreeMiner && { color: '#666' }]}>
                         Activate Daily Free Miner
                       </Text>
-                      <Text style={[styles.actionButtonSubtitle, !adStats.can_watch_ad && { color: '#666' }]}>
-                        {adStats.can_watch_ad ? '1 GH/s for 24 hours' : 'Available in ' + getTimeUntilReset()}
+                      <Text style={[styles.actionButtonSubtitle, !canActivateFreeMiner && { color: '#666' }]}>
+                        {canActivateFreeMiner ? '1 GH/s for 24 hours' : 'Available in ' + getTimeUntilReset()}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={adStats.can_watch_ad ? "#4CAF50" : "#666"} />
+                    <Ionicons name="chevron-forward" size={20} color={canActivateFreeMiner ? "#4CAF50" : "#666"} />
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
