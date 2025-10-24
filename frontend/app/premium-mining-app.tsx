@@ -1935,6 +1935,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
+              
+              {/* Footer spacer to prevent navigation overlap */}
+              <View style={{ height: 35 }} />
             </LinearGradient>
           </View>
         </Modal>
