@@ -80,54 +80,169 @@ class BackendTester:
         except Exception as e:
             return self.log_test("User Registration", False, f"Exception: {str(e)}")
     
-    def test_daily_stats_endpoint(self):
-        """Test POST /api/ads/daily-stats endpoint"""
+    def test_store_miners_endpoint(self):
+        """Test GET /api/store/miners endpoint - Main focus of this testing"""
         try:
-            response = self.session.post(f"{API_BASE}/ads/daily-stats")
+            response = self.session.get(f"{API_BASE}/store/miners")
             
-            if response.status_code == 200:
+            if response.status_code != 200:
+                return self.log_test(
+                    "Store Miners Endpoint Access", 
+                    False, 
+                    f"HTTP {response.status_code}: {response.text}"
+                )
+            
+            # Test successful response
+            self.log_test("Store Miners Endpoint Access", True, "Endpoint accessible")
+            
+            try:
                 data = response.json()
-                
-                # Verify required fields
-                required_fields = ["ads_watched_today", "remaining_ads", "max_daily_ads", "can_watch_ad", "next_reset"]
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log_test("Daily Stats - Required Fields", False, f"Missing fields: {missing_fields}")
-                    return False
-                
-                # Verify data types and values
-                if not isinstance(data["ads_watched_today"], int) or data["ads_watched_today"] < 0:
-                    self.log_test("Daily Stats - ads_watched_today", False, f"Invalid value: {data['ads_watched_today']}")
-                    return False
-                
-                if not isinstance(data["remaining_ads"], int) or data["remaining_ads"] < 0:
-                    self.log_test("Daily Stats - remaining_ads", False, f"Invalid value: {data['remaining_ads']}")
-                    return False
-                
-                if data["max_daily_ads"] != 30:
-                    self.log_test("Daily Stats - max_daily_ads", False, f"Expected 30, got {data['max_daily_ads']}")
-                    return False
-                
-                if not isinstance(data["can_watch_ad"], bool):
-                    self.log_test("Daily Stats - can_watch_ad", False, f"Expected boolean, got {type(data['can_watch_ad'])}")
-                    return False
-                
-                # For new user, should start with 0 ads watched
-                if data["ads_watched_today"] == 0 and data["remaining_ads"] == 30 and data["can_watch_ad"]:
-                    self.log_test("Daily Stats - New User Values", True, "New user starts with 0 ads, 30 remaining")
-                else:
-                    self.log_test("Daily Stats - New User Values", False, f"Unexpected values for new user: {data}")
-                
-                self.log_test("Daily Stats Endpoint", True, f"All fields present and valid")
-                return True
-            else:
-                self.log_test("Daily Stats Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+            except json.JSONDecodeError:
+                return self.log_test(
+                    "Store Miners JSON Response", 
+                    False, 
+                    "Response is not valid JSON"
+                )
+            
+            # Test JSON structure
+            if "miners" not in data:
+                return self.log_test(
+                    "Store Miners JSON Structure", 
+                    False, 
+                    "Response missing 'miners' key"
+                )
+            
+            self.log_test("Store Miners JSON Structure", True, "Response has 'miners' key")
+            
+            miners = data["miners"]
+            
+            # Test exact count (should be 9 miners)
+            expected_count = 9
+            actual_count = len(miners)
+            count_success = actual_count == expected_count
+            self.log_test(
+                "Store Miners Count", 
+                count_success, 
+                f"Expected: {expected_count}, Actual: {actual_count}"
+            )
+            
+            if not count_success:
                 return False
+            
+            # Expected miner specifications from the review request
+            expected_miners = [
+                {"name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
+                {"name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
+                {"name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
+                {"name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
+                {"name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
+                {"name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
+                {"name": "Ultimate Miner", "hash_rate": 10000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
+                {"name": "Legendary Miner", "hash_rate": 15000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
+                {"name": "Mythical Miner", "hash_rate": 20000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
+            ]
+            
+            # Test each miner's specifications
+            all_miners_valid = True
+            
+            for i, expected in enumerate(expected_miners):
+                if i >= len(miners):
+                    self.log_test(
+                        f"Miner {i+1} Existence", 
+                        False, 
+                        f"Missing miner at index {i}"
+                    )
+                    all_miners_valid = False
+                    continue
                 
+                actual = miners[i]
+                miner_name = expected["name"]
+                
+                # Test required fields exist
+                required_fields = ["id", "name", "hash_rate", "price", "duration_days", "daily_reward"]
+                for field in required_fields:
+                    if field not in actual:
+                        self.log_test(
+                            f"{miner_name} - Field '{field}'", 
+                            False, 
+                            f"Missing required field: {field}"
+                        )
+                        all_miners_valid = False
+                        continue
+                
+                # Test name
+                name_match = actual["name"] == expected["name"]
+                self.log_test(
+                    f"{miner_name} - Name", 
+                    name_match, 
+                    f"Expected: '{expected['name']}', Actual: '{actual.get('name', 'N/A')}'"
+                )
+                if not name_match:
+                    all_miners_valid = False
+                
+                # Test hash rate
+                hash_rate_match = actual["hash_rate"] == expected["hash_rate"]
+                self.log_test(
+                    f"{miner_name} - Hash Rate", 
+                    hash_rate_match, 
+                    f"Expected: {expected['hash_rate']} GH/s, Actual: {actual.get('hash_rate', 'N/A')} GH/s"
+                )
+                if not hash_rate_match:
+                    all_miners_valid = False
+                
+                # Test price
+                price_match = actual["price"] == expected["price"]
+                self.log_test(
+                    f"{miner_name} - Price", 
+                    price_match, 
+                    f"Expected: ${expected['price']}, Actual: ${actual.get('price', 'N/A')}"
+                )
+                if not price_match:
+                    all_miners_valid = False
+                
+                # Test duration
+                duration_match = actual["duration_days"] == expected["duration_days"]
+                self.log_test(
+                    f"{miner_name} - Duration", 
+                    duration_match, 
+                    f"Expected: {expected['duration_days']} days, Actual: {actual.get('duration_days', 'N/A')} days"
+                )
+                if not duration_match:
+                    all_miners_valid = False
+                
+                # Test daily reward (14-decimal precision)
+                daily_reward_match = abs(actual["daily_reward"] - expected["daily_reward"]) < 1e-15
+                self.log_test(
+                    f"{miner_name} - Daily Reward", 
+                    daily_reward_match, 
+                    f"Expected: {expected['daily_reward']:.14f}, Actual: {actual.get('daily_reward', 'N/A'):.14f}"
+                )
+                if not daily_reward_match:
+                    all_miners_valid = False
+            
+            # Test hash rate progression (should be: 100, 200, 400, 1000, 2000, 4000, 10000, 15000, 20000)
+            expected_hash_rates = [100, 200, 400, 1000, 2000, 4000, 10000, 15000, 20000]
+            actual_hash_rates = [miner["hash_rate"] for miner in miners]
+            hash_rate_progression_match = actual_hash_rates == expected_hash_rates
+            self.log_test(
+                "Hash Rate Progression", 
+                hash_rate_progression_match, 
+                f"Expected: {expected_hash_rates}, Actual: {actual_hash_rates}"
+            )
+            
+            # Test price progression (should be ascending)
+            actual_prices = [miner["price"] for miner in miners]
+            price_ascending = all(actual_prices[i] <= actual_prices[i+1] for i in range(len(actual_prices)-1))
+            self.log_test(
+                "Price Progression (Ascending)", 
+                price_ascending, 
+                f"Prices: {actual_prices}"
+            )
+            
+            return all_miners_valid and hash_rate_progression_match and price_ascending
+            
         except Exception as e:
-            self.log_test("Daily Stats Endpoint", False, f"Exception: {str(e)}")
-            return False
+            return self.log_test("Store Miners Endpoint", False, f"Exception: {str(e)}")
     
     def test_watch_ad_endpoint(self, ad_type):
         """Test POST /api/ads/watch endpoint for specific ad type"""
