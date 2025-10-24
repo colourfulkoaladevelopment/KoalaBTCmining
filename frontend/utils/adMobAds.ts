@@ -29,23 +29,34 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
 
 /**
  * Show Rewarded Video Ad (for miner activation)
- * Returns promise with reward status
+ * Returns object with watched and rewarded status
  */
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
-    const { RewardedAd, RewardedAdEventType } = await import('react-native-google-mobile-ads');
+    const { RewardedAd, RewardedAdEventType, TestIds } = await import('react-native-google-mobile-ads');
     
     const adUnitId = getAdUnitId('miner_activation');
+    console.log('Loading rewarded ad with unit ID:', adUnitId);
+    
     const rewarded = RewardedAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: false,
     });
     
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let adWatched = false;
-      let rewardEarned = false;
+      let adRewarded = false;
+      let loadTimeout: NodeJS.Timeout;
+      
+      // Set timeout for ad loading (30 seconds)
+      loadTimeout = setTimeout(() => {
+        console.log('Rewarded ad load timeout');
+        unsubscribeAll();
+        reject(new Error('Ad load timeout'));
+      }, 30000);
 
       const unsubscribeLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        console.log('Rewarded ad loaded');
+        console.log('Rewarded ad loaded, showing now...');
+        clearTimeout(loadTimeout);
         rewarded.show();
       });
 
@@ -53,23 +64,33 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
         RewardedAdEventType.EARNED_REWARD,
         (reward) => {
           console.log('User earned reward:', reward);
+          adRewarded = true;
           adWatched = true;
-          rewardEarned = true;
         }
       );
 
-      const unsubscribeDismissed = rewarded.addAdEventListener(
-        RewardedAdEventType.DISMISSED,
-        () => {
-          console.log('Rewarded ad dismissed');
-          unsubscribeLoaded();
-          unsubscribeEarned();
-          unsubscribeDismissed();
-          resolve({ watched: adWatched, rewarded: rewardEarned });
-        }
-      );
+      const unsubscribeClosed = rewarded.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+        console.log('Rewarded ad closed, watched:', adWatched, 'rewarded:', adRewarded);
+        unsubscribeAll();
+        resolve({ watched: adWatched, rewarded: adRewarded });
+      });
+      
+      const unsubscribeError = rewarded.addAdEventListener(RewardedAdEventType.ERROR, (error) => {
+        console.error('Rewarded ad error:', error);
+        clearTimeout(loadTimeout);
+        unsubscribeAll();
+        reject(error);
+      });
+
+      const unsubscribeAll = () => {
+        unsubscribeLoaded();
+        unsubscribeEarned();
+        unsubscribeClosed();
+        unsubscribeError();
+      };
 
       // Load the ad
+      console.log('Starting to load rewarded ad...');
       rewarded.load();
     });
   } catch (error) {
