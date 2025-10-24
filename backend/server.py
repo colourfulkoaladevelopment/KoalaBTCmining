@@ -49,7 +49,7 @@ PROMO_CODES = {
 }
 
 # Ad system constants
-MAX_DAILY_ADS = 30
+MAX_DAILY_ADS = 999999  # Unlimited ads as requested
 AD_MINER_HASHRATE = 2.0  # 2 GH/s
 AD_MINER_DURATION_HOURS = 24  # 24 hours instead of 30 minutes
 
