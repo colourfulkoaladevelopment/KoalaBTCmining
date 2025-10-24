@@ -1726,6 +1726,11 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* Build Version */}
+            <View style={styles.buildVersionContainer}>
+              <Text style={styles.buildVersionText}>Build Version: 1.0.0 (1)</Text>
+            </View>
+
             <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
               <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
                 <Ionicons name="log-out" size={20} color="#FFF" />
