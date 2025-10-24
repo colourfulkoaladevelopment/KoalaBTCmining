@@ -1582,7 +1582,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     <Text style={styles.storeMinerHashRate}>
                       {miner.hash_rate >= 1000 ? `${(miner.hash_rate / 1000).toFixed(1)} TH/s` : `${miner.hash_rate} GH/s`}
                     </Text>
-                    <Text style={styles.storeMinerEarnings}>est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day</Text>
                     <Text style={styles.storeMinerPrice}>${miner.price}</Text>
                     <Text style={styles.storeMinerDuration}>30 days rental</Text>
                     
