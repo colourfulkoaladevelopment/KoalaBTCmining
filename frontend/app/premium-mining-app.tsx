@@ -821,7 +821,8 @@ Your miner is now active and earning Bitcoin!`,
 
 Mining Power: +${result.ad_miner.hash_rate} GH/s
 Duration: ${result.ad_miner.duration_hours} hours
-Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_daily_ads}`,
+
+${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
             [{ 
               text: 'Awesome!', 
               onPress: () => {
