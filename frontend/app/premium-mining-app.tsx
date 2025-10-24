@@ -81,6 +81,7 @@ export default function PremiumBitcoinMiningApp() {
     max_daily_ads: 30,
     can_watch_ad: true
   });
+  const [canActivateFreeMiner, setCanActivateFreeMiner] = useState(true);
   const [showAdModal, setShowAdModal] = useState(false);
   const [currentAdType, setCurrentAdType] = useState(null);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
