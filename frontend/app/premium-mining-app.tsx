@@ -1812,7 +1812,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         <Modal visible={showContactForm} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Contact Support</Text>
+              <Text style={styles.modalTitle}>Suggest a Feature</Text>
               <Text style={styles.modalSubtitle}>We're here to help you</Text>
               
               <View style={styles.inputContainer}>
