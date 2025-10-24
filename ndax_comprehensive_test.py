@@ -14,7 +14,7 @@ import hashlib
 from datetime import datetime
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://mine-simulator.preview.emergentagent.com/api"
+BACKEND_URL = "https://koala-crypto-mine.preview.emergentagent.com/api"
 
 # Test user credentials
 TEST_USER = {

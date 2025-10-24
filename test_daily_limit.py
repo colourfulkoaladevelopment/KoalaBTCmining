@@ -6,7 +6,7 @@ Test Facebook Ads Daily Limit Enforcement (30 ads max)
 import requests
 import time
 
-BACKEND_URL = "https://mine-simulator.preview.emergentagent.com"
+BACKEND_URL = "https://koala-crypto-mine.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def test_daily_limit():

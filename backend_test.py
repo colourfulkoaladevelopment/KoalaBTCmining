@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://mine-simulator.preview.emergentagent.com")
+BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://koala-crypto-mine.preview.emergentagent.com")
 API_BASE = f"{BACKEND_URL}/api"
 TEST_USER_EMAIL = f"storetest_{uuid.uuid4().hex[:8]}@example.com"
 TEST_USER_PASSWORD = "TestPassword123!"
