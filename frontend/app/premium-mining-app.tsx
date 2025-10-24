@@ -1704,13 +1704,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
 
             {/* Support Actions */}
-            <TouchableOpacity style={styles.supportButton} onPress={() => setShowFAQ(true)}>
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
-                <Ionicons name="help-circle" size={20} color="#9C27B0" />
-                <Text style={styles.supportButtonText}>FAQ</Text>
-                <Ionicons name="chevron-forward" size={16} color="#666" />
-              </LinearGradient>
-            </TouchableOpacity>
 
             <TouchableOpacity style={styles.supportButton} onPress={() => setShowContactForm(true)}>
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
