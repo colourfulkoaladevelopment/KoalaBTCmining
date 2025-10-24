@@ -34,7 +34,7 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
     const mobileAds = await import('react-native-google-mobile-ads');
-    const { RewardedAd, RewardedAdEventType } = mobileAds;
+    const { RewardedAd } = mobileAds;
     
     const adUnitId = getAdUnitId('miner_activation');
     console.log('Loading rewarded ad with unit ID:', adUnitId);
@@ -55,29 +55,25 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
         reject(new Error('Ad load timeout'));
       }, 30000);
 
-      const unsubscribeLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      // Use string event types for ALL events
+      const unsubscribeLoaded = rewarded.addAdEventListener('loaded', () => {
         console.log('Rewarded ad loaded, showing now...');
         clearTimeout(loadTimeout);
         rewarded.show();
       });
 
-      const unsubscribeEarned = rewarded.addAdEventListener(
-        RewardedAdEventType.EARNED_REWARD,
-        (reward) => {
-          console.log('User earned reward:', reward);
-          adRewarded = true;
-          adWatched = true;
-        }
-      );
+      const unsubscribeEarned = rewarded.addAdEventListener('earned_reward', (reward) => {
+        console.log('User earned reward:', reward);
+        adRewarded = true;
+        adWatched = true;
+      });
 
-      // Use DISMISSED instead of CLOSED (correct event type)
       const unsubscribeDismissed = rewarded.addAdEventListener('dismissed', () => {
         console.log('Rewarded ad dismissed, watched:', adWatched, 'rewarded:', adRewarded);
         unsubscribeAll();
         resolve({ watched: adWatched, rewarded: adRewarded });
       });
       
-      // Use error event as string
       const unsubscribeError = rewarded.addAdEventListener('error', (error) => {
         console.error('Rewarded ad error:', error);
         clearTimeout(loadTimeout);
