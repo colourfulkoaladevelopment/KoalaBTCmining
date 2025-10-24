@@ -34,7 +34,10 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-5648720019902247~5985575029"
+      }
     },
     "web": {
       "bundler": "metro",
