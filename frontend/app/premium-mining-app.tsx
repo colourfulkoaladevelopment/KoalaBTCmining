@@ -2476,12 +2476,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hashRateLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#AAA',
     marginBottom: 5,
   },
   hashRate: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#4CAF50',
   },
