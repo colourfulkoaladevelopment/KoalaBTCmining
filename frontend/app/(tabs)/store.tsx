@@ -248,27 +248,6 @@ export default function Store() {
         {/* Premium Miners Header */}
         <View style={styles.premiumHeader}>
           <Text style={styles.premiumTitle}>Premium Miners</Text>
-          <Text style={{color: '#FFD700', fontSize: 12, textAlign: 'center', marginTop: 4}}>v2.1 - Build Test</Text>
-        </View>
-
-        {/* Hash Rate Legend - MUST BE VISIBLE */}
-        <View style={{backgroundColor: '#FFD700', padding: 20, margin: 15}}>
-          <Text style={{color: '#000', fontWeight: 'bold', fontSize: 18}}>LEGEND TEST - IF YOU SEE THIS, LEGEND WORKS</Text>
-        </View>
-
-        <View style={styles.legendCard}>
-          <View style={styles.legendHeader}>
-            <Ionicons name="information-circle" size={20} color="#FFD700" />
-            <Text style={styles.legendTitle}>Hash Rate Legend</Text>
-          </View>
-          <View style={styles.legendContent}>
-            <Text style={styles.legendText}>100 MH/s = Est. B 0.00000000054350/day</Text>
-            <Text style={styles.legendText}>1 GH/s = Est. B 0.00000000543500/day</Text>
-            <Text style={styles.legendText}>10 GH/s = Est. B 0.00000005435000/day</Text>
-            <Text style={styles.legendText}>100 GH/s = Est. B 0.00000054350000/day</Text>
-            <Text style={styles.legendText}>1 TH/s = Est. B 0.00000543500000/day</Text>
-            <Text style={styles.legendText}>10 TH/s = Est. B 0.00005435000000/day</Text>
-          </View>
         </View>
 
         {/* Miners Grid */}
