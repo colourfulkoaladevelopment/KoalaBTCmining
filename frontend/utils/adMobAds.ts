@@ -34,7 +34,7 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
     const mobileAds = await import('react-native-google-mobile-ads');
-    const { RewardedAd, AdEventType } = mobileAds;
+    const { RewardedAd, RewardedAdEventType } = mobileAds;
     
     const adUnitId = getAdUnitId('miner_activation');
     console.log('Loading rewarded ad with unit ID:', adUnitId);
@@ -55,39 +55,31 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
         reject(new Error('Ad load timeout'));
       }, 30000);
 
-      // Use AdEventType.LOADED for all ad types (universal enum)
-      const unsubscribeLoaded = rewarded.addAdEventListener(AdEventType.LOADED, () => {
+      // Use RewardedAdEventType.LOADED (as error message specified)
+      const unsubscribeLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
         console.log('Rewarded ad loaded, showing now...');
         clearTimeout(loadTimeout);
         rewarded.show();
       });
 
-      // EARNED_REWARD might need to be a string
-      const unsubscribeEarned = rewarded.addAdEventListener('rewarded', (reward) => {
+      // Use RewardedAdEventType.EARNED_REWARD
+      const unsubscribeEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward) => {
         console.log('User earned reward:', reward);
         adRewarded = true;
         adWatched = true;
       });
 
-      // Use AdEventType.CLOSED instead of RewardedAdEventType
-      const unsubscribeClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      // Try using CLOSED event (common in ad SDKs)
+      const unsubscribeClosed = rewarded.addAdEventListener(RewardedAdEventType.CLOSED, () => {
         console.log('Rewarded ad closed, watched:', adWatched, 'rewarded:', adRewarded);
         unsubscribeAll();
         resolve({ watched: adWatched, rewarded: adRewarded });
       });
       
-      const unsubscribeError = rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
-        console.error('Rewarded ad error:', error);
-        clearTimeout(loadTimeout);
-        unsubscribeAll();
-        reject(error);
-      });
-
       const unsubscribeAll = () => {
         unsubscribeLoaded();
         unsubscribeEarned();
         unsubscribeClosed();
-        unsubscribeError();
       };
 
       // Load the ad
