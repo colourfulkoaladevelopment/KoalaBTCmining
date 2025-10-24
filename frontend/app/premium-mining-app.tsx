@@ -1373,12 +1373,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <View style={styles.hashRateContainer}>
                 <Text style={styles.hashRateLabel}>Current Hash Rate</Text>
                 <Text style={styles.hashRate}>{walletData?.current_hash_rate?.toFixed(1) || '0.0'} GH/s</Text>
-                {(walletData?.current_hash_rate || 0) > 0 && (
-                  <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.miningIndicator} />
-                )}
               </View>
               <View style={styles.hashRateContainer}>
-                <Text style={styles.hashRateLabel}>Total Daily Bitcoin</Text>
+                <Text style={styles.hashRateLabel}>Total Estimated Daily Bitcoin</Text>
                 <Text style={styles.hashRate}>₿ {calculateTotalDailyEarnings()}/day</Text>
               </View>
             </LinearGradient>
