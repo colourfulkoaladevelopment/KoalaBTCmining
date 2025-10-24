@@ -2716,6 +2716,18 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  buildVersionContainer: {
+    marginHorizontal: 15,
+    marginTop: 15,
+    marginBottom: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  buildVersionText: {
+    color: '#666',
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
   signOutButton: {
     marginHorizontal: 15,
     marginTop: 20,
