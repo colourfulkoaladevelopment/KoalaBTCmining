@@ -486,6 +486,11 @@ export default function PremiumBitcoinMiningApp() {
   };
 
   const activateFreeMiner = async () => {
+    // Don't show popup if already activated - button is already grayed out
+    if (!canActivateFreeMiner) {
+      return;
+    }
+    
     try {
       const token = await AsyncStorage.getItem('session_token');
       const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/miners/activate-free`, {
@@ -498,10 +503,17 @@ export default function PremiumBitcoinMiningApp() {
 
       if (response.ok) {
         Alert.alert('Success! 🎉', 'Free daily miner activated for 24 hours!');
+        setCanActivateFreeMiner(false); // Disable until next reset
         await loadAppData();
       } else {
         const result = await response.json();
-        Alert.alert('Error', result.detail || 'Failed to activate free miner');
+        // Silently handle "already active" error - just refresh data
+        if (result.detail?.includes('already active')) {
+          setCanActivateFreeMiner(false);
+          await loadAppData();
+        } else {
+          Alert.alert('Error', result.detail || 'Failed to activate free miner');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Network error occurred');
