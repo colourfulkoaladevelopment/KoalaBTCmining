@@ -351,14 +351,15 @@ export default function PremiumBitcoinMiningApp() {
         const minersResult = await minersResponse.json();
         const allMiners = minersResult.miners;
         
-        // Check if free miner was activated today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Check if free miner was activated today (using UTC to match backend)
+        const now = new Date();
+        const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        
         const hasFreeMinerToday = allMiners.some(miner => {
-          if (miner.miner_type === 'free' && miner.status === 'active') {
+          if (miner.miner_type === 'free') {
             const createdDate = new Date(miner.created_at);
-            createdDate.setHours(0, 0, 0, 0);
-            return createdDate.getTime() === today.getTime();
+            const createdUTC = Date.UTC(createdDate.getUTCFullYear(), createdDate.getUTCMonth(), createdDate.getUTCDate());
+            return createdUTC === todayUTC;
           }
           return false;
         });
