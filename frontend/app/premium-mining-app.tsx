@@ -760,73 +760,12 @@ Your miner is now active and earning Bitcoin!`,
 
   const watchAd = async (adType) => {
     try {
-      if (!adStats.can_watch_ad) {
-        Alert.alert('Daily Limit Reached', 'You have watched the maximum number of ads for today. Try again tomorrow!');
-        return;
-      }
-
-      // Set ad type and show ad
+      // Set ad type and show modal (like login ad)
       setCurrentAdType(adType);
-      setShowAdModal(false); // Don't show modal, directly play ad
-      
-      // Show Facebook ad
-      const adWatched = await showFacebookAd(adType);
-      
-      if (!adWatched) {
-        Alert.alert('Ad Canceled', 'You must watch the ad to continue.');
-        setCurrentAdType(null);
-        return;
-      }
-
-      // Process ad view on backend
-      const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ad_type: adType
-        })
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // Refresh ad stats
-        await loadAdStats();
-        
-        // Show reward for miner_activation
-        if (adType === 'miner_activation') {
-          Alert.alert(
-            '🎉 Ad Reward Earned!',
-            `${result.message}
-
-Mining Power: +${result.ad_miner.hash_rate} GH/s
-Duration: ${result.ad_miner.duration_hours} hours
-Daily Ads: ${result.daily_stats.ads_watched_today}/${result.daily_stats.max_daily_ads}`,
-            [{ 
-              text: 'Awesome!', 
-              onPress: () => {
-                loadAppData(); // Refresh app data
-              }
-            }]
-          );
-        }
-      } else {
-        if (response.status === 429) {
-          Alert.alert('Daily Limit Reached', result.detail || 'You have watched the maximum number of ads for today.');
-        } else {
-          Alert.alert('Error', result.detail || 'Failed to process ad view');
-        }
-      }
-      
-      setCurrentAdType(null);
+      setShowAdModal(true);
     } catch (error) {
       console.error('Error in watchAd:', error);
       Alert.alert('Error', 'Failed to load ad. Please try again.');
-      setCurrentAdType(null);
     }
   };
 
