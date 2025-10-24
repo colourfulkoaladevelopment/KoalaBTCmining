@@ -2938,5 +2938,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 6,
+    marginRight: 2,
   },
 });
