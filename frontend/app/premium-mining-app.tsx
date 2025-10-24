@@ -1891,6 +1891,11 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             <LinearGradient colors={['#000000', '#1a1a1a']} style={[styles.modalContent, styles.faqModal]}>
               <Text style={styles.modalTitle}>Frequently Asked Questions</Text>
               
+              {/* Test Marker */}
+              <View style={{backgroundColor: '#FFD700', padding: 15, marginBottom: 15}}>
+                <Text style={{color: '#000', fontWeight: 'bold'}}>FAQ TEST v2.1 - IF YOU SEE THIS, FAQ MODAL IS WORKING</Text>
+              </View>
+              
               <ScrollView style={styles.faqContent}>
                 {/* FAQ Item 1 */}
                 <TouchableOpacity 
