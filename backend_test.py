@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend Testing for Facebook Ads Integration
-Testing all Facebook Ads endpoints after frontend integration updates
+Backend Testing Suite for Bitcoin Mining App
+Focus: Enhanced Store System Testing (Issues #9-11)
 """
 
 import requests
 import json
-import time
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime
+import sys
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Get backend URL from frontend .env
+# Configuration
 BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://mine-simulator.preview.emergentagent.com")
 API_BASE = f"{BACKEND_URL}/api"
+TEST_USER_EMAIL = f"storetest_{uuid.uuid4().hex[:8]}@example.com"
+TEST_USER_PASSWORD = "TestPassword123!"
+TEST_USER_NAME = "Store Test User"
 
 class FacebookAdsBackendTester:
     def __init__(self):
