@@ -34,7 +34,7 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
 export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarded: boolean }> => {
   try {
     const mobileAds = await import('react-native-google-mobile-ads');
-    const { RewardedAd } = mobileAds;
+    const { RewardedAd, RewardedAdEventType, AdEventType } = mobileAds;
     
     const adUnitId = getAdUnitId('miner_activation');
     console.log('Loading rewarded ad with unit ID:', adUnitId);
@@ -55,26 +55,26 @@ export const showRewardedVideoAd = async (): Promise<{ watched: boolean; rewarde
         reject(new Error('Ad load timeout'));
       }, 30000);
 
-      // Use string event types for ALL events
-      const unsubscribeLoaded = rewarded.addAdEventListener('loaded', () => {
+      // Use correct enum constants from react-native-google-mobile-ads
+      const unsubscribeLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
         console.log('Rewarded ad loaded, showing now...');
         clearTimeout(loadTimeout);
         rewarded.show();
       });
 
-      const unsubscribeEarned = rewarded.addAdEventListener('earned_reward', (reward) => {
+      const unsubscribeEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward) => {
         console.log('User earned reward:', reward);
         adRewarded = true;
         adWatched = true;
       });
 
-      const unsubscribeDismissed = rewarded.addAdEventListener('dismissed', () => {
+      const unsubscribeDismissed = rewarded.addAdEventListener(RewardedAdEventType.DISMISSED, () => {
         console.log('Rewarded ad dismissed, watched:', adWatched, 'rewarded:', adRewarded);
         unsubscribeAll();
         resolve({ watched: adWatched, rewarded: adRewarded });
       });
       
-      const unsubscribeError = rewarded.addAdEventListener('error', (error) => {
+      const unsubscribeError = rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
         console.error('Rewarded ad error:', error);
         clearTimeout(loadTimeout);
         unsubscribeAll();
