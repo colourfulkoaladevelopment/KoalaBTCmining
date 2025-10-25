@@ -1899,10 +1899,10 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
             {/* Admin Panel Button (only for admin users) */}
             {isAdmin && (
-              <TouchableOpacity style={styles.supportButton} onPress={() => setShowAdminPanel(true)}>
+              <TouchableOpacity style={styles.supportButton} onPress={executeFactoryReset}>
                 <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
-                  <Ionicons name="shield-checkmark" size={20} color="#FFD700" />
-                  <Text style={styles.supportButtonText}>Admin Panel</Text>
+                  <Ionicons name="nuclear" size={20} color="#FF6B6B" />
+                  <Text style={styles.supportButtonText}>Factory Reset (Admin)</Text>
                   <Ionicons name="chevron-forward" size={16} color="#666" />
                 </LinearGradient>
               </TouchableOpacity>
