@@ -1023,7 +1023,7 @@ This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
 
             if (response.ok) {
               console.log('✅ Withdrawal successful');
-              Alert.alert(
+              showCustomAlert(
                 '✅ Withdrawal Submitted!',
                 `${result.message}
                 
@@ -1045,12 +1045,12 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               debugInfo += `Error: ${result.detail}\n`;
               
               // Show debug info
-              Alert.alert(
+              showCustomAlert(
                 '❌ Withdrawal Failed',
                 result.detail || 'Failed to process withdrawal',
                 [
                   { text: 'Show Debug Info', onPress: () => {
-                    Alert.alert('Debug Information', debugInfo, [
+                    showCustomAlert('Debug Information', debugInfo, [
                       { text: 'Close' }
                     ]);
                   }},
@@ -1071,12 +1071,12 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             }
             
             // Show error with debug option
-            Alert.alert(
+            showCustomAlert(
               '❌ Network Error',
               `An error occurred while processing your withdrawal.\n\nError: ${error.message}`,
               [
                 { text: 'Show Debug Info', onPress: () => {
-                  Alert.alert('Debug Information', debugInfo, [
+                  showCustomAlert('Debug Information', debugInfo, [
                     { text: 'Close' }
                   ]);
                 }},
@@ -1095,7 +1095,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
   const submitContactForm = async () => {
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showCustomAlert('Error', 'Please fill in all required fields');
       return;
     }
 
