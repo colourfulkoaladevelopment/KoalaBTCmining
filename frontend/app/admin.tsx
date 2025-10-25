@@ -298,6 +298,42 @@ export default function AdminPanel() {
           ))}
         </LinearGradient>
       </ScrollView>
+
+      {/* Custom Alert Modal */}
+      <Modal visible={customAlert.visible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{customAlert.title}</Text>
+            <Text style={styles.modalSubtitle}>{customAlert.message}</Text>
+            
+            <View style={styles.modalButtons}>
+              {customAlert.buttons.map((button, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1
+                      ? styles.confirmButton
+                      : styles.cancelButton,
+                    customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 }
+                  ]}
+                  onPress={() => {
+                    hideCustomAlert();
+                    if (button.onPress) button.onPress();
+                  }}
+                >
+                  {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
+                    <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                      <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <Text style={styles.cancelButtonText}>{button.text || 'OK'}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </LinearGradient>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
