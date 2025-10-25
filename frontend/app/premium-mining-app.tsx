@@ -3399,6 +3399,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFD700',
   },
+  timeRangeToggle: {
+    flexDirection: 'row',
+    padding: 15,
+    gap: 10,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#444',
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#FFD700',
+    borderColor: '#FFD700',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#AAA',
+  },
+  toggleButtonTextActive: {
+    color: '#000',
+  },
   statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
