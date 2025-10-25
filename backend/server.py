@@ -3823,6 +3823,74 @@ async def factory_reset_all_accounts(current_user: Dict = Depends(get_current_us
         logger.error(f"Error during factory reset: {e}")
         raise HTTPException(status_code=500, detail="Failed to perform factory reset")
 
+@app.get("/api/admin/pending-wallets")
+async def get_pending_wallets(current_user: Dict = Depends(get_current_user)):
+    """Get all users with pending wallet approvals"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Find all users with pending wallet status
+        pending_users = await users_collection.find({
+            "wallet_status": "pending"
+        }).to_list(length=1000)
+        
+        pending_wallets = []
+        for user in pending_users:
+            pending_wallets.append({
+                "user_id": str(user["_id"]),
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email", ""),
+                "btc_wallet_address": user.get("btc_wallet_address", ""),
+                "wallet_registered_at": user.get("wallet_registered_at"),
+                "balance": user.get("bitcoin_balance", 0.0)
+            })
+        
+        return {
+            "pending_wallets": pending_wallets,
+            "count": len(pending_wallets)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting pending wallets: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending wallets")
+
+@app.post("/api/admin/approve-wallet/{user_id}")
+async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Approve a user's BTC wallet address"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Update user wallet status to connected
+        result = await users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {
+                "wallet_status": "connected",
+                "wallet_approved_at": datetime.utcnow()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found or wallet already approved")
+        
+        # Get user info for logging
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        logger.info(f"Admin approved wallet for user {user.get('email')}: {user.get('btc_wallet_address')}")
+        
+        return {
+            "success": True,
+            "message": "Wallet approved successfully",
+            "user_email": user.get("email"),
+            "btc_wallet_address": user.get("btc_wallet_address")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving wallet: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve wallet")
+
 # Add payment configuration to .env file
 @app.post("/api/admin/configure-payments")
 async def configure_payments(config_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
