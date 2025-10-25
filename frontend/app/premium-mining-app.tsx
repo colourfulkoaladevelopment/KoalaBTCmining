@@ -1399,6 +1399,16 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
   }
 
   // Main App with Tab Navigation
+  // Show Admin Panel if user is admin
+  if (isAdmin) {
+    return <AdminPanelComponent 
+      user={user} 
+      showCustomAlert={showCustomAlert}
+      loadAppData={loadAppData}
+      signOut={signOut}
+    />;
+  }
+
   return (
     <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
       {/* Header for safe area - similar to bottom clearance */}
