@@ -393,6 +393,32 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
             </View>
           ))}
         </LinearGradient>
+
+        {/* Pending Wallets */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+          
+          {pendingWallets.length === 0 ? (
+            <Text style={styles.noDataText}>No pending wallet approvals</Text>
+          ) : (
+            pendingWallets.map((wallet) => (
+              <View key={wallet.id} style={styles.userItem}>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{wallet.user_name || 'Unknown'}</Text>
+                  <Text style={styles.userEmail}>{wallet.user_email}</Text>
+                  <Text style={styles.userBalance}>Address: {wallet.btc_address}</Text>
+                  <Text style={styles.userMiners}>Submitted: {new Date(wallet.created_at).toLocaleDateString()}</Text>
+                </View>
+                <TouchableOpacity onPress={() => approveWallet(wallet.id, wallet.user_email)}>
+                  <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
+                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                    <Text style={styles.resetButtonText}>Approve</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </LinearGradient>
       </ScrollView>
     </LinearGradient>
   );
