@@ -802,7 +802,7 @@ Your miner is now active and earning Bitcoin!`,
       setShowAdModal(true);
     } catch (error) {
       console.error('Error in watchAd:', error);
-      Alert.alert('Error', 'Failed to load ad. Please try again.');
+      showCustomAlert('Error', 'Failed to load ad. Please try again.');
     }
   };
 
@@ -815,7 +815,7 @@ Your miner is now active and earning Bitcoin!`,
       setShowAdModal(false);
       
       if (!adWatched) {
-        Alert.alert('Ad Canceled', 'You must watch the ad to continue.');
+        showCustomAlert('Ad Canceled', 'You must watch the ad to continue.');
         setCurrentAdType(null);
         return;
       }
@@ -842,7 +842,7 @@ Your miner is now active and earning Bitcoin!`,
         // Handle based on ad type
         if (currentAdType === 'miner_activation') {
           // Rewarded ad - show reward details
-          Alert.alert(
+          showCustomAlert(
             '🎉 Ad Reward Earned!',
             `${result.message}
 
@@ -859,7 +859,7 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
           );
         } else if (currentAdType === 'withdrawal') {
           // Withdrawal ad - proceed with withdrawal
-          Alert.alert('Thank you!', 'Thank you for watching. Proceeding with withdrawal...', [{
+          showCustomAlert('Thank you!', 'Thank you for watching. Proceeding with withdrawal...', [{
             text: 'Continue',
             onPress: () => {
               setTimeout(() => proceedWithWithdrawal(), 500);
@@ -867,14 +867,14 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
           }]);
         } else if (currentAdType === 'app_launch') {
           // App launch ad - just thank user
-          Alert.alert('Welcome!', 'Thank you for watching. Enjoy mining!');
+          showCustomAlert('Welcome!', 'Thank you for watching. Enjoy mining!');
         }
       } else {
         // Handle backend errors (e.g., daily limit reached)
         if (response.status === 429) {
-          Alert.alert('Daily Limit Reached', result.detail || 'You have watched the maximum number of ads for today.');
+          showCustomAlert('Daily Limit Reached', result.detail || 'You have watched the maximum number of ads for today.');
         } else {
-          Alert.alert('Error', result.detail || 'Failed to process ad view');
+          showCustomAlert('Error', result.detail || 'Failed to process ad view');
         }
       }
       
@@ -882,7 +882,7 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
       setCurrentAdType(null);
     } catch (error) {
       console.error('Error handling ad watch:', error);
-      Alert.alert('Error', 'Failed to process ad. Please try again.');
+      showCustomAlert('Error', 'Failed to process ad. Please try again.');
       setShowAdModal(false);
       setCurrentAdType(null);
     }
