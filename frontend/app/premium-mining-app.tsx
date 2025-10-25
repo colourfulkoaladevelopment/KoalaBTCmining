@@ -1435,7 +1435,16 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             {/* Withdraw Button */}
             <TouchableOpacity 
               style={styles.withdrawButton}
-              onPress={() => setShowWithdrawModal(true)}
+              onPress={() => {
+                // TODO: Remove this popup when Kraken is configured
+                Alert.alert(
+                  '⏸️ Withdrawals Temporarily Disabled',
+                  'We are currently setting up our withdrawal system to ensure the best experience for you.\n\nWithdrawals will be available very soon. We appreciate your patience and understanding! 🙏',
+                  [{ text: 'OK' }]
+                );
+                // Uncomment the line below when Kraken is ready
+                // setShowWithdrawModal(true);
+              }}
             >
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                 <Ionicons name="send" size={20} color="#000" />
