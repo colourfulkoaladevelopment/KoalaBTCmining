@@ -26,7 +26,7 @@ import Constants from 'expo-constants';
 const { width, height } = Dimensions.get('window');
 
 // Admin Panel Component
-function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
+function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurrentScreen, setIsAdmin, showCustomAlert, loadAppData }) {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
