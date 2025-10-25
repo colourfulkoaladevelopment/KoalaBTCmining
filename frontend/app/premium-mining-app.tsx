@@ -716,7 +716,7 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const renewMiner = (miner) => {
-    Alert.alert(
+    showCustomAlert(
       'Renew Miner',
       `Renew ${miner.name} for another 30 days?\n\nPrice: $${miner.purchase_price.toFixed(2)}`,
       [
