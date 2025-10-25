@@ -1111,19 +1111,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
       });
 
       if (response.ok) {
-        Alert.alert('Message Sent! 📧', 'Your support request has been submitted. We\'ll get back to you soon!');
+        showCustomAlert('Message Sent! 📧', 'Your support request has been submitted. We\'ll get back to you soon!');
         setShowContactForm(false);
         setContactForm({ name: '', email: '', subject: '', message: '' });
       } else {
-        Alert.alert('Error', 'Failed to submit support request');
+        showCustomAlert('Error', 'Failed to submit support request');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred');
+      showCustomAlert('Error', 'Network error occurred');
     }
   };
 
   const signOut = async () => {
-    Alert.alert(
+    showCustomAlert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
