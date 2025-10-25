@@ -1204,6 +1204,24 @@ async def withdraw_bitcoin(
         address = withdrawal_data.get("address", "").strip()
         amount = float(withdrawal_data.get("amount", 0))
         
+        # Check wallet status first
+        user = await users_collection.find_one({"_id": ObjectId(current_user["id"])})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        wallet_status = user.get("wallet_status", "disconnected")
+        if wallet_status != "connected":
+            if wallet_status == "pending":
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Your wallet is pending admin approval. Please wait for approval before withdrawing."
+                )
+            else:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Please register your Bitcoin wallet address first in your Profile settings."
+                )
+        
         if not address:
             raise HTTPException(status_code=400, detail="Bitcoin address is required")
         
