@@ -9,6 +9,7 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,33 @@ export default function AdminPanel() {
   const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
+
+  // Custom Alert state
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: []
+  });
+
+  // Custom Alert helper function
+  const showCustomAlert = (title, message, buttons = [{ text: 'OK', onPress: () => {} }]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert({
+      visible: false,
+      title: '',
+      message: '',
+      buttons: []
+    });
+  };
 
   useEffect(() => {
     checkAdminAccess();
