@@ -25,6 +25,213 @@ import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
 
+// Admin Panel Component
+function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  const loadAdminData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      
+      // Load statistics
+      const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData);
+      }
+
+      // Load users
+      const usersResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers(usersData.users || []);
+      }
+    } catch (error) {
+      console.error('Failed to load admin data:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAdminData();
+    setRefreshing(false);
+  };
+
+  const handleResetUser = async (userId, userEmail) => {
+    showCustomAlert(
+      '⚠️ Reset User Account',
+      `Are you sure you want to reset ${userEmail}?\n\nThis will:\n• Delete all miners\n• Reset BTC balance to 0\n• Keep login credentials`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/reset-user/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User account reset successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to reset user account');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleFactoryReset = async () => {
+    showCustomAlert(
+      '🚨 FACTORY RESET WARNING',
+      'This will DELETE ALL MINERS and RESET ALL BALANCES to ₿ 0.00000000 for ALL users!\n\nThis action CANNOT be undone!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'RESET ALL',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/factory-reset`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                showCustomAlert(
+                  '✅ Factory Reset Complete',
+                  `Successfully reset all accounts!\n\nMiners Deleted: ${result.miners_deleted}\nUsers Reset: ${result.users_reset}`,
+                  [{ text: 'OK', onPress: () => loadAdminData() }]
+                );
+              } else {
+                showCustomAlert('❌ Error', 'Failed to perform factory reset');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFD700" />}
+      >
+        {/* Header */}
+        <View style={styles.adminHeader}>
+          <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
+          <TouchableOpacity onPress={signOut}>
+            <Ionicons name="log-out" size={24} color="#FF6B6B" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Statistics Cards */}
+        <View style={styles.statsContainer}>
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+            <Ionicons name="people" size={32} color="#FFD700" />
+            <Text style={styles.statValue}>{stats?.total_users || 0}</Text>
+            <Text style={styles.statLabel}>Total Users</Text>
+          </LinearGradient>
+
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+            <Ionicons name="flash" size={32} color="#FFD700" />
+            <Text style={styles.statValue}>{stats?.active_miners || 0}</Text>
+            <Text style={styles.statLabel}>Active Miners</Text>
+          </LinearGradient>
+
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+            <Ionicons name="logo-bitcoin" size={32} color="#FFD700" />
+            <Text style={styles.statValue}>₿ {(stats?.total_btc_mined || 0).toFixed(8)}</Text>
+            <Text style={styles.statLabel}>Total BTC Mined</Text>
+          </LinearGradient>
+
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+            <Ionicons name="warning" size={32} color="#FF6B6B" />
+            <Text style={styles.statValue}>₿ {(stats?.total_btc_owed || 0).toFixed(8)}</Text>
+            <Text style={styles.statLabel}>Total BTC Owed</Text>
+            <Text style={styles.statSubLabel}>(Future Earnings)</Text>
+          </LinearGradient>
+        </View>
+
+        {/* Factory Reset */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>🚨 Danger Zone</Text>
+          <TouchableOpacity onPress={handleFactoryReset}>
+            <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.factoryResetButton}>
+              <Ionicons name="nuclear" size={20} color="#FFF" />
+              <Text style={styles.factoryResetButtonText}>Factory Reset All Accounts</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* User Management */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
+          
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search users..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {filteredUsers.map((usr) => (
+            <View key={usr.id} style={styles.userItem}>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
+                <Text style={styles.userEmail}>{usr.email}</Text>
+                <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
+                <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+              </View>
+              <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
+                <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
+                  <Ionicons name="refresh" size={16} color="#FFF" />
+                  <Text style={styles.resetButtonText}>Reset</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </LinearGradient>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
 export default function PremiumBitcoinMiningApp() {
   const [currentScreen, setCurrentScreen] = useState('loading');
   const [isLogin, setIsLogin] = useState(true);
