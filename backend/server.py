@@ -3590,16 +3590,20 @@ async def get_admin_stats(
                     "payment_status": "completed",
                     "created_at": {"$gte": thirty_days_ago}
                 }},
-                {"$group": {"_id": None, "total": {"$sum": "$price"}}}
+                {"$group": {"_id": None, "total": {"$sum": "$amount_usd"}}}
             ]
         else:
             revenue_pipeline = [
                 {"$match": {"payment_status": "completed"}},
-                {"$group": {"_id": None, "total": {"$sum": "$price"}}}
+                {"$group": {"_id": None, "total": {"$sum": "$amount_usd"}}}
             ]
         
-        revenue_result = await purchases_collection.aggregate(revenue_pipeline).to_list(length=1)
-        total_miner_revenue = revenue_result[0]["total"] if revenue_result else 0.0
+        try:
+            revenue_result = await purchases_collection.aggregate(revenue_pipeline).to_list(length=1)
+            total_miner_revenue = revenue_result[0]["total"] if revenue_result and len(revenue_result) > 0 else 0.0
+        except Exception as rev_error:
+            logger.warning(f"Revenue calculation error: {rev_error}")
+            total_miner_revenue = 0.0
         
         # Calculate total BTC owed (future earnings from active miners)
         total_btc_owed = 0.0
