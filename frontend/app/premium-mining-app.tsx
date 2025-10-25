@@ -487,13 +487,13 @@ export default function PremiumBitcoinMiningApp() {
         await loadAppData();
         setCurrentScreen('app');
         setActiveTab('dashboard');
-        Alert.alert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
+        showCustomAlert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
       } else {
-        Alert.alert('Error', result.detail || 'Authentication failed');
+        showCustomAlert('Error', result.detail || 'Authentication failed');
       }
     } catch (error) {
       console.error('Login/Register error:', error);
-      Alert.alert('Network Error', `Unable to connect to server. Please check your internet connection.\n\nError: ${error.message || 'Unknown error'}`);
+      showCustomAlert('Network Error', `Unable to connect to server. Please check your internet connection.\n\nError: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -501,7 +501,7 @@ export default function PremiumBitcoinMiningApp() {
 
   const handleForgotPassword = async () => {
     if (!forgotPasswordEmail) {
-      Alert.alert('Error', 'Please enter your email address');
+      showCustomAlert('Error', 'Please enter your email address');
       return;
     }
 
