@@ -197,7 +197,7 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
         {/* Header */}
         <View style={styles.adminHeader}>
           <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
-          <TouchableOpacity onPress={signOut}>
+          <TouchableOpacity onPress={handleSignOut}>
             <Ionicons name="log-out" size={24} color="#FF6B6B" />
           </TouchableOpacity>
         </View>
