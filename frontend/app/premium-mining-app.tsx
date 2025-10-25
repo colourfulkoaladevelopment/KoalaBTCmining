@@ -35,6 +35,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
   const [timeRange, setTimeRange] = useState('30_days'); // '30_days' or 'all_time'
   const [debugInfo, setDebugInfo] = useState(''); // For showing debug info on screen
   const [showDebugModal, setShowDebugModal] = useState(false);
+  const [pendingWallets, setPendingWallets] = useState([]);
 
   useEffect(() => {
     loadAdminData();
