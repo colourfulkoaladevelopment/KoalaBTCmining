@@ -3690,8 +3690,9 @@ async def get_admin_stats(
             "status": "active",
             "expires_at": {"$gt": datetime.utcnow()}
         })
+        active_miners_list = await active_miners_cursor.to_list(length=100000)
         
-        async for miner in active_miners_cursor:
+        for miner in active_miners_list:
             # Calculate remaining mining time
             now = datetime.utcnow()
             expires_at = miner.get("expires_at")
