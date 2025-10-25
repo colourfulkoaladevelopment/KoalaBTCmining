@@ -127,8 +127,10 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
               await AsyncStorage.removeItem('session_token');
               await AsyncStorage.removeItem('user_data');
               await AsyncStorage.removeItem('app_launch_ad_shown');
-              // Call the signOut function passed from parent
-              signOut();
+              // Reload the page to reset everything
+              if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
             } catch (error) {
               console.error('Logout error:', error);
               showCustomAlert('Error', 'Failed to sign out. Please try again.');
