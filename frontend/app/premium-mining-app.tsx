@@ -219,10 +219,35 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
         {/* Header */}
         <View style={styles.adminHeader}>
           <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
-          <TouchableOpacity onPress={handleSignOut}>
-            <Ionicons name="log-out" size={24} color="#FF6B6B" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 15 }}>
+            <TouchableOpacity onPress={() => setShowDebugModal(true)}>
+              <Ionicons name="bug" size={24} color="#FFD700" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSignOut}>
+              <Ionicons name="log-out" size={24} color="#FF6B6B" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Debug Modal */}
+        <Modal visible={showDebugModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={[styles.modalContent, { maxHeight: '80%' }]}>
+              <Text style={styles.modalTitle}>🐛 Debug Information</Text>
+              <ScrollView style={{ maxHeight: 400 }}>
+                <Text style={[styles.modalSubtitle, { textAlign: 'left', fontFamily: 'monospace', fontSize: 12 }]}>
+                  {debugInfo || 'No debug info yet. Pull to refresh admin panel.'}
+                </Text>
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowDebugModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Close</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </Modal>
 
         {/* Time Range Toggle */}
         <View style={styles.timeRangeToggle}>
