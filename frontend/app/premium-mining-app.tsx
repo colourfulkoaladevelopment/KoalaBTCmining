@@ -2020,9 +2020,11 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               }}
             >
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
-                <Ionicons name="send" size={20} color="#000" />
+                <Ionicons name={walletStatus === 'connected' ? 'send' : 'link'} size={20} color="#000" />
                 <View style={{ alignItems: 'center' }}>
-                  <Text style={styles.withdrawButtonText}>Withdraw BTC</Text>
+                  <Text style={styles.withdrawButtonText}>
+                    {walletStatus === 'connected' ? 'Withdraw BTC' : 'Link Your BTC Wallet'}
+                  </Text>
                   <Text style={[styles.withdrawButtonText, { fontSize: 11, marginTop: 2 }]}>Minimum withdrawal ₿ 0.00001</Text>
                 </View>
               </LinearGradient>
