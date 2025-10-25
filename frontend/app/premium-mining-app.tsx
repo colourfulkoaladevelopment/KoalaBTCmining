@@ -3016,6 +3016,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  walletStatusContainer: {
+    marginHorizontal: 15,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  walletStatusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  walletStatusSubtext: {
+    fontSize: 12,
+    color: '#AAA',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  walletAddressInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+    padding: 12,
+    color: '#FFF',
+    fontSize: 14,
+    marginBottom: 20,
+  },
   
   // Mining Card
   miningCard: {
