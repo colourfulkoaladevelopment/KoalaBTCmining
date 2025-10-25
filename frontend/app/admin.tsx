@@ -489,4 +489,65 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 20,
+    padding: 30,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#AAA',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 15,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmButton: {
+    flex: 1,
+    borderRadius: 12,
+    marginLeft: 10,
+  },
+  confirmButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonGradient: {
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
 });
