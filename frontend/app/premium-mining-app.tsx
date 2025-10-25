@@ -46,6 +46,8 @@ export default function PremiumBitcoinMiningApp() {
   const [referralStats, setReferralStats] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [refreshing, setRefreshing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
