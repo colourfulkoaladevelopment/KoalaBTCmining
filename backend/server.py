@@ -3555,27 +3555,51 @@ async def check_admin_access(current_user: Dict = Depends(get_current_user)):
     return {"is_admin": True}
 
 @app.get("/api/admin/stats")
-async def get_admin_stats(current_user: Dict = Depends(get_current_user)):
-    """Get platform statistics for admin dashboard"""
+async def get_admin_stats(
+    time_range: str = "30_days",  # Options: "30_days" or "all_time"
+    current_user: Dict = Depends(get_current_user)
+):
+    """Get admin statistics"""
     try:
         if not is_admin(current_user):
             raise HTTPException(status_code=403, detail="Admin access required")
         
-        # Total users
+        # Calculate date threshold for 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        # Total users (all time)
         total_users = await users_collection.count_documents({})
         
-        # Active miners count
-        active_miners = await miners_collection.count_documents({
-            "status": "active",
-            "expires_at": {"$gt": datetime.utcnow()}
-        })
+        # Active miners based on time range
+        if time_range == "30_days":
+            active_miners = await miners_collection.count_documents({
+                "status": "active",
+                "expires_at": {"$gt": datetime.utcnow()},
+                "created_at": {"$gte": thirty_days_ago}
+            })
+        else:
+            active_miners = await miners_collection.count_documents({
+                "status": "active",
+                "expires_at": {"$gt": datetime.utcnow()}
+            })
         
-        # Total BTC mined (sum of all user balances)
-        pipeline = [
-            {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
-        ]
-        result = await users_collection.aggregate(pipeline).to_list(length=1)
-        total_btc_mined = result[0]["total"] if result else 0.0
+        # Total Miner Revenue from purchases (purchases collection)
+        if time_range == "30_days":
+            revenue_pipeline = [
+                {"$match": {
+                    "payment_status": "completed",
+                    "created_at": {"$gte": thirty_days_ago}
+                }},
+                {"$group": {"_id": None, "total": {"$sum": "$price"}}}
+            ]
+        else:
+            revenue_pipeline = [
+                {"$match": {"payment_status": "completed"}},
+                {"$group": {"_id": None, "total": {"$sum": "$price"}}}
+            ]
+        
+        revenue_result = await purchases_collection.aggregate(revenue_pipeline).to_list(length=1)
+        total_miner_revenue = revenue_result[0]["total"] if revenue_result else 0.0
         
         # Calculate total BTC owed (future earnings from active miners)
         total_btc_owed = 0.0
@@ -3604,8 +3628,9 @@ async def get_admin_stats(current_user: Dict = Depends(get_current_user)):
         return {
             "total_users": total_users,
             "active_miners": active_miners,
-            "total_btc_mined": round(total_btc_mined, 8),
-            "total_btc_owed": round(total_btc_owed, 8)
+            "total_miner_revenue": round(total_miner_revenue, 2),
+            "total_btc_owed": round(total_btc_owed, 8),
+            "time_range": time_range
         }
         
     except Exception as e:
