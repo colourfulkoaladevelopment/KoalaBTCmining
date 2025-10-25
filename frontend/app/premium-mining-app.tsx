@@ -379,6 +379,11 @@ export default function PremiumBitcoinMiningApp() {
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
   
+  // Wallet status state
+  const [walletStatus, setWalletStatus] = useState('disconnected');
+  const [showWalletRegistrationModal, setShowWalletRegistrationModal] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
