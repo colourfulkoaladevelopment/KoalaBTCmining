@@ -3642,15 +3642,22 @@ async def get_admin_stats(
 ):
     """Get admin statistics"""
     try:
+        logger.info(f"Admin stats called by {current_user.get('email')}")
+        
         if not is_admin(current_user):
             raise HTTPException(status_code=403, detail="Admin access required")
+        
+        logger.info("Admin check passed")
         
         # Calculate date threshold for 30 days
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         
+        logger.info("Counting total users...")
         # Total users (all time)
         total_users = await users_collection.count_documents({})
+        logger.info(f"Total users: {total_users}")
         
+        logger.info("Counting active miners...")
         # Active miners based on time range
         if time_range == "30_days":
             active_miners = await miners_collection.count_documents({
@@ -3663,6 +3670,7 @@ async def get_admin_stats(
                 "status": "active",
                 "expires_at": {"$gt": datetime.utcnow()}
             })
+        logger.info(f"Active miners: {active_miners}")
         
         # Total Miner Revenue from purchases (purchases collection)
         if time_range == "30_days":
