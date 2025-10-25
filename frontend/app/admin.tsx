@@ -477,6 +477,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  warningText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    marginBottom: 15,
+    lineHeight: 20,
+  },
+  factoryResetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: 12,
+  },
+  factoryResetButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
