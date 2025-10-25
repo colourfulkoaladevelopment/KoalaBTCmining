@@ -32,23 +32,31 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [timeRange, setTimeRange] = useState('30_days'); // '30_days' or 'all_time'
 
   useEffect(() => {
     loadAdminData();
-  }, []);
+  }, [timeRange]); // Reload when time range changes
 
   const loadAdminData = async () => {
     try {
       const token = await AsyncStorage.getItem('session_token');
+      console.log('Loading admin data with token:', token ? 'present' : 'missing');
       
-      // Load statistics
-      const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/stats`, {
+      // Load statistics with time range
+      const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/stats?time_range=${timeRange}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      console.log('Stats response status:', statsResponse.status);
+      
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
+        console.log('Stats data:', statsData);
         setStats(statsData);
+      } else {
+        const error = await statsResponse.text();
+        console.error('Stats error:', error);
       }
 
       // Load users
@@ -56,12 +64,19 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      console.log('Users response status:', usersResponse.status);
+      
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
+        console.log('Users data:', usersData);
         setUsers(usersData.users || []);
+      } else {
+        const error = await usersResponse.text();
+        console.error('Users error:', error);
       }
     } catch (error) {
       console.error('Failed to load admin data:', error);
+      showCustomAlert('Error', `Failed to load admin data: ${error.message}`);
     }
   };
 
