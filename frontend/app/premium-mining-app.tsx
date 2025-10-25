@@ -964,7 +964,7 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
       address: withdrawForm.address
     });
 
-    Alert.alert(
+    showCustomAlert(
       '🪙 Confirm Bitcoin Withdrawal',
       `Amount: ₿ ${amount.toFixed(8)}
 Processing Fee (0.5%): ₿ ${processingFee.toFixed(8)}
