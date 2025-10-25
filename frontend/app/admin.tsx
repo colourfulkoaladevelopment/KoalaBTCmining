@@ -299,6 +299,20 @@ export default function AdminPanel() {
           </TouchableOpacity>
         </LinearGradient>
 
+        {/* Factory Reset */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.section}>
+          <Text style={styles.sectionTitle}>🚨 Danger Zone</Text>
+          <Text style={styles.warningText}>
+            Factory Reset will delete ALL miners and reset ALL user balances to ₿ 0. This action cannot be undone!
+          </Text>
+          <TouchableOpacity onPress={handleFactoryReset}>
+            <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.factoryResetButton}>
+              <Ionicons name="nuclear" size={20} color="#FFF" />
+              <Text style={styles.factoryResetButtonText}>Factory Reset All Accounts</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+
         {/* User Management */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.section}>
           <Text style={styles.sectionTitle}>👥 User Management</Text>
