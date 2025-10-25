@@ -720,6 +720,11 @@ export default function PremiumBitcoinMiningApp() {
         setWalletData(walletResult);
       }
 
+      if (walletStatusResponse.ok) {
+        const statusData = await walletStatusResponse.json();
+        setWalletStatus(statusData.wallet_status || 'disconnected');
+      }
+
       if (minersResponse.ok) {
         const minersResult = await minersResponse.json();
         const allMiners = minersResult.miners;
