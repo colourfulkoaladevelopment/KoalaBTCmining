@@ -3719,7 +3719,11 @@ async def get_admin_stats(
         
     except Exception as e:
         logger.error(f"Error getting admin stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
 
 @app.get("/api/admin/users")
 async def get_all_users(current_user: Dict = Depends(get_current_user)):
