@@ -3654,19 +3654,19 @@ async def get_admin_stats(
         
         logger.info("Counting total users...")
         # Total users (all time)
-        total_users = await users_collection.count_documents({})
+        total_users = users_collection.count_documents({})
         logger.info(f"Total users: {total_users}")
         
         logger.info("Counting active miners...")
         # Active miners based on time range
         if time_range == "30_days":
-            active_miners = await miners_collection.count_documents({
+            active_miners = miners_collection.count_documents({
                 "status": "active",
                 "expires_at": {"$gt": datetime.utcnow()},
                 "created_at": {"$gte": thirty_days_ago}
             })
         else:
-            active_miners = await miners_collection.count_documents({
+            active_miners = miners_collection.count_documents({
                 "status": "active",
                 "expires_at": {"$gt": datetime.utcnow()}
             })
