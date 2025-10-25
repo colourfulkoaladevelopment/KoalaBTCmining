@@ -1169,6 +1169,47 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
       ]
     );
   };
+  
+  const executeFactoryReset = async () => {
+    showCustomAlert(
+      '🚨 FACTORY RESET - FINAL CONFIRMATION',
+      'This will DELETE ALL MINERS and RESET ALL BALANCES to ₿ 0 for ALL USERS!\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'RESET ALL',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setAdminLoading(true);
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/factory-reset`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                showCustomAlert(
+                  '✅ Factory Reset Complete',
+                  `Successfully reset all accounts!\n\nMiners Deleted: ${result.miners_deleted}\nUsers Reset: ${result.users_reset}`,
+                  [{ text: 'OK', onPress: () => {
+                    loadAppData(); // Refresh data
+                  }}]
+                );
+              } else {
+                showCustomAlert('❌ Error', 'Failed to perform factory reset');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            } finally {
+              setAdminLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   // Loading Screen with Progress Bar
   if (currentScreen === 'loading') {
