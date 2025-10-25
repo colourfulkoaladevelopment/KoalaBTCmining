@@ -272,10 +272,19 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
         <View style={styles.adminHeader}>
           <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
           <View style={{ flexDirection: 'row', gap: 15 }}>
-            <TouchableOpacity onPress={() => setShowDebugModal(true)}>
+            <TouchableOpacity onPress={() => {
+              console.log('Debug button pressed');
+              setShowDebugModal(true);
+            }}>
               <Ionicons name="bug" size={24} color="#FFD700" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSignOut}>
+            <TouchableOpacity 
+              onPress={() => {
+                console.log('Sign out button pressed');
+                handleSignOut();
+              }}
+              style={{ padding: 5 }}
+            >
               <Ionicons name="log-out" size={24} color="#FF6B6B" />
             </TouchableOpacity>
           </View>
