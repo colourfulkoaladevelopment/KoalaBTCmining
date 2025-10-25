@@ -2578,6 +2578,49 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
           </View>
         </Modal>
+
+        {/* Wallet Registration Modal */}
+        <Modal visible={showWalletRegistrationModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>🔐 Register Bitcoin Wallet</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter your Bitcoin wallet address to enable withdrawals. Your address will be reviewed by an admin before activation.
+              </Text>
+              
+              <TextInput
+                style={styles.walletAddressInput}
+                placeholder="Enter Bitcoin address (starts with 1, 3, or bc1)"
+                placeholderTextColor="#666"
+                value={walletAddress}
+                onChangeText={setWalletAddress}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowWalletRegistrationModal(false);
+                    setWalletAddress('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={registerWalletAddress}
+                >
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Register</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
       </>
     );
   }
