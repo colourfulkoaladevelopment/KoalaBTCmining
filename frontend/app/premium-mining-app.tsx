@@ -89,6 +89,22 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
         const errorText = await usersResponse.text();
         debugLog += `8. Users Error: ${errorText}\n`;
       }
+
+      // Load pending wallets
+      const pendingResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/pending-wallets`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log('Pending wallets response status:', pendingResponse.status);
+      
+      if (pendingResponse.ok) {
+        const pendingData = await pendingResponse.json();
+        console.log('Pending wallets data:', pendingData);
+        setPendingWallets(pendingData.pending_wallets || []);
+      } else {
+        const error = await pendingResponse.text();
+        console.error('Pending wallets error:', error);
+      }
       
       debugLog += '\n=== END DEBUG ===';
       setDebugInfo(debugLog);
