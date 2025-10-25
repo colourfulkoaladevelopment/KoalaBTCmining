@@ -3668,15 +3668,13 @@ async def get_admin_stats(
         if time_range == "30_days":
             revenue_pipeline = [
                 {"$match": {
-                    "payment_status": "completed",
                     "created_at": {"$gte": thirty_days_ago}
                 }},
-                {"$group": {"_id": None, "total": {"$sum": "$amount_usd"}}}
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
             ]
         else:
             revenue_pipeline = [
-                {"$match": {"payment_status": "completed"}},
-                {"$group": {"_id": None, "total": {"$sum": "$amount_usd"}}}
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
             ]
         
         try:
