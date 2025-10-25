@@ -1838,6 +1838,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
             {/* Support Actions */}
 
+            {/* Admin Panel Button (only for admin users) */}
+            {isAdmin && (
+              <TouchableOpacity style={styles.supportButton} onPress={() => setShowAdminPanel(true)}>
+                <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
+                  <Ionicons name="shield-checkmark" size={20} color="#FFD700" />
+                  <Text style={styles.supportButtonText}>Admin Panel</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#666" />
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.supportButton} onPress={() => setShowContactForm(true)}>
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
                 <Ionicons name="headset" size={20} color="#4CAF50" />
