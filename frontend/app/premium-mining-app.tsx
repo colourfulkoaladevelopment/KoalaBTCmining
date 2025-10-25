@@ -33,48 +33,70 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [timeRange, setTimeRange] = useState('30_days'); // '30_days' or 'all_time'
+  const [debugInfo, setDebugInfo] = useState(''); // For showing debug info on screen
+  const [showDebugModal, setShowDebugModal] = useState(false);
 
   useEffect(() => {
     loadAdminData();
   }, [timeRange]); // Reload when time range changes
 
   const loadAdminData = async () => {
+    let debugLog = '=== ADMIN DATA LOADING DEBUG ===\n';
+    
     try {
       const token = await AsyncStorage.getItem('session_token');
-      console.log('Loading admin data with token:', token ? 'present' : 'missing');
+      debugLog += `\n1. Token: ${token ? 'Present (length: ' + token.length + ')' : 'MISSING!'}\n`;
+      
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      debugLog += `2. Backend URL: ${backendUrl}\n`;
       
       // Load statistics with time range
-      const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/stats?time_range=${timeRange}`, {
+      const statsUrl = `${backendUrl}/api/admin/stats?time_range=${timeRange}`;
+      debugLog += `\n3. Fetching Stats from: ${statsUrl}\n`;
+      
+      const statsResponse = await fetch(statsUrl, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('Stats response status:', statsResponse.status);
+      debugLog += `4. Stats Response Status: ${statsResponse.status}\n`;
       
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
-        console.log('Stats data:', statsData);
+        debugLog += `5. Stats Data: ${JSON.stringify(statsData, null, 2)}\n`;
         setStats(statsData);
       } else {
-        const error = await statsResponse.text();
-        console.error('Stats error:', error);
+        const errorText = await statsResponse.text();
+        debugLog += `5. Stats Error: ${errorText}\n`;
       }
 
       // Load users
-      const usersResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/users`, {
+      const usersUrl = `${backendUrl}/api/admin/users`;
+      debugLog += `\n6. Fetching Users from: ${usersUrl}\n`;
+      
+      const usersResponse = await fetch(usersUrl, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('Users response status:', usersResponse.status);
+      debugLog += `7. Users Response Status: ${usersResponse.status}\n`;
       
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
-        console.log('Users data:', usersData);
+        debugLog += `8. Users Count: ${usersData.users?.length || 0}\n`;
+        debugLog += `9. Users Data Sample: ${JSON.stringify(usersData.users?.slice(0, 2), null, 2)}\n`;
         setUsers(usersData.users || []);
       } else {
-        const error = await usersResponse.text();
-        console.error('Users error:', error);
+        const errorText = await usersResponse.text();
+        debugLog += `8. Users Error: ${errorText}\n`;
       }
+      
+      debugLog += '\n=== END DEBUG ===';
+      setDebugInfo(debugLog);
+      console.log(debugLog);
+      
     } catch (error) {
+      debugLog += `\n❌ EXCEPTION: ${error.message}\n`;
+      debugLog += `Stack: ${error.stack}\n`;
+      setDebugInfo(debugLog);
       console.error('Failed to load admin data:', error);
       showCustomAlert('Error', `Failed to load admin data: ${error.message}`);
     }
