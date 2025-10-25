@@ -922,7 +922,7 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
 
   const handleWithdraw = async () => {
     if (!withdrawForm.address || !withdrawForm.amount) {
-      Alert.alert('Error', 'Please enter Bitcoin address and amount');
+      showCustomAlert('Error', 'Please enter Bitcoin address and amount');
       return;
     }
 
@@ -930,12 +930,12 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
     const minWithdrawal = 0.00001;
 
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Please enter a valid withdrawal amount');
+      showCustomAlert('Error', 'Please enter a valid withdrawal amount');
       return;
     }
 
     if (amount < minWithdrawal) {
-      Alert.alert('Minimum Withdrawal', `Minimum withdrawal amount is ₿ ${minWithdrawal.toFixed(5)}. Please enter a higher amount.`);
+      showCustomAlert('Minimum Withdrawal', `Minimum withdrawal amount is ₿ ${minWithdrawal.toFixed(5)}. Please enter a higher amount.`);
       return;
     }
 
