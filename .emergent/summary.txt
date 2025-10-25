@@ -1,105 +1,96 @@
 <analysis>
-The trajectory details the development of the Koala Mining mobile app, focusing on UI/UX enhancements, third-party API integrations (Coinbase, PayPal, AdMob), and persistent build system debugging. Key challenges included migrating ad networks (from Facebook to Google AdMob), requiring extensive  and  configuration, and correcting AdMob event listener types. A major recurring issue was EAS build failures, initially due to a missing  in the forked environment, then build limits, and crucially, stale cached artifacts and the incorrect inclusion of the  native directory in git. This led to builds consistently reflecting outdated code. The AI engineer systematically addressed these by clearing caches, removing the  folder from git, pushing all changes, and implementing a custom Expo config plugin. Coinbase withdrawal functionality repeatedly failed with  errors, linked to dynamic IP addresses in the Kubernetes environment and Coinbase's IP whitelisting. UI discrepancies, such as a missing store legend, blank FAQ content, and improper app icon scaling, required deep investigation into rendering and build consistency. The process was iterative, involving numerous build attempts and troubleshooting, eventually pinpointing git and caching issues as the primary blockers for code changes reflecting in builds.
+The trajectory details iterative development on the Koala Mining app, covering UI/UX enhancements, AdMob integration fixes, and persistent cryptocurrency withdrawal challenges. Initially, the AI engineer resolved EAS build issues, app icon scaling, and fixed  inconsistencies. A major focus was the Network Error on login, traced to  web incompatibility, resolved by creating a platform-specific AdMob stub.
+
+Coinbase withdrawal issues (, ) consumed significant effort, stemming from API key type mismatches (legacy vs. Advanced Trade vs. CDP). After multiple failed attempts to integrate Coinbase and then NDAX due to API complexities and format requirements, withdrawals were temporarily set to demo mode.
+
+Most recently, a temporary withdrawal popup was added. The AI engineer then started implementing an admin panel, removed Est. Daily text from miner displays, and triggered a new build incorporating these changes, awaiting user review for further tasks like color scheme consistency and executing a factory reset.
 </analysis>
 
 <product_requirements>
-The Koala Mining app is a Bitcoin mining simulator with real financial integrations, rebranded from Bitcoin Mining. It offers Google/email authentication, a black marble and gold UI, password reset, and real BTC withdrawals (min 0.00001 BTC, 0.5% fee). Miners activate automatically, displaying real-time balance updates (1-second, 14-decimal BTC). Monetization uses Coinbase (previously Kraken) for BTC withdrawals, PayPal for miner purchases, and Google AdMob (replacing Facebook Ads) for launch, rewarded miners, and withdrawal clicks. Initial ad limits of 0-30 daily were later removed.
+The Koala Mining app is a Bitcoin mining simulator featuring Google/email authentication, a black marble and gold UI, password reset, and real BTC withdrawals (min 0.00001 BTC, 0.5% fee). Miners activate automatically with real-time balance updates. Monetization uses Google AdMob for various ad types and previously attempted Coinbase (now demo mode) and NDAX (failed) for withdrawals, with Kraken as a pending alternative.
 
-Required UI/UX and feature updates included:
-- Removed Simulated ad text, fixed ad modal overlap, and improved app icon scaling with a gold border and proper padding.
-- Ensured non-rewarded ads for launch/withdrawal.
-- Converted miner time formats from  to .
-- Clarified earnings display to Est. Daily: B x.xxxxxxxxxxxxxx (later Total Estimated Daily Bitcoin, green dot removed).
-- Implemented expandable Your Miners and Expired Miners sections.
-- Fixed the Watch Ad button for proper ad playback and reward logic.
-- Renamed Quick Start to Daily Free Miner with a countdown, to prevent immediate re-activation.
-- Added a Suggest a Feature button (modal title changed from Contact Support).
-- Integrated a Total Daily Bitcoin display (later Total Estimated Daily Bitcoin) in the Mining Status bubble.
-- Store page legend (later removed) and updated paid miner prices, limits, hashrates, and hidden rewards.
-- Displayed the EAS build ID in the Profile tab (later removed).
+Recent user-requested features and fixes include:
+- Removing Simulated ad text, fixing ad modal overlap, and improving app icon.
+- Converting miner time formats to .
+- Displaying Total Estimated Daily Bitcoin without a green dot.
+- Implementing expandable Your Miners and Expired Miners.
+- Refactoring Watch Ad and Daily Free Miner buttons.
+- Adding a Suggest a Feature button.
+- Removing est. B xx.xx per day from all miner cards.
+- Adding a temporary withdrawals disabled popup.
+- **New additions:** Admin panel for  including total BTC owed, consistent black/gold color scheme for all popups, and a factory reset option for all user accounts (retaining usernames/passwords).
 </product_requirements>
 
 <key_technical_concepts>
--   **Mobile Framework**: Expo (React Native)
--   **Backend**: FastAPI (Python)
--   **Database**: MongoDB
--   **Navigation**:  (primarily managed within  for tabs)
--   **Payments**: PayPal SDK, Coinbase Advanced Trade API, Kraken API ()
--   **Advertising**: Google AdMob ()
--   **Build System**: EAS Build (, , - Creating native project directories (./ios and ./android) and updating .gitignore
-- Creating native project directories (./ios and ./android) and updating .gitignore
-- Creating native project directories (./ios and ./android) and updating .gitignore
-✖ Failed to create the native project.
-[19:09:01] You may want to delete the `./ios` and/or `./android` directories before trying again.)
--   **Environment Variables**: ,  files, 
--   **Image Processing**: Python PIL (for icon padding)
+- **Mobile Framework**: Expo (React Native)
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB
+- **Navigation**:  (via )
+- **Payments**: Coinbase Advanced Trade API, NDAX API, PayPal SDK, Kraken API (planned)
+- **Advertising**: Google AdMob ()
+- **Build System**: EAS Build, custom Expo config plugins
+- **Environment Variables**: , , 
 </key_technical_concepts>
 
 <code_architecture>
-The application utilizes an Expo (React Native) frontend, a FastAPI backend, and a MongoDB database. Frontend routing is primarily handled within  for its tab-based navigation, effectively overriding the file-based routing convention of .
+The application uses an Expo (React Native) frontend, a FastAPI backend, and a MongoDB database. Frontend routing is primarily managed within  for its tab-based navigation, effectively overriding the  file-based routing.
 
 
 
 -   ****
-    -   **Importance**: Implements core API endpoints for authentication, user data, miner activation/management, earnings, referrals, contact forms, payments, and crypto withdrawals.
+    -   **Importance**: Core API endpoints (auth, user data, miner management, earnings, referrals, payments, crypto withdrawals).
     -   **Changes**:
-        -   Switched primary BTC withdrawal to , removing , NDAX, and BitGo logic.
-        -   Modified  to reward only  ad types and removed daily ad limits (set to a high value).
-        -   Integrated Gmail SMTP credentials for the contact form.
+        -   Withdrawal logic heavily modified: initially Coinbase, then NDAX, now temporarily  mode due to API integration challenges.
+        -   Added extensive logging for Coinbase/NDAX withdrawal attempts.
+        -   Integrated admin endpoints for user management (, , , , ).
+        -   Updated  in  based on active provider (Coinbase, NDAX, demo).
 -   ****
-    -   **Importance**: Stores critical environment variables for backend services.
-    -   **Changes**: Updated  to . Removed Kraken, NDAX, BitGo related keys. Added  and .
+    -   **Importance**: Backend environment variables.
+    -   **Changes**:  updated to  (currently), previously , . , , ,  were added/updated during troubleshooting.
 -   ****
-    -   **Importance**: Contains the primary UI and logic for the Dashboard, Profile, and actual Store sections. This file manages most user interactions and feature displays.
+    -   **Importance**: Primary UI, controls most user interactions and feature displays (Dashboard, Profile, Store).
     -   **Changes**:
-        -   Removed est. B xx.xx per day display from embedded store miner cards (specifically at line 1585).
-        -   Fixed Total Daily Bitcoin text overflow (adjusted font sizes) and removed the green dot from Mining Status; updated text to Total Estimated Daily Bitcoin.
-        -   Updated  button to show a countdown and removed the immediate already active popup.
-        -   Refactored Watch Ad functionality to use a modal-based display like the login ad, fixed Cancelled to Canceled spelling.
-        -   Completely removed the FAQ section and its button.
-        -   Removed the EAS Build ID display from the Profile tab.
-        -   Changed Contact Support modal title to Suggest a Feature.
-        -   Added 35px footer spacing to the ad modal to prevent navigation bar overlap.
+        -   Fixed login Network Error by refactoring AdMob imports for web compatibility.
+        -   Corrected rewarded ad event listeners (used ).
+        -   Removed est. B x.xx/day from store miner cards.
+        -   Removed green dot from Mining Status, updated text to Total Estimated Daily Bitcoin.
+        -   Removed  from ad confirmation message.
+        -   Added comprehensive logging and an on-screen debug info display for withdrawal errors.
+        -   Centered Watch Ad button text by adding .
+        -   Implemented a temporary  popup for withdrawal button tap, stating withdrawals are disabled.
+        -   Removed Est. Daily B x.xxxxxxxxxxxxxx from Your Miners and Expired Miners sections.
 -   ****
-    -   **Importance**: Intended for file-based routing of the Store tab, but largely superseded by  for the main store display.
-    -   **Changes**: Initial attempts to add a Hash Rate Legend and modify miner card displays were made here, but ultimately, the active store content was found and modified in . The legend section was subsequently removed from this file.
--   ****
-    -   **Importance**: Stores frontend environment variables.
-    -   **Changes**: Added , , , .  was re-added after environment fork.
--   ****
-    -   **Importance**: Expo manifest file, critical for build configuration.
-    -   **Changes**: Updated app icon path. Configured  and  for AdMob. Added  as a custom config plugin.
--   ** (and related adaptive/favicon)**
-    -   **Importance**: Application icons.
-    -   **Changes**: Replaced with a user-provided Koala Mining image, then repadded (5% safe area) using Python PIL to fix cropping issues.
--   ****
-    -   **Importance**: Encapsulates Google AdMob initialization, loading, and display logic.
-    -   **Changes**: Refactored rewarded ad event listeners to use correct  enums (LOADED, DISMISSED, EARNED_REWARD, ERROR) and implemented error handling with a 30-second timeout.
--   ****
-    -   **Importance**: Custom Expo config plugin.
-    -   **Changes**: Created to automatically inject  into  during EAS prebuild, resolving conflicts with  plugin's  attributes.
--   ****
-    -   **Importance**: Android manifest.
-    -   **Changes**: Initially manually modified for AdMob conflict. This file and the entire  folder were later removed from git to ensure EAS rebuilds native code from source, with  applying the necessary manifest modifications.
+    -   **Importance**: Encapsulates Google AdMob initialization, loading, and display logic for native builds.
+    -   **Changes**: Refactored rewarded ad event listeners to use  and .
+-   **** (New File)
+    -   **Importance**: Provides stub functions for AdMob methods, enabling web compatibility by preventing native-only AdMob modules from loading on web.
+-   **** (New File)
+    -   **Importance**: Frontend entry point for the new admin panel functionality.
+    -   **Changes**: Initial file created with basic structure.
 </code_architecture>
 
 <pending_tasks>
--   **Rewarded Ads**: Ads are still not playing correctly, showing Ad Canceled popups followed by a second error message, despite multiple attempts to fix AdMob event types and configuration. This requires further investigation.
--   **Bitcoin Withdrawals**: Coinbase API continues to return  for withdrawals. This is attributed to the backend's dynamic IP () not being consistently whitelisted on the user's Coinbase account.
+- Update all gray popups (e.g., login success, alerts) to match the black/gold color scheme of the Watch Ad popup.
+- Execute the factory reset for all user accounts, retaining usernames and passwords (an admin endpoint exists, but the user requested the action).
+- Fully re-enable real Bitcoin withdrawals (currently in demo mode) using Kraken once user's KYC is complete, or another suitable provider.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary, the AI engineer made a concerted effort to resolve several persistent issues that were not reflecting in the EAS builds, stemming from deeper problems with the build process itself (uncommitted changes,  folder in git, caching).
+Immediately prior to this summary, the AI engineer completed several significant tasks:
 
-The following fixes were implemented and pushed to GitHub:
--   **Store Page Earnings Display**: The est. B x.xx/day text on store miners was finally removed from  (line 1585), which was identified as the actual file rendering the store UI, not .
--   **Mining Status UI**: The green dot icon in the Mining Status section was removed from , and the display text was updated from Total Daily Bitcoin to Total Estimated Daily Bitcoin.
--   **Rewarded Ads Event Types**: The  calls in  were corrected to use the proper  enums (LOADED, DISMISSED, EARNED_REWARD, ERROR), addressing the specific error messages reported by the user.
--   **Profile Page UI**: The EAS Build ID display was removed from the Profile tab, and the modal title for the Suggest a Feature button was changed from Contact Support to Suggest a Feature in .
+1.  **Admin Panel Implementation:**
+    -   A new frontend file  was created.
+    -   New backend API endpoints were added to  for admin functionalities, including ,  (calculating all future earnings from active miners), , , and . This panel is accessible by logging in with .
 
-These changes were committed to git (commit ) and pushed to the remote GitHub repository. A new EAS build (ID ) was triggered, which is expected to contain all these latest fixes. The AI engineer provided the build link and a summary, indicating the current state of resolved items and the two remaining Outstanding Issues (Rewarded Ads and Bitcoin Withdrawals), and is awaiting the user's action to fork the conversation.
+2.  **Est. Daily Removal from Miners:**
+    -   The display text Est. Daily B x.xxxxxxxxxxxxxx was removed from both Your Miners and Expired Miners sections within . This aligns the miner card display with the earlier removal of similar text from the store page.
+
+3.  **Withdrawal Popup:**
+    -   A temporary  popup was implemented in  that appears when the withdrawal button is tapped. It states that withdrawals are temporarily disabled and will be available soon, to manage user expectations during the ongoing real withdrawal integration challenges.
+
+All these changes (admin panel, Est. Daily removal, and the withdrawal popup) have been committed to git (latest commit ) and a new EAS build () has been triggered. The current work involved setting up the infrastructure for the admin features and refining the UI per user requests, with the build processing on EAS servers for user testing.
 </current_work>
 
 <optional_next_step>
-Investigate the persistent rewarded ad failure and the Coinbase withdrawal  error, providing specific debugging steps for the user regarding Coinbase IP whitelisting.
+Implement the consistent black/gold color scheme for all gray popups, mirroring the Watch Ad popup design.
 </optional_next_step>
