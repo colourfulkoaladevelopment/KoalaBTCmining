@@ -639,7 +639,7 @@ Daily Earning Estimate: est. ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`
           await Linking.openURL(approvalUrl);
           
           // Show simple instructions - automatic redirect will handle the rest
-          Alert.alert(
+          showCustomAlert(
             '🌐 PayPal Checkout Opened',
             'Complete your payment in the browser.\n\nAfter payment, you\'ll be automatically redirected back to the app and your miner will be activated immediately.\n\n✅ No need to click anything manually!',
             [
@@ -656,7 +656,7 @@ Daily Earning Estimate: est. ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`
         throw new Error(orderData.detail || 'Failed to create PayPal order');
       }
     } catch (error) {
-      Alert.alert('Payment Error', error.message || 'Failed to initiate PayPal payment');
+      showCustomAlert('Payment Error', error.message || 'Failed to initiate PayPal payment');
     } finally {
       setIsLoading(false);
     }
@@ -682,7 +682,7 @@ Daily Earning Estimate: est. ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`
       const result = await response.json();
 
       if (response.ok) {
-        Alert.alert(
+        showCustomAlert(
           '✅ Payment Successful!',
           `${miner.name} purchased successfully!
 
@@ -699,13 +699,13 @@ Your miner is now active and earning Bitcoin!`,
         );
       } else {
         // Payment failed - show error
-        Alert.alert(
+        showCustomAlert(
           '❌ Payment Failed', 
           result.detail || 'Payment could not be processed. Please try again.'
         );
       }
     } catch (error) {
-      Alert.alert('Payment Error', 'Failed to confirm payment. Please contact support if you were charged.');
+      showCustomAlert('Payment Error', 'Failed to confirm payment. Please contact support if you were charged.');
     } finally {
       setIsLoading(false);
     }
