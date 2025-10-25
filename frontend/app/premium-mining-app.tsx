@@ -1727,10 +1727,14 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
   // Show Admin Panel if user is admin
   if (isAdmin) {
     return <AdminPanelComponent 
-      user={user} 
+      user={user}
+      setUser={setUser}
+      setWalletData={setWalletData}
+      setMiners={setMiners}
+      setCurrentScreen={setCurrentScreen}
+      setIsAdmin={setIsAdmin}
       showCustomAlert={showCustomAlert}
       loadAppData={loadAppData}
-      signOut={signOut}
     />;
   }
 
