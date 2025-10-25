@@ -515,7 +515,7 @@ export default function PremiumBitcoinMiningApp() {
       const result = await response.json();
 
       if (response.ok) {
-        Alert.alert(
+        showCustomAlert(
           'Password Reset Sent! 📧',
           result.message || 'If an account with this email exists, you will receive password reset instructions.',
           [{ text: 'OK', onPress: () => {
@@ -524,10 +524,10 @@ export default function PremiumBitcoinMiningApp() {
           }}]
         );
       } else {
-        Alert.alert('Error', result.detail || 'Failed to send reset email');
+        showCustomAlert('Error', result.detail || 'Failed to send reset email');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred. Please try again.');
+      showCustomAlert('Error', 'Network error occurred. Please try again.');
     }
   };
 
@@ -548,7 +548,7 @@ export default function PremiumBitcoinMiningApp() {
       });
 
       if (response.ok) {
-        Alert.alert('Success! 🎉', 'Free daily miner activated for 24 hours!');
+        showCustomAlert('Success! 🎉', 'Free daily miner activated for 24 hours!');
         setCanActivateFreeMiner(false); // Disable until next reset
         await loadAppData();
       } else {
@@ -558,11 +558,11 @@ export default function PremiumBitcoinMiningApp() {
           setCanActivateFreeMiner(false);
           await loadAppData();
         } else {
-          Alert.alert('Error', result.detail || 'Failed to activate free miner');
+          showCustomAlert('Error', result.detail || 'Failed to activate free miner');
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred');
+      showCustomAlert('Error', 'Network error occurred');
     }
   };
 
