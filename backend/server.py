@@ -3686,7 +3686,7 @@ async def get_admin_stats(
             ]
         
         try:
-            revenue_result = await purchases_collection.aggregate(revenue_pipeline).to_list(length=1)
+            revenue_result = list(purchases_collection.aggregate(revenue_pipeline))
             total_miner_revenue = revenue_result[0]["total"] if revenue_result and len(revenue_result) > 0 else 0.0
         except Exception as rev_error:
             logger.warning(f"Revenue calculation error: {rev_error}")
@@ -3698,7 +3698,7 @@ async def get_admin_stats(
             "status": "active",
             "expires_at": {"$gt": datetime.utcnow()}
         })
-        active_miners_list = await active_miners_cursor.to_list(length=100000)
+        active_miners_list = list(active_miners_cursor)
         
         for miner in active_miners_list:
             # Calculate remaining mining time
