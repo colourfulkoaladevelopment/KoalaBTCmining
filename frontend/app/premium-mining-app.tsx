@@ -171,6 +171,26 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
           </TouchableOpacity>
         </View>
 
+        {/* Time Range Toggle */}
+        <View style={styles.timeRangeToggle}>
+          <TouchableOpacity 
+            style={[styles.toggleButton, timeRange === '30_days' && styles.toggleButtonActive]}
+            onPress={() => setTimeRange('30_days')}
+          >
+            <Text style={[styles.toggleButtonText, timeRange === '30_days' && styles.toggleButtonTextActive]}>
+              Last 30 Days
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.toggleButton, timeRange === 'all_time' && styles.toggleButtonActive]}
+            onPress={() => setTimeRange('all_time')}
+          >
+            <Text style={[styles.toggleButtonText, timeRange === 'all_time' && styles.toggleButtonTextActive]}>
+              All Time
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Statistics Cards */}
         <View style={styles.statsContainer}>
           <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
@@ -186,9 +206,10 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
           </LinearGradient>
 
           <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
-            <Ionicons name="logo-bitcoin" size={32} color="#FFD700" />
-            <Text style={styles.statValue}>₿ {(stats?.total_btc_mined || 0).toFixed(8)}</Text>
-            <Text style={styles.statLabel}>Total BTC Mined</Text>
+            <Ionicons name="cash" size={32} color="#4CAF50" />
+            <Text style={styles.statValue}>${(stats?.total_miner_revenue || 0).toFixed(2)}</Text>
+            <Text style={styles.statLabel}>Miner Revenue</Text>
+            <Text style={styles.statSubLabel}>({timeRange === '30_days' ? 'Last 30 Days' : 'All Time'})</Text>
           </LinearGradient>
 
           <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
