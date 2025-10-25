@@ -86,6 +86,37 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
     setRefreshing(false);
   };
 
+  const handleSignOut = async () => {
+    showCustomAlert(
+      'Sign Out',
+      'Are you sure you want to sign out from admin panel?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/logout`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              await AsyncStorage.removeItem('session_token');
+              await AsyncStorage.removeItem('user_data');
+              await AsyncStorage.removeItem('app_launch_ad_shown');
+              // Call the signOut function passed from parent
+              signOut();
+            } catch (error) {
+              console.error('Logout error:', error);
+              showCustomAlert('Error', 'Failed to sign out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleResetUser = async (userId, userEmail) => {
     showCustomAlert(
       '⚠️ Reset User Account',
