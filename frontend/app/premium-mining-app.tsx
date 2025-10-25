@@ -1907,10 +1907,41 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * bitcoinPrice).toFixed(2)} USD</Text>
             </LinearGradient>
 
+            {/* Wallet Status Indicator */}
+            <View style={styles.walletStatusContainer}>
+              <Text style={[styles.walletStatusText, {
+                color: walletStatus === 'connected' ? '#4CAF50' : 
+                       walletStatus === 'pending' ? '#FFA500' : '#FF6B6B'
+              }]}>
+                Wallet Status: {
+                  walletStatus === 'connected' ? 'Connected ✅' :
+                  walletStatus === 'pending' ? 'Pending ⏳' :
+                  'Disconnected ❌'
+                }
+              </Text>
+              {walletStatus === 'pending' && (
+                <Text style={styles.walletStatusSubtext}>Awaiting admin approval...</Text>
+              )}
+              {walletStatus === 'disconnected' && (
+                <Text style={styles.walletStatusSubtext}>Register your wallet to enable withdrawals</Text>
+              )}
+            </View>
+
             {/* Withdraw Button */}
             <TouchableOpacity 
               style={styles.withdrawButton}
-              onPress={() => setShowWithdrawModal(true)}
+              onPress={() => {
+                if (walletStatus === 'disconnected') {
+                  setShowWalletRegistrationModal(true);
+                } else if (walletStatus === 'pending') {
+                  showCustomAlert(
+                    'Pending Approval ⏳',
+                    'Your Bitcoin wallet address is awaiting admin approval. You\'ll be able to withdraw once approved.'
+                  );
+                } else {
+                  setShowWithdrawModal(true);
+                }
+              }}
             >
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                 <Ionicons name="send" size={20} color="#000" />
