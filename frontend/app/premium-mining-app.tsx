@@ -579,20 +579,20 @@ export default function PremiumBitcoinMiningApp() {
       });
 
       if (response.ok) {
-        Alert.alert('Ad Boost Activated! ⚡', 'Your mining power has been increased for 30 minutes!');
+        showCustomAlert('Ad Boost Activated! ⚡', 'Your mining power has been increased for 30 minutes!');
         await loadAppData();
       } else {
         const result = await response.json();
-        Alert.alert('Error', result.detail || 'Failed to activate ad boost');
+        showCustomAlert('Error', result.detail || 'Failed to activate ad boost');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error occurred');
+      showCustomAlert('Error', 'Network error occurred');
     }
   };
 
   const handlePurchaseMiner = async (miner) => {
     try {
-      Alert.alert(
+      showCustomAlert(
         '💰 Purchase Miner',
         `Purchase ${miner.name} for $${miner.price}?
 
@@ -605,7 +605,7 @@ Daily Earning Estimate: est. ₿ ${calculateDailyEarnings(miner.hash_rate)}/day`
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to purchase miner');
+      showCustomAlert('Error', 'Failed to purchase miner');
     }
   };
 
