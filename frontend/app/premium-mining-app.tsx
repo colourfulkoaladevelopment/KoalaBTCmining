@@ -148,6 +148,25 @@ export default function PremiumBitcoinMiningApp() {
     return calculateDailyEarnings(totalHashRate);
   };
 
+  // Custom Alert helper function (replaces Alert.alert with black/gold themed modal)
+  const showCustomAlert = (title, message, buttons = [{ text: 'OK', onPress: () => {} }]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons
+    });
+  };
+
+  const hideCustomAlert = () => {
+    setCustomAlert({
+      visible: false,
+      title: '',
+      message: '',
+      buttons: []
+    });
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
