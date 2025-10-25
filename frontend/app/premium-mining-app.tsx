@@ -1464,7 +1464,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               style={styles.withdrawButton}
               onPress={() => {
                 // TODO: Remove this popup when Kraken is configured
-                Alert.alert(
+                showCustomAlert(
                   '⏸️ Withdrawals Temporarily Disabled',
                   'We are currently setting up our withdrawal system to ensure the best experience for you.\n\nWithdrawals will be available very soon. We appreciate your patience and understanding! 🙏',
                   [{ text: 'OK' }]
