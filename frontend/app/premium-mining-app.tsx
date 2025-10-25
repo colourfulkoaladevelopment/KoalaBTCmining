@@ -144,7 +144,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
               await AsyncStorage.removeItem('session_token');
               await AsyncStorage.removeItem('user_data');
               await AsyncStorage.removeItem('app_launch_ad_shown');
-              // Reset app state properly for mobile
+              // Reset all app state
               setUser(null);
               setWalletData(null);
               setMiners([]);
