@@ -1549,6 +1549,42 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
     );
   };
 
+  const registerWalletAddress = async () => {
+    try {
+      if (!walletAddress.trim()) {
+        showCustomAlert('Error', 'Please enter a valid Bitcoin address');
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/register`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ btc_address: walletAddress })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setWalletStatus('pending');
+        setShowWalletRegistrationModal(false);
+        setWalletAddress('');
+        showCustomAlert(
+          '✅ Wallet Registered!',
+          'Your Bitcoin address has been submitted for approval. You\'ll be able to withdraw once an admin approves it.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        showCustomAlert('Error', result.detail || 'Failed to register wallet');
+      }
+    } catch (error) {
+      showCustomAlert('Error', 'Network error occurred');
+    }
+  };
+
   // Loading Screen with Progress Bar
   if (currentScreen === 'loading') {
     return (
