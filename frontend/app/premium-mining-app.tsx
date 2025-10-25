@@ -282,6 +282,12 @@ export default function PremiumBitcoinMiningApp() {
           if (response.ok) {
             const userInfo = await response.json();
             setUser(userInfo);
+            
+            // Check if user is admin
+            if (userInfo.email === 'colourfulkoaladevelopment@gmail.com') {
+              setIsAdmin(true);
+            }
+            
             await loadAppData();
             setCurrentScreen('app');
           } else {
