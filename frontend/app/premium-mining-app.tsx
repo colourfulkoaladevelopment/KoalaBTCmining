@@ -1739,7 +1739,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <TouchableOpacity onPress={() => {
                   if (referralStats?.referral_code) {
                     Clipboard.setString(referralStats.referral_code);
-                    Alert.alert('Copied! 📋', 'Referral code copied to clipboard');
+                    showCustomAlert('Copied! 📋', 'Referral code copied to clipboard');
                   }
                 }}>
                   <Ionicons name="copy" size={20} color="#FFD700" />
