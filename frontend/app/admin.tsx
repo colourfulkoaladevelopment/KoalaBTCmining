@@ -68,11 +68,11 @@ export default function AdminPanel() {
         setIsAdmin(true);
         loadAdminData();
       } else {
-        Alert.alert('Access Denied', 'You do not have admin privileges.');
+        showCustomAlert('Access Denied', 'You do not have admin privileges.');
         router.back();
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to verify admin access');
+      showCustomAlert('Error', 'Failed to verify admin access');
       router.back();
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function AdminPanel() {
   };
 
   const handleResetUser = async (userId: string, userEmail: string) => {
-    Alert.alert(
+    showCustomAlert(
       '⚠️ Reset User Account',
       `Are you sure you want to reset ${userEmail}?\n\nThis will:\n• Delete all miners\n• Reset BTC balance to 0\n• Keep login credentials`,
       [
@@ -131,13 +131,13 @@ export default function AdminPanel() {
               });
 
               if (response.ok) {
-                Alert.alert('✅ Success', 'User account reset successfully');
+                showCustomAlert('✅ Success', 'User account reset successfully');
                 loadAdminData();
               } else {
-                Alert.alert('❌ Error', 'Failed to reset user account');
+                showCustomAlert('❌ Error', 'Failed to reset user account');
               }
             } catch (error) {
-              Alert.alert('❌ Error', 'Network error occurred');
+              showCustomAlert('❌ Error', 'Network error occurred');
             }
           }
         }
@@ -147,11 +147,11 @@ export default function AdminPanel() {
 
   const handleBroadcastNotification = async () => {
     if (!broadcastMessage.trim()) {
-      Alert.alert('Error', 'Please enter a message');
+      showCustomAlert('Error', 'Please enter a message');
       return;
     }
 
-    Alert.alert(
+    showCustomAlert(
       '📢 Broadcast Notification',
       `Send this message to all users?\n\n"${broadcastMessage}"`,
       [
@@ -171,13 +171,13 @@ export default function AdminPanel() {
               });
 
               if (response.ok) {
-                Alert.alert('✅ Success', 'Notification sent to all users');
+                showCustomAlert('✅ Success', 'Notification sent to all users');
                 setBroadcastMessage('');
               } else {
-                Alert.alert('❌ Error', 'Failed to send notification');
+                showCustomAlert('❌ Error', 'Failed to send notification');
               }
             } catch (error) {
-              Alert.alert('❌ Error', 'Network error occurred');
+              showCustomAlert('❌ Error', 'Network error occurred');
             }
           }
         }
