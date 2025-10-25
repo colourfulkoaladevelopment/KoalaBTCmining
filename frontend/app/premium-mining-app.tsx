@@ -179,14 +179,14 @@ export default function PremiumBitcoinMiningApp() {
       
       if (url.includes('koalamining://paypal/success')) {
         // PayPal payment successful - refresh data
-        Alert.alert(
+        showCustomAlert(
           '✅ Payment Successful!',
           'Your miner has been activated and is now generating Bitcoin!',
           [{ text: 'Great!', onPress: () => loadAppData() }]
         );
       } else if (url.includes('koalamining://paypal/cancel')) {
         // PayPal payment canceled
-        Alert.alert(
+        showCustomAlert(
           'Payment Canceled',
           'Your payment was canceled. No charges were made.',
           [{ text: 'OK' }]
