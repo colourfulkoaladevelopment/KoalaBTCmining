@@ -670,6 +670,65 @@ async def get_wallet_balance(current_user: Dict = Depends(get_current_user)):
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0)
     }
 
+@app.post("/api/wallet/register")
+async def register_btc_wallet(
+    wallet_data: Dict[str, str],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Register BTC wallet address for withdrawals"""
+    try:
+        btc_address = wallet_data.get("btc_address", "").strip()
+        
+        if not btc_address:
+            raise HTTPException(status_code=400, detail="Bitcoin address is required")
+        
+        # Basic Bitcoin address validation (starts with 1, 3, or bc1)
+        if not (btc_address.startswith('1') or btc_address.startswith('3') or btc_address.startswith('bc1')):
+            raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
+        
+        # Check if address is already registered by another user
+        existing = await users_collection.find_one({
+            "btc_wallet_address": btc_address,
+            "_id": {"$ne": ObjectId(current_user["id"])}
+        })
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="This Bitcoin address is already registered")
+        
+        # Update user with wallet address and set status to pending
+        await users_collection.update_one(
+            {"_id": ObjectId(current_user["id"])},
+            {"$set": {
+                "btc_wallet_address": btc_address,
+                "wallet_status": "pending",
+                "wallet_registered_at": datetime.utcnow()
+            }}
+        )
+        
+        logger.info(f"User {current_user['email']} registered BTC wallet: {btc_address}")
+        
+        return {
+            "success": True,
+            "message": "Wallet registered successfully. Awaiting admin approval.",
+            "wallet_status": "pending"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error registering wallet: {e}")
+        raise HTTPException(status_code=500, detail="Failed to register wallet")
+
+@app.get("/api/wallet/status")
+async def get_wallet_status(current_user: Dict = Depends(get_current_user)):
+    """Get user's wallet connection status"""
+    return {
+        "wallet_status": current_user.get("wallet_status", "disconnected"),
+        "btc_wallet_address": current_user.get("btc_wallet_address"),
+        "wallet_registered_at": current_user.get("wallet_registered_at"),
+        "wallet_approved_at": current_user.get("wallet_approved_at")
+    }
+
 # Miner management
 @app.get("/api/miners/list")
 async def get_user_miners(current_user: Dict = Depends(get_current_user)):
