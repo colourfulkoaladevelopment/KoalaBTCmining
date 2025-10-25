@@ -1836,6 +1836,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </View>
             </LinearGradient>
 
+            {/* App Version */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statsCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="information-circle" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>App Information</Text>
+              </View>
+              
+              <View style={styles.profileStats}>
+                <Text style={styles.profileStat}>Version: {Constants.expoConfig?.version || '1.0.0'}</Text>
+                <Text style={styles.profileStat}>Build: {Constants.expoConfig?.android?.versionCode || Constants.expoConfig?.ios?.buildNumber || 'N/A'}</Text>
+              </View>
+            </LinearGradient>
+
             {/* Support Actions */}
 
             {/* Admin Panel Button (only for admin users) */}
