@@ -3742,11 +3742,11 @@ async def get_all_users(current_user: Dict = Depends(get_current_user)):
         
         users = []
         users_cursor = users_collection.find({})
-        users_list = await users_cursor.to_list(length=10000)
+        users_list = list(users_cursor)
         
         for user in users_list:
             # Count active miners for this user
-            active_miners_count = await miners_collection.count_documents({
+            active_miners_count = miners_collection.count_documents({
                 "user_id": str(user["_id"]),
                 "status": "active",
                 "expires_at": {"$gt": datetime.utcnow()}
