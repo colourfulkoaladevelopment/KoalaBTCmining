@@ -191,6 +191,37 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
     );
   };
 
+  const approveWallet = async (walletId, userEmail) => {
+    showCustomAlert(
+      '✅ Approve Wallet',
+      `Approve Bitcoin wallet for ${userEmail}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/approve-wallet/${walletId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'Wallet approved successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to approve wallet');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleFactoryReset = async () => {
     showCustomAlert(
       '🚨 FACTORY RESET WARNING',
