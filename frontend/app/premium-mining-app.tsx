@@ -486,6 +486,12 @@ export default function PremiumBitcoinMiningApp() {
         await AsyncStorage.setItem('session_token', result.access_token);
         await AsyncStorage.setItem('user_data', JSON.stringify(result.user));
         setUser(result.user);
+        
+        // Check if user is admin
+        if (result.user.email === 'colourfulkoaladevelopment@gmail.com') {
+          setIsAdmin(true);
+        }
+        
         await loadAppData();
         setCurrentScreen('app');
         setActiveTab('dashboard');
