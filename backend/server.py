@@ -108,6 +108,10 @@ class User(BaseModel):
     total_earnings: float = 0.0
     total_referral_rewards: float = 0.0
     total_cashed_out: float = 0.0
+    btc_wallet_address: Optional[str] = None
+    wallet_status: str = "disconnected"  # disconnected, pending, connected
+    wallet_registered_at: Optional[datetime] = None
+    wallet_approved_at: Optional[datetime] = None
     created_at: datetime = datetime.utcnow()
     
     class Config:
