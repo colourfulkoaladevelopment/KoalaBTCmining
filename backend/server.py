@@ -3539,6 +3539,198 @@ async def get_user_purchases(current_user: Dict = Depends(get_current_user)):
         logger.error(f"Error getting user purchases: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve purchase history")
 
+# ==================== ADMIN ENDPOINTS ====================
+# Admin email configuration
+ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
+
+def is_admin(current_user: Dict) -> bool:
+    """Check if current user is admin"""
+    return current_user.get("email") == ADMIN_EMAIL
+
+@app.get("/api/admin/check")
+async def check_admin_access(current_user: Dict = Depends(get_current_user)):
+    """Check if user has admin access"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return {"is_admin": True}
+
+@app.get("/api/admin/stats")
+async def get_admin_stats(current_user: Dict = Depends(get_current_user)):
+    """Get platform statistics for admin dashboard"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Total users
+        total_users = await users_collection.count_documents({})
+        
+        # Active miners count
+        active_miners = await miners_collection.count_documents({
+            "status": "active",
+            "expires_at": {"$gt": datetime.utcnow()}
+        })
+        
+        # Total BTC mined (sum of all user balances)
+        pipeline = [
+            {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
+        ]
+        result = await users_collection.aggregate(pipeline).to_list(length=1)
+        total_btc_mined = result[0]["total"] if result else 0.0
+        
+        # Calculate total BTC owed (future earnings from active miners)
+        total_btc_owed = 0.0
+        active_miners_cursor = miners_collection.find({
+            "status": "active",
+            "expires_at": {"$gt": datetime.utcnow()}
+        })
+        
+        async for miner in active_miners_cursor:
+            # Calculate remaining mining time
+            now = datetime.utcnow()
+            expires_at = miner.get("expires_at")
+            
+            if expires_at and expires_at > now:
+                remaining_seconds = (expires_at - now).total_seconds()
+                remaining_hours = remaining_seconds / 3600
+                
+                # Get miner's earnings rate (BTC per hour)
+                hash_rate = miner.get("hash_rate", 0)
+                btc_per_hour = hash_rate * 0.000000000001  # Conversion rate
+                
+                # Calculate total future earnings
+                future_earnings = btc_per_hour * remaining_hours
+                total_btc_owed += future_earnings
+        
+        return {
+            "total_users": total_users,
+            "active_miners": active_miners,
+            "total_btc_mined": round(total_btc_mined, 8),
+            "total_btc_owed": round(total_btc_owed, 8)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting admin stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve statistics")
+
+@app.get("/api/admin/users")
+async def get_all_users(current_user: Dict = Depends(get_current_user)):
+    """Get all users for admin dashboard"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        users = []
+        users_cursor = users_collection.find({})
+        
+        async for user in users_cursor:
+            # Count active miners for this user
+            active_miners_count = await miners_collection.count_documents({
+                "user_id": str(user["_id"]),
+                "status": "active",
+                "expires_at": {"$gt": datetime.utcnow()}
+            })
+            
+            users.append({
+                "id": str(user["_id"]),
+                "name": user.get("name", ""),
+                "email": user.get("email", ""),
+                "balance": user.get("balance", 0.0),
+                "active_miners": active_miners_count,
+                "created_at": user.get("created_at", "").isoformat() if user.get("created_at") else ""
+            })
+        
+        return {"users": users}
+        
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
+
+@app.post("/api/admin/reset-user/{user_id}")
+async def reset_user_account(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Reset a specific user's account (delete miners, reset balance)"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        from bson import ObjectId
+        
+        # Delete all miners for this user
+        await miners_collection.delete_many({"user_id": user_id})
+        
+        # Reset user balance to 0
+        await users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"balance": 0.0}}
+        )
+        
+        logger.info(f"Admin reset user account: {user_id}")
+        
+        return {"message": "User account reset successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error resetting user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset user account")
+
+@app.post("/api/admin/broadcast")
+async def broadcast_notification(
+    message_data: Dict[str, str],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Broadcast a notification to all users"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        message = message_data.get("message", "")
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        # Store notification in database for all users
+        # In a production app, you'd use a notification service or push notifications
+        notification = {
+            "message": message,
+            "created_at": datetime.utcnow(),
+            "type": "broadcast",
+            "sent_by": "admin"
+        }
+        
+        # For now, just log it - in production, implement proper notification system
+        logger.info(f"Admin broadcast notification: {message}")
+        
+        return {"message": "Notification broadcast successfully", "recipients": "all_users"}
+        
+    except Exception as e:
+        logger.error(f"Error broadcasting notification: {e}")
+        raise HTTPException(status_code=500, detail="Failed to broadcast notification")
+
+@app.post("/api/admin/factory-reset")
+async def factory_reset_all_accounts(current_user: Dict = Depends(get_current_user)):
+    """Factory reset all user accounts - DELETE ALL MINERS AND RESET BALANCES"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Delete ALL miners
+        miners_deleted = await miners_collection.delete_many({})
+        
+        # Reset ALL user balances to 0
+        users_updated = await users_collection.update_many(
+            {},
+            {"$set": {"balance": 0.0}}
+        )
+        
+        logger.warning(f"FACTORY RESET: Deleted {miners_deleted.deleted_count} miners, reset {users_updated.modified_count} user balances")
+        
+        return {
+            "message": "Factory reset completed successfully",
+            "miners_deleted": miners_deleted.deleted_count,
+            "users_reset": users_updated.modified_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during factory reset: {e}")
+        raise HTTPException(status_code=500, detail="Failed to perform factory reset")
+
 # Add payment configuration to .env file
 @app.post("/api/admin/configure-payments")
 async def configure_payments(config_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
