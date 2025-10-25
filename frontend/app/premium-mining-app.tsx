@@ -49,6 +49,11 @@ export default function PremiumBitcoinMiningApp() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   
+  // Admin panel state
+  const [adminStats, setAdminStats] = useState<any>(null);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
