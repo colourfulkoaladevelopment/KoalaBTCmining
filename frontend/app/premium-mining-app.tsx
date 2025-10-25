@@ -439,7 +439,7 @@ export default function PremiumBitcoinMiningApp() {
       await loadAppData();
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      Alert.alert('Error', 'Failed to refresh data. Please try again.');
+      showCustomAlert('Error', 'Failed to refresh data. Please try again.');
     } finally {
       setRefreshing(false);
     }
@@ -447,12 +447,12 @@ export default function PremiumBitcoinMiningApp() {
 
   const handleAuth = async () => {
     if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showCustomAlert('Error', 'Please fill in all required fields');
       return;
     }
 
     if (!isLogin && !formData.name) {
-      Alert.alert('Error', 'Please enter your name');
+      showCustomAlert('Error', 'Please enter your name');
       return;
     }
 
