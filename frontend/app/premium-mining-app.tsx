@@ -3834,6 +3834,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginVertical: 20,
+  },
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
