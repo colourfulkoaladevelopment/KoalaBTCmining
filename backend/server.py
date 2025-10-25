@@ -3847,9 +3847,10 @@ async def get_pending_wallets(current_user: Dict = Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Admin access required")
         
         # Find all users with pending wallet status
-        pending_users = await users_collection.find({
+        pending_users_cursor = users_collection.find({
             "wallet_status": "pending"
-        }).to_list(length=1000)
+        })
+        pending_users = await pending_users_cursor.to_list(length=1000)
         
         pending_wallets = []
         for user in pending_users:
