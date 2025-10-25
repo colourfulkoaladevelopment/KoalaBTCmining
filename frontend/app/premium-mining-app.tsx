@@ -1626,7 +1626,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                       <View key={miner.id} style={styles.expiredMinerItem}>
                         <Text style={styles.expiredMinerName}>{miner.name}</Text>
                         <Text style={styles.expiredMinerDetails}>
-                          Earned: ₿ {miner.total_earned?.toFixed(14)} | {miner.hash_rate} GH/s | est. ₿ {calculateDailyEarnings(miner.hash_rate)}/day
+                          Earned: ₿ {miner.total_earned?.toFixed(14)} | {miner.hash_rate} GH/s
                         </Text>
                       </View>
                     ))}
