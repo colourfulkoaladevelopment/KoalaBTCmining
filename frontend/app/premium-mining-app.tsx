@@ -790,7 +790,7 @@ Your miner is now active and earning Bitcoin!`,
       setIsWatchingAd(false);
       // Show user-friendly error message
       const errorMessage = error.message || 'Unable to load advertisement';
-      Alert.alert('Ad Unavailable', `${errorMessage}. Please try again later.`);
+      showCustomAlert('Ad Unavailable', `${errorMessage}. Please try again later.`);
       return false;
     }
   };
