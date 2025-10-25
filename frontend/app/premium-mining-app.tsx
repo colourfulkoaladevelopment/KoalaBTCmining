@@ -1890,8 +1890,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </View>
               
               <View style={styles.profileStats}>
-                <Text style={styles.profileStat}>Version: {Constants.expoConfig?.version || '1.0.0'}</Text>
-                <Text style={styles.profileStat}>Build: {Constants.expoConfig?.android?.versionCode || Constants.expoConfig?.ios?.buildNumber || 'N/A'}</Text>
+                <Text style={styles.profileStat}>Version: 1.0.0 (Alpha)</Text>
               </View>
             </LinearGradient>
 
