@@ -85,6 +85,14 @@ export default function PremiumBitcoinMiningApp() {
   const [showAdModal, setShowAdModal] = useState(false);
   const [currentAdType, setCurrentAdType] = useState(null);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
+  
+  // Custom Alert state
+  const [customAlert, setCustomAlert] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: []
+  });
 
   // Calculate estimated BTC per day for a given hash rate
   const calculateDailyEarnings = (hashRate) => {
