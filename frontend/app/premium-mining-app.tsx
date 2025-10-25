@@ -402,16 +402,18 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
             <Text style={styles.noDataText}>No pending wallet approvals</Text>
           ) : (
             pendingWallets.map((wallet) => (
-              <View key={wallet.id} style={styles.userItem}>
+              <View key={wallet.user_id} style={styles.userItem}>
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{wallet.user_name || 'Unknown'}</Text>
-                  <Text style={styles.userEmail}>{wallet.user_email}</Text>
-                  <Text style={styles.userBalance}>Address: {wallet.btc_address}</Text>
-                  <Text style={styles.userMiners}>Submitted: {new Date(wallet.created_at).toLocaleDateString()}</Text>
+                  <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
+                  <Text style={styles.userEmail}>{wallet.email}</Text>
+                  <Text style={[styles.userBalance, { fontSize: 11, marginTop: 4 }]}>
+                    {wallet.btc_wallet_address}
+                  </Text>
+                  <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
                 </View>
-                <TouchableOpacity onPress={() => approveWallet(wallet.id, wallet.user_email)}>
+                <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
                   <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
-                    <Ionicons name="checkmark" size={16} color="#FFF" />
+                    <Ionicons name="checkmark-circle" size={16} color="#FFF" />
                     <Text style={styles.resetButtonText}>Approve</Text>
                   </LinearGradient>
                 </TouchableOpacity>
