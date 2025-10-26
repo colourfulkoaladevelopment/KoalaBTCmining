@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.koalamining.app",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
