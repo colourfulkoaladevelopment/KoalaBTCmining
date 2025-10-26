@@ -2805,14 +2805,12 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 autoCorrect={false}
               />
               
-              {/* Debug Log Display */}
-              {walletDebugLog ? (
-                <ScrollView style={{ maxHeight: 200, backgroundColor: '#1a1a1a', padding: 10, borderRadius: 8, marginTop: 10 }}>
-                  <Text style={{ color: '#FFD700', fontSize: 11, fontFamily: 'monospace' }}>
-                    {walletDebugLog}
-                  </Text>
-                </ScrollView>
-              ) : null}
+              {/* Debug Log Display - Always Visible */}
+              <View style={{ maxHeight: 200, backgroundColor: '#1a1a1a', padding: 10, borderRadius: 8, marginTop: 10, minHeight: 60 }}>
+                <Text style={{ color: '#FFD700', fontSize: 10, fontFamily: 'monospace' }}>
+                  {walletDebugLog || 'Debug log will appear here...'}
+                </Text>
+              </View>
               
               <View style={styles.modalButtons}>
                 <TouchableOpacity
