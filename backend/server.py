@@ -686,8 +686,8 @@ async def register_btc_wallet(
         if not (btc_address.startswith('1') or btc_address.startswith('3') or btc_address.startswith('bc1')):
             raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
         
-        # Get user's _id from current_user (already an ObjectId from database)
-        user_id = current_user["_id"]
+        # Use current_user["id"] which is the processed string UUID - matches pattern used throughout codebase
+        user_id = current_user["id"]
         
         # Check if address is already registered by another user
         existing = await users_collection.find_one({
