@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 # Backend URL
-BASE_URL = "https://golden-koala-mine.preview.emergentagent.com/api"
+BASE_URL = "https://koala-mining.preview.emergentagent.com/api"
 
 def test_coinbase_withdrawal():
     """Test Coinbase withdrawal with detailed error reporting"""
