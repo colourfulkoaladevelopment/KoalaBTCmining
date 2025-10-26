@@ -439,6 +439,18 @@ frontend:
         agent: "main"
         comment: "✅ ENHANCED FACEBOOK ADS INTEGRATION: Updated all three ad triggers to properly track in backend and respect daily limits. Changes: 1) Updated showFacebookAd() to use real Facebook SDK on iOS/Android devices (imports facebookAds.ts utilities dynamically), falls back to simulation on web/Expo Go. 2) Modified handleAdWatch() to call /api/ads/watch backend endpoint for ALL ad types (app_launch, withdrawal, miner_activation) to properly increment daily counter. 3) Updated triggerAppLaunchAd() to check daily ad limit before showing ad. 4) Updated handleWithdraw() to check daily limit and skip ad if limit reached. 5) Added app_launch_ad_shown flag clearing on logout for proper session tracking. All ad types now properly integrated with backend tracking system and respect 0-30 daily limit."
 
+  - task: "3-Way Fee Breakdown for Withdrawals"
+    implemented: true
+    working: "NA"
+    file: "premium-mining-app.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "✅ IMPLEMENTED 3-WAY FEE BREAKDOWN: Added comprehensive fee breakdown in withdrawal confirmation dialog. Features implemented: 1) Added networkFee state variable with default 0.00001 BTC, 2) Created fetchNetworkFee() function to dynamically fetch current network fees from /api/bitcoin/network-fee endpoint, 3) Network fee fetched automatically when withdrawal modal opens, 4) Updated withdrawal confirmation dialog to display three fee components: User Receives (amount - network fee), System Fee (0.5% of amount), Network Fee (dynamic from API), and Total Deducted (sum of all three), 5) Updated proceedWithWithdrawal() calculation logic to include network fee in total deduction. Withdrawal confirmation now shows clear breakdown: 'User Receives: ₿ X.XXXXXXXX', 'System Fee (0.5%): ₿ X.XXXXXXXX', 'Network Fee: ₿ X.XXXXXXXX', separator line, 'Total Deducted: ₿ X.XXXXXXXX'. Provides complete transparency for withdrawal costs."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
