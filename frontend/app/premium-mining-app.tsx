@@ -36,6 +36,8 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
   const [debugInfo, setDebugInfo] = useState(''); // For showing debug info on screen
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [pendingWallets, setPendingWallets] = useState([]);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showPendingWallets, setShowPendingWallets] = useState(true);
 
   useEffect(() => {
     loadAdminData();
