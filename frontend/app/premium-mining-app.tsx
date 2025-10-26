@@ -1742,8 +1742,18 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
       debugLog += `11. Response ok: ${response.ok}\n`;
       setWalletDebugLog(debugLog);
       
-      const result = await response.json();
-      debugLog += `12. Response data: ${JSON.stringify(result)}\n`;
+      let result;
+      try {
+        const responseText = await response.text();
+        debugLog += `12. Response text: ${responseText}\n`;
+        setWalletDebugLog(debugLog);
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        debugLog += `12. JSON Parse Error: ${parseError.message}\n`;
+        setWalletDebugLog(debugLog);
+        result = { detail: 'Invalid server response' };
+      }
+      debugLog += `13. Response data: ${JSON.stringify(result)}\n`;
       setWalletDebugLog(debugLog);
 
       if (response.ok) {
