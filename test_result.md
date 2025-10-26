@@ -459,7 +459,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Store Page UI Enhancements"
+    - "3-Way Fee Breakdown for Withdrawals"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
