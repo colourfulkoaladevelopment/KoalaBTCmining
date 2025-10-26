@@ -686,13 +686,13 @@ async def register_btc_wallet(
         if not (btc_address.startswith('1') or btc_address.startswith('3') or btc_address.startswith('bc1')):
             raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
         
-        # Get user's ObjectId - current_user["id"] is a string, need to convert
-        user_object_id = ObjectId(current_user["_id"]) if isinstance(current_user.get("_id"), str) else current_user["_id"]
+        # Get user's _id from current_user (already an ObjectId from database)
+        user_id = current_user["_id"]
         
         # Check if address is already registered by another user
         existing = await users_collection.find_one({
             "btc_wallet_address": btc_address,
-            "_id": {"$ne": user_object_id}
+            "_id": {"$ne": user_id}
         })
         
         if existing:
@@ -700,7 +700,7 @@ async def register_btc_wallet(
         
         # Update user with wallet address and set status to pending
         await users_collection.update_one(
-            {"_id": user_object_id},
+            {"_id": user_id},
             {"$set": {
                 "btc_wallet_address": btc_address,
                 "wallet_status": "pending",
