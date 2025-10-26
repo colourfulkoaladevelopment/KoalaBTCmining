@@ -510,6 +510,7 @@ export default function PremiumBitcoinMiningApp() {
   const [walletStatus, setWalletStatus] = useState('disconnected');
   const [showWalletRegistrationModal, setShowWalletRegistrationModal] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
+  const [walletDebugLog, setWalletDebugLog] = useState('');
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
