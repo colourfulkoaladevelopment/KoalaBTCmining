@@ -1699,29 +1699,36 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
   };
 
   const registerWalletAddress = async () => {
-    console.log('=== WALLET REGISTRATION DEBUG ===');
-    console.log('1. Function called');
-    console.log('2. Wallet address:', walletAddress);
+    let debugLog = '=== WALLET REGISTRATION DEBUG ===\n';
+    debugLog += '1. Function called\n';
+    debugLog += `2. Wallet address: ${walletAddress}\n`;
+    setWalletDebugLog(debugLog);
     
     try {
       if (!walletAddress.trim()) {
-        console.log('3. Validation failed: empty address');
+        debugLog += '3. Validation failed: empty address\n';
+        setWalletDebugLog(debugLog);
         showCustomAlert('Error', 'Please enter a valid Bitcoin address');
         return;
       }
       
-      console.log('4. Validation passed');
-      console.log('5. Getting token from AsyncStorage...');
+      debugLog += '4. Validation passed\n';
+      debugLog += '5. Getting token from AsyncStorage...\n';
+      setWalletDebugLog(debugLog);
+      
       const token = await AsyncStorage.getItem('session_token');
-      console.log('6. Token:', token ? 'Present (length: ' + token.length + ')' : 'MISSING!');
+      debugLog += `6. Token: ${token ? 'Present (length: ' + token.length + ')' : 'MISSING!'}\n`;
+      setWalletDebugLog(debugLog);
       
       const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/register`;
-      console.log('7. URL:', url);
+      debugLog += `7. URL: ${url}\n`;
+      setWalletDebugLog(debugLog);
       
       const body = { btc_address: walletAddress };
-      console.log('8. Body:', JSON.stringify(body));
+      debugLog += `8. Body: ${JSON.stringify(body)}\n`;
+      debugLog += '9. Sending POST request...\n';
+      setWalletDebugLog(debugLog);
       
-      console.log('9. Sending POST request...');
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -1731,34 +1738,41 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         body: JSON.stringify(body)
       });
       
-      console.log('10. Response status:', response.status);
-      console.log('11. Response ok:', response.ok);
+      debugLog += `10. Response status: ${response.status}\n`;
+      debugLog += `11. Response ok: ${response.ok}\n`;
+      setWalletDebugLog(debugLog);
       
       const result = await response.json();
-      console.log('12. Response data:', JSON.stringify(result));
+      debugLog += `12. Response data: ${JSON.stringify(result)}\n`;
+      setWalletDebugLog(debugLog);
 
       if (response.ok) {
-        console.log('13. SUCCESS - Updating wallet status to pending');
+        debugLog += '13. SUCCESS - Updating wallet status to pending\n';
+        setWalletDebugLog(debugLog);
         setWalletStatus('pending');
         setShowWalletRegistrationModal(false);
         setWalletAddress('');
+        setWalletDebugLog('');
         showCustomAlert(
           '✅ Wallet Registered!',
           'Your Bitcoin address has been submitted for approval. You\'ll be able to withdraw once an admin approves it.',
           [{ text: 'OK' }]
         );
       } else {
-        console.log('14. FAILED - Response not OK');
+        debugLog += '14. FAILED - Response not OK\n';
+        debugLog += `15. Error detail: ${result.detail || 'Unknown error'}\n`;
+        setWalletDebugLog(debugLog);
         showCustomAlert('Error', result.detail || 'Failed to register wallet');
       }
     } catch (error) {
-      console.error('15. EXCEPTION caught:', error);
-      console.error('16. Error type:', error.constructor.name);
-      console.error('17. Error message:', error.message);
-      console.error('18. Error stack:', error.stack);
+      debugLog += `16. EXCEPTION caught: ${error.message}\n`;
+      debugLog += `17. Error type: ${error.constructor.name}\n`;
+      debugLog += `18. Error stack: ${error.stack}\n`;
+      setWalletDebugLog(debugLog);
       showCustomAlert('Error', `Network error: ${error.message}`);
     }
-    console.log('=== END WALLET REGISTRATION DEBUG ===');
+    debugLog += '=== END WALLET REGISTRATION DEBUG ===\n';
+    setWalletDebugLog(debugLog);
   };
 
   // Loading Screen with Progress Bar
