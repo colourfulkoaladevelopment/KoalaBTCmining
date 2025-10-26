@@ -3858,6 +3858,13 @@ const styles = StyleSheet.create({
     color: '#FFD700',
     marginBottom: 15,
   },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    marginBottom: 15,
+  },
   factoryResetButton: {
     flexDirection: 'row',
     alignItems: 'center',
