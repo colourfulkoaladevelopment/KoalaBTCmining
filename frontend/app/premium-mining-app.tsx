@@ -1454,20 +1454,25 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
     console.log('=== WITHDRAWAL PROCESS STARTED ===');
     const amount = parseFloat(withdrawForm.amount);
     const processingFee = amount * 0.005; // 0.5% fee
-    const totalDeduction = amount + processingFee;
+    const totalDeduction = amount + processingFee + networkFee; // Include network fee
+    const userReceives = amount - networkFee; // User receives amount minus network fee
     const usdValue = amount * bitcoinPrice;
 
     console.log('Withdrawal details:', {
       amount,
       processingFee,
+      networkFee,
       totalDeduction,
+      userReceives,
       address: withdrawForm.address
     });
 
     showCustomAlert(
       '🪙 Confirm Bitcoin Withdrawal',
-      `Amount: ₿ ${amount.toFixed(8)}
-Processing Fee (0.5%): ₿ ${processingFee.toFixed(8)}
+      `User Receives: ₿ ${userReceives.toFixed(8)}
+System Fee (0.5%): ₿ ${processingFee.toFixed(8)}
+Network Fee: ₿ ${networkFee.toFixed(8)}
+─────────────────────────────
 Total Deducted: ₿ ${totalDeduction.toFixed(8)}
 USD Value: $${usdValue.toFixed(2)}
       
