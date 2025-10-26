@@ -26,7 +26,7 @@ import Constants from 'expo-constants';
 const { width, height } = Dimensions.get('window');
 
 // Admin Panel Component
-function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
+function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurrentScreen, setIsAdmin, showCustomAlert, loadAppData }) {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +35,9 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
   const [timeRange, setTimeRange] = useState('30_days'); // '30_days' or 'all_time'
   const [debugInfo, setDebugInfo] = useState(''); // For showing debug info on screen
   const [showDebugModal, setShowDebugModal] = useState(false);
+  const [pendingWallets, setPendingWallets] = useState([]);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showPendingWallets, setShowPendingWallets] = useState(true);
 
   useEffect(() => {
     loadAdminData();
@@ -88,6 +91,22 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
         const errorText = await usersResponse.text();
         debugLog += `8. Users Error: ${errorText}\n`;
       }
+
+      // Load pending wallets
+      const pendingResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/pending-wallets`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log('Pending wallets response status:', pendingResponse.status);
+      
+      if (pendingResponse.ok) {
+        const pendingData = await pendingResponse.json();
+        console.log('Pending wallets data:', pendingData);
+        setPendingWallets(pendingData.pending_wallets || []);
+      } else {
+        const error = await pendingResponse.text();
+        console.error('Pending wallets error:', error);
+      }
       
       debugLog += '\n=== END DEBUG ===';
       setDebugInfo(debugLog);
@@ -127,7 +146,7 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
               await AsyncStorage.removeItem('session_token');
               await AsyncStorage.removeItem('user_data');
               await AsyncStorage.removeItem('app_launch_ad_shown');
-              // Reset app state properly for mobile
+              // Reset all app state
               setUser(null);
               setWalletData(null);
               setMiners([]);
@@ -164,6 +183,37 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
                 loadAdminData();
               } else {
                 showCustomAlert('❌ Error', 'Failed to reset user account');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const approveWallet = async (walletId, userEmail) => {
+    showCustomAlert(
+      '✅ Approve Wallet',
+      `Approve Bitcoin wallet for ${userEmail}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/approve-wallet/${walletId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'Wallet approved successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to approve wallet');
               }
             } catch (error) {
               showCustomAlert('❌ Error', 'Network error occurred');
@@ -224,10 +274,19 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
         <View style={styles.adminHeader}>
           <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
           <View style={{ flexDirection: 'row', gap: 15 }}>
-            <TouchableOpacity onPress={() => setShowDebugModal(true)}>
+            <TouchableOpacity onPress={() => {
+              console.log('Debug button pressed');
+              setShowDebugModal(true);
+            }}>
               <Ionicons name="bug" size={24} color="#FFD700" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSignOut}>
+            <TouchableOpacity 
+              onPress={() => {
+                console.log('Sign out button pressed');
+                handleSignOut();
+              }}
+              style={{ padding: 5 }}
+            >
               <Ionicons name="log-out" size={24} color="#FF6B6B" />
             </TouchableOpacity>
           </View>
@@ -315,35 +374,103 @@ function AdminPanelComponent({ user, showCustomAlert, loadAppData, signOut }) {
 
         {/* User Management */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
-          
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search users..."
-              placeholderTextColor="#666"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+          <TouchableOpacity 
+            onPress={() => setShowUserManagement(!showUserManagement)}
+            style={styles.collapsibleHeader}
+          >
+            <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
+            <Ionicons 
+              name={showUserManagement ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#FFD700" 
             />
-          </View>
-
-          {filteredUsers.map((usr) => (
-            <View key={usr.id} style={styles.userItem}>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
-                <Text style={styles.userEmail}>{usr.email}</Text>
-                <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
-                <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+          </TouchableOpacity>
+          
+          {showUserManagement && (
+            <>
+              {/* Search */}
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="#666" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search users..."
+                  placeholderTextColor="#666"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
               </View>
-              <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
-                <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
-                  <Ionicons name="refresh" size={16} color="#FFF" />
-                  <Text style={styles.resetButtonText}>Reset</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ))}
+
+              {filteredUsers.map((usr) => (
+                <View key={usr.id} style={styles.userItem}>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
+                    <Text style={styles.userEmail}>{usr.email}</Text>
+                    <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
+                    <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
+                    <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
+                      <Ionicons name="refresh" size={16} color="#FFF" />
+                      <Text style={styles.resetButtonText}>Reset</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
+          )}
+        </LinearGradient>
+
+        {/* Pending Wallets */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <TouchableOpacity 
+            onPress={() => setShowPendingWallets(!showPendingWallets)}
+            style={styles.collapsibleHeader}
+          >
+            <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+            <Ionicons 
+              name={showPendingWallets ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#FFD700" 
+            />
+          </TouchableOpacity>
+          
+          {showPendingWallets && (
+            <>
+              {pendingWallets.length === 0 ? (
+                <Text style={styles.noDataText}>No pending wallet approvals</Text>
+              ) : (
+                pendingWallets.map((wallet) => (
+                  <View key={wallet.user_id} style={styles.userItem}>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
+                      <Text style={styles.userEmail}>{wallet.email}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
+                          {wallet.btc_wallet_address}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={async () => {
+                            await Clipboard.setString(wallet.btc_wallet_address);
+                            showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
+                          }}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons name="copy" size={16} color="#FFD700" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
+                      <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFF" />
+                        <Text style={styles.resetButtonText}>Approve</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </>
+          )}
         </LinearGradient>
       </ScrollView>
     </LinearGradient>
@@ -378,6 +505,11 @@ export default function PremiumBitcoinMiningApp() {
   const [adminStats, setAdminStats] = useState<any>(null);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
+  
+  // Wallet status state
+  const [walletStatus, setWalletStatus] = useState('disconnected');
+  const [showWalletRegistrationModal, setShowWalletRegistrationModal] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
@@ -690,8 +822,11 @@ export default function PremiumBitcoinMiningApp() {
       const token = await AsyncStorage.getItem('session_token');
       
       // Load all data in parallel including updated user info
-      const [walletResponse, minersResponse, storeResponse, referralResponse, userResponse] = await Promise.all([
+      const [walletResponse, walletStatusResponse, minersResponse, storeResponse, referralResponse, userResponse] = await Promise.all([
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/status`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/miners/list`, {
@@ -711,6 +846,11 @@ export default function PremiumBitcoinMiningApp() {
       if (walletResponse.ok) {
         const walletResult = await walletResponse.json();
         setWalletData(walletResult);
+      }
+
+      if (walletStatusResponse.ok) {
+        const statusData = await walletStatusResponse.json();
+        setWalletStatus(statusData.wallet_status || 'disconnected');
       }
 
       if (minersResponse.ok) {
@@ -1075,6 +1215,21 @@ Your miner is now active and earning Bitcoin!`,
     );
   };
 
+  // Fetch Bitcoin network fee
+  const fetchNetworkFee = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/bitcoin/network-fee`);
+      if (response.ok) {
+        const data = await response.json();
+        setNetworkFee(data.network_fee_btc);
+        console.log('Network fee fetched:', data.network_fee_btc, 'BTC');
+      }
+    } catch (error) {
+      console.error('Failed to fetch network fee:', error);
+      // Keep default fallback fee
+    }
+  };
+
   // Facebook Ads Functions
   const loadAdStats = async () => {
     try {
@@ -1299,20 +1454,25 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
     console.log('=== WITHDRAWAL PROCESS STARTED ===');
     const amount = parseFloat(withdrawForm.amount);
     const processingFee = amount * 0.005; // 0.5% fee
-    const totalDeduction = amount + processingFee;
+    const totalDeduction = amount + processingFee + networkFee; // Include network fee
+    const userReceives = amount - networkFee; // User receives amount minus network fee
     const usdValue = amount * bitcoinPrice;
 
     console.log('Withdrawal details:', {
       amount,
       processingFee,
+      networkFee,
       totalDeduction,
+      userReceives,
       address: withdrawForm.address
     });
 
     showCustomAlert(
       '🪙 Confirm Bitcoin Withdrawal',
-      `Amount: ₿ ${amount.toFixed(8)}
-Processing Fee (0.5%): ₿ ${processingFee.toFixed(8)}
+      `User Receives: ₿ ${userReceives.toFixed(8)}
+System Fee (0.5%): ₿ ${processingFee.toFixed(8)}
+Network Fee: ₿ ${networkFee.toFixed(8)}
+─────────────────────────────
 Total Deducted: ₿ ${totalDeduction.toFixed(8)}
 USD Value: $${usdValue.toFixed(2)}
       
@@ -1535,6 +1695,69 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         }
       ]
     );
+  };
+
+  const registerWalletAddress = async () => {
+    console.log('=== WALLET REGISTRATION DEBUG ===');
+    console.log('1. Function called');
+    console.log('2. Wallet address:', walletAddress);
+    
+    try {
+      if (!walletAddress.trim()) {
+        console.log('3. Validation failed: empty address');
+        showCustomAlert('Error', 'Please enter a valid Bitcoin address');
+        return;
+      }
+      
+      console.log('4. Validation passed');
+      console.log('5. Getting token from AsyncStorage...');
+      const token = await AsyncStorage.getItem('session_token');
+      console.log('6. Token:', token ? 'Present (length: ' + token.length + ')' : 'MISSING!');
+      
+      const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/register`;
+      console.log('7. URL:', url);
+      
+      const body = { btc_address: walletAddress };
+      console.log('8. Body:', JSON.stringify(body));
+      
+      console.log('9. Sending POST request...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      console.log('10. Response status:', response.status);
+      console.log('11. Response ok:', response.ok);
+      
+      const result = await response.json();
+      console.log('12. Response data:', JSON.stringify(result));
+
+      if (response.ok) {
+        console.log('13. SUCCESS - Updating wallet status to pending');
+        setWalletStatus('pending');
+        setShowWalletRegistrationModal(false);
+        setWalletAddress('');
+        showCustomAlert(
+          '✅ Wallet Registered!',
+          'Your Bitcoin address has been submitted for approval. You\'ll be able to withdraw once an admin approves it.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        console.log('14. FAILED - Response not OK');
+        showCustomAlert('Error', result.detail || 'Failed to register wallet');
+      }
+    } catch (error) {
+      console.error('15. EXCEPTION caught:', error);
+      console.error('16. Error type:', error.constructor.name);
+      console.error('17. Error message:', error.message);
+      console.error('18. Error stack:', error.stack);
+      showCustomAlert('Error', `Network error: ${error.message}`);
+    }
+    console.log('=== END WALLET REGISTRATION DEBUG ===');
   };
 
   // Loading Screen with Progress Bar
@@ -1859,24 +2082,50 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.usdValue}>≈ ${((walletData?.total_balance || 0) * bitcoinPrice).toFixed(2)} USD</Text>
             </LinearGradient>
 
+            {/* Wallet Status Indicator */}
+            <View style={styles.walletStatusContainer}>
+              <Text style={[styles.walletStatusText, {
+                color: walletStatus === 'connected' ? '#4CAF50' : 
+                       walletStatus === 'pending' ? '#FFA500' : '#FF6B6B'
+              }]}>
+                Wallet Status: {
+                  walletStatus === 'connected' ? 'Connected ✅' :
+                  walletStatus === 'pending' ? 'Pending ⏳' :
+                  'Disconnected ❌'
+                }
+              </Text>
+              {walletStatus === 'pending' && (
+                <Text style={styles.walletStatusSubtext}>Awaiting admin approval...</Text>
+              )}
+              {walletStatus === 'disconnected' && (
+                <Text style={styles.walletStatusSubtext}>Register your wallet to enable withdrawals</Text>
+              )}
+            </View>
+
             {/* Withdraw Button */}
             <TouchableOpacity 
               style={styles.withdrawButton}
               onPress={() => {
-                // TODO: Remove this popup when Kraken is configured
-                showCustomAlert(
-                  '⏸️ Withdrawals Temporarily Disabled',
-                  'We are currently setting up our withdrawal system to ensure the best experience for you.\n\nWithdrawals will be available very soon. We appreciate your patience and understanding! 🙏',
-                  [{ text: 'OK' }]
-                );
-                // Uncomment the line below when Kraken is ready
-                // setShowWithdrawModal(true);
+                if (walletStatus === 'disconnected') {
+                  setShowWalletRegistrationModal(true);
+                } else if (walletStatus === 'pending') {
+                  showCustomAlert(
+                    'Pending Approval ⏳',
+                    'Your Bitcoin wallet address is awaiting admin approval. You\'ll be able to withdraw once approved.'
+                  );
+                } else {
+                  // Fetch network fee before showing modal
+                  fetchNetworkFee();
+                  setShowWithdrawModal(true);
+                }
               }}
             >
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
-                <Ionicons name="send" size={20} color="#000" />
+                <Ionicons name={walletStatus === 'connected' ? 'send' : 'link'} size={20} color="#000" />
                 <View style={{ alignItems: 'center' }}>
-                  <Text style={styles.withdrawButtonText}>Withdraw BTC</Text>
+                  <Text style={styles.withdrawButtonText}>
+                    {walletStatus === 'connected' ? 'Withdraw BTC' : 'Link Your BTC Wallet'}
+                  </Text>
                   <Text style={[styles.withdrawButtonText, { fontSize: 11, marginTop: 2 }]}>Minimum withdrawal ₿ 0.00001</Text>
                 </View>
               </LinearGradient>
@@ -2508,6 +2757,52 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
           </View>
         </Modal>
+
+        {/* Wallet Registration Modal */}
+        <Modal visible={showWalletRegistrationModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>🔐 Register Bitcoin Wallet</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter your Bitcoin wallet address to enable withdrawals. Your address will be reviewed by an admin before activation.
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: '#FFA500', marginTop: 10, fontSize: 13 }]}>
+                ⚡ We currently only accept withdrawals on the Bitcoin network. Lightning support will be added soon.
+              </Text>
+              
+              <TextInput
+                style={styles.walletAddressInput}
+                placeholder="Enter Bitcoin address"
+                placeholderTextColor="#666"
+                value={walletAddress}
+                onChangeText={setWalletAddress}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowWalletRegistrationModal(false);
+                    setWalletAddress('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={registerWalletAddress}
+                >
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Register</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
       </>
     );
   }
@@ -2902,6 +3197,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  walletStatusContainer: {
+    marginHorizontal: 15,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  walletStatusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  walletStatusSubtext: {
+    fontSize: 12,
+    color: '#AAA',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  walletAddressInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+    padding: 12,
+    color: '#FFF',
+    fontSize: 14,
+    marginBottom: 20,
   },
   
   // Mining Card
@@ -3556,6 +3881,13 @@ const styles = StyleSheet.create({
     color: '#FFD700',
     marginBottom: 15,
   },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    marginBottom: 15,
+  },
   factoryResetButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3616,6 +3948,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginVertical: 20,
   },
   resetButton: {
     flexDirection: 'row',
