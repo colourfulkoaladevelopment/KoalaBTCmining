@@ -407,29 +407,54 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
 
         {/* Pending Wallets */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+          <TouchableOpacity 
+            onPress={() => setShowPendingWallets(!showPendingWallets)}
+            style={styles.collapsibleHeader}
+          >
+            <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+            <Ionicons 
+              name={showPendingWallets ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#FFD700" 
+            />
+          </TouchableOpacity>
           
-          {pendingWallets.length === 0 ? (
-            <Text style={styles.noDataText}>No pending wallet approvals</Text>
-          ) : (
-            pendingWallets.map((wallet) => (
-              <View key={wallet.user_id} style={styles.userItem}>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
-                  <Text style={styles.userEmail}>{wallet.email}</Text>
-                  <Text style={[styles.userBalance, { fontSize: 11, marginTop: 4 }]}>
-                    {wallet.btc_wallet_address}
-                  </Text>
-                  <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
-                </View>
-                <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
-                  <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
-                    <Ionicons name="checkmark-circle" size={16} color="#FFF" />
-                    <Text style={styles.resetButtonText}>Approve</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            ))
+          {showPendingWallets && (
+            <>
+              {pendingWallets.length === 0 ? (
+                <Text style={styles.noDataText}>No pending wallet approvals</Text>
+              ) : (
+                pendingWallets.map((wallet) => (
+                  <View key={wallet.user_id} style={styles.userItem}>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
+                      <Text style={styles.userEmail}>{wallet.email}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
+                          {wallet.btc_wallet_address}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={async () => {
+                            await Clipboard.setString(wallet.btc_wallet_address);
+                            showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
+                          }}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons name="copy" size={16} color="#FFD700" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
+                      <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
+                        <Ionicons name="checkmark-circle" size={16} color="#FFF" />
+                        <Text style={styles.resetButtonText}>Approve</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </>
           )}
         </LinearGradient>
       </ScrollView>
