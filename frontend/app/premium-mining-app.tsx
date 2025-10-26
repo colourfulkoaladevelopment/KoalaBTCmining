@@ -1215,6 +1215,21 @@ Your miner is now active and earning Bitcoin!`,
     );
   };
 
+  // Fetch Bitcoin network fee
+  const fetchNetworkFee = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/bitcoin/network-fee`);
+      if (response.ok) {
+        const data = await response.json();
+        setNetworkFee(data.network_fee_btc);
+        console.log('Network fee fetched:', data.network_fee_btc, 'BTC');
+      }
+    } catch (error) {
+      console.error('Failed to fetch network fee:', error);
+      // Keep default fallback fee
+    }
+  };
+
   // Facebook Ads Functions
   const loadAdStats = async () => {
     try {
