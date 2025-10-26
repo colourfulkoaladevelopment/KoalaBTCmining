@@ -2661,6 +2661,21 @@ async def capture_paypal_order(order_data: Dict[str, Any], current_user: Dict = 
             }
             transactions_collection.insert_one(transaction_record)
             
+            # Record purchase for revenue tracking
+            purchase_record = {
+                "_id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "miner_id": new_miner["_id"],
+                "miner_name": miner_data["name"],
+                "amount": stored_order["final_price"],
+                "payment_method": "paypal",
+                "payment_id": response.result.id,
+                "promo_code": stored_order.get("promo_code"),
+                "discount_amount": stored_order.get("discount_amount", 0),
+                "created_at": datetime.utcnow()
+            }
+            purchases_collection.insert_one(purchase_record)
+            
             return {
                 "success": True,
                 "message": "Payment completed and miner activated!",
