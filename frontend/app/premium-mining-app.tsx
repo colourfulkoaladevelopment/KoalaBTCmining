@@ -1757,7 +1757,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
       setWalletDebugLog(debugLog);
 
       if (response.ok) {
-        debugLog += '13. SUCCESS - Updating wallet status to pending\n';
+        debugLog += '14. SUCCESS - Updating wallet status to pending\n';
         setWalletDebugLog(debugLog);
         setWalletStatus('pending');
         setShowWalletRegistrationModal(false);
@@ -1769,8 +1769,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
           [{ text: 'OK' }]
         );
       } else {
-        debugLog += '14. FAILED - Response not OK\n';
-        debugLog += `15. Error detail: ${result.detail || 'Unknown error'}\n`;
+        debugLog += '15. FAILED - Response not OK\n';
+        debugLog += `16. Error detail: ${result.detail || 'Unknown error'}\n`;
         setWalletDebugLog(debugLog);
         showCustomAlert('Error', result.detail || 'Failed to register wallet');
       }
