@@ -403,6 +403,7 @@ export default function PremiumBitcoinMiningApp() {
   });
   
   const [bitcoinPrice, setBitcoinPrice] = useState(50000); // Default fallback price
+  const [networkFee, setNetworkFee] = useState(0.00001); // Default network fee in BTC
   
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
