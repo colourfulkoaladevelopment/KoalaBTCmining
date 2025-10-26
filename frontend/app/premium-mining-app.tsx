@@ -2674,10 +2674,13 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.modalSubtitle}>
                 Enter your Bitcoin wallet address to enable withdrawals. Your address will be reviewed by an admin before activation.
               </Text>
+              <Text style={[styles.modalSubtitle, { color: '#FFA500', marginTop: 10, fontSize: 13 }]}>
+                ⚡ We currently only accept withdrawals on the Bitcoin network. Lightning support will be added soon.
+              </Text>
               
               <TextInput
                 style={styles.walletAddressInput}
-                placeholder="Enter Bitcoin address (starts with 1, 3, or bc1)"
+                placeholder="Enter Bitcoin address"
                 placeholderTextColor="#666"
                 value={walletAddress}
                 onChangeText={setWalletAddress}
