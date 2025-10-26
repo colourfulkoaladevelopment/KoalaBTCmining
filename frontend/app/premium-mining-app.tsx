@@ -2787,6 +2787,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         <Modal visible={showWalletRegistrationModal} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              
+              {/* DEBUG LOG - ALWAYS AT TOP */}
+              <View style={{ backgroundColor: '#FF0000', padding: 10, borderRadius: 8, marginBottom: 10, minHeight: 80, borderWidth: 2, borderColor: '#FFD700' }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>
+                  DEBUG LOG:
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 9 }}>
+                  {walletDebugLog || 'Waiting for registration attempt...'}
+                </Text>
+              </View>
+              
               <Text style={styles.modalTitle}>🔐 Register Bitcoin Wallet</Text>
               <Text style={styles.modalSubtitle}>
                 Enter your Bitcoin wallet address to enable withdrawals. Your address will be reviewed by an admin before activation.
@@ -2804,13 +2815,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              
-              {/* Debug Log Display - Always Visible */}
-              <View style={{ maxHeight: 200, backgroundColor: '#1a1a1a', padding: 10, borderRadius: 8, marginTop: 10, minHeight: 60 }}>
-                <Text style={{ color: '#FFD700', fontSize: 10, fontFamily: 'monospace' }}>
-                  {walletDebugLog || 'Debug log will appear here...'}
-                </Text>
-              </View>
               
               <View style={styles.modalButtons}>
                 <TouchableOpacity
