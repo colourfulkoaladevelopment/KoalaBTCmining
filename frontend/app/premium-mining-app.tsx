@@ -2109,6 +2109,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     'Your Bitcoin wallet address is awaiting admin approval. You\'ll be able to withdraw once approved.'
                   );
                 } else {
+                  // Fetch network fee before showing modal
+                  fetchNetworkFee();
                   setShowWithdrawModal(true);
                 }
               }}
