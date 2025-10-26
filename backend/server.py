@@ -1194,6 +1194,47 @@ async def get_bitcoin_price():
         }
 
 # Bitcoin withdrawal endpoints
+@app.get("/api/bitcoin/network-fee")
+async def get_bitcoin_network_fee():
+    """Get current recommended Bitcoin network fee"""
+    try:
+        # Fetch from blockchain.info API for recommended fees
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.blockchain.info/mempool/fees') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    # Return fee in BTC (convert from satoshis per byte)
+                    # Typical transaction size is ~250 bytes
+                    fee_per_byte_satoshis = data.get('regular', 50)  # Use 'regular' priority
+                    transaction_size_bytes = 250
+                    total_fee_satoshis = fee_per_byte_satoshis * transaction_size_bytes
+                    total_fee_btc = total_fee_satoshis / 100000000  # Convert to BTC
+                    
+                    return {
+                        "network_fee_btc": total_fee_btc,
+                        "network_fee_satoshis": total_fee_satoshis,
+                        "fee_per_byte": fee_per_byte_satoshis,
+                        "estimated_confirmation": "30-60 minutes"
+                    }
+                else:
+                    # Fallback to conservative estimate
+                    return {
+                        "network_fee_btc": 0.00001,
+                        "network_fee_satoshis": 1000,
+                        "fee_per_byte": 4,
+                        "estimated_confirmation": "30-60 minutes"
+                    }
+    except Exception as e:
+        logger.error(f"Error fetching network fee: {e}")
+        # Fallback
+        return {
+            "network_fee_btc": 0.00001,
+            "network_fee_satoshis": 1000,
+            "fee_per_byte": 4,
+            "estimated_confirmation": "30-60 minutes"
+        }
+
 @app.post("/api/withdraw/bitcoin")
 async def withdraw_bitcoin(
     withdrawal_data: Dict[str, Any],
