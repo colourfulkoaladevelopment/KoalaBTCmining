@@ -1635,25 +1635,46 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
   };
 
   const registerWalletAddress = async () => {
+    console.log('=== WALLET REGISTRATION DEBUG ===');
+    console.log('1. Function called');
+    console.log('2. Wallet address:', walletAddress);
+    
     try {
       if (!walletAddress.trim()) {
+        console.log('3. Validation failed: empty address');
         showCustomAlert('Error', 'Please enter a valid Bitcoin address');
         return;
       }
-
+      
+      console.log('4. Validation passed');
+      console.log('5. Getting token from AsyncStorage...');
       const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/register`, {
+      console.log('6. Token:', token ? 'Present (length: ' + token.length + ')' : 'MISSING!');
+      
+      const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/register`;
+      console.log('7. URL:', url);
+      
+      const body = { btc_address: walletAddress };
+      console.log('8. Body:', JSON.stringify(body));
+      
+      console.log('9. Sending POST request...');
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ btc_address: walletAddress })
+        body: JSON.stringify(body)
       });
-
+      
+      console.log('10. Response status:', response.status);
+      console.log('11. Response ok:', response.ok);
+      
       const result = await response.json();
+      console.log('12. Response data:', JSON.stringify(result));
 
       if (response.ok) {
+        console.log('13. SUCCESS - Updating wallet status to pending');
         setWalletStatus('pending');
         setShowWalletRegistrationModal(false);
         setWalletAddress('');
@@ -1663,11 +1684,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
           [{ text: 'OK' }]
         );
       } else {
+        console.log('14. FAILED - Response not OK');
         showCustomAlert('Error', result.detail || 'Failed to register wallet');
       }
     } catch (error) {
-      showCustomAlert('Error', 'Network error occurred');
+      console.error('15. EXCEPTION caught:', error);
+      console.error('16. Error type:', error.constructor.name);
+      console.error('17. Error message:', error.message);
+      console.error('18. Error stack:', error.stack);
+      showCustomAlert('Error', `Network error: ${error.message}`);
     }
+    console.log('=== END WALLET REGISTRATION DEBUG ===');
   };
 
   // Loading Screen with Progress Bar
