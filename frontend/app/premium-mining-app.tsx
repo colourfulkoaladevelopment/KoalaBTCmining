@@ -374,35 +374,50 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
 
         {/* User Management */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
-          
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search users..."
-              placeholderTextColor="#666"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+          <TouchableOpacity 
+            onPress={() => setShowUserManagement(!showUserManagement)}
+            style={styles.collapsibleHeader}
+          >
+            <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
+            <Ionicons 
+              name={showUserManagement ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#FFD700" 
             />
-          </View>
-
-          {filteredUsers.map((usr) => (
-            <View key={usr.id} style={styles.userItem}>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
-                <Text style={styles.userEmail}>{usr.email}</Text>
-                <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
-                <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+          </TouchableOpacity>
+          
+          {showUserManagement && (
+            <>
+              {/* Search */}
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="#666" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search users..."
+                  placeholderTextColor="#666"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
               </View>
-              <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
-                <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
-                  <Ionicons name="refresh" size={16} color="#FFF" />
-                  <Text style={styles.resetButtonText}>Reset</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ))}
+
+              {filteredUsers.map((usr) => (
+                <View key={usr.id} style={styles.userItem}>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
+                    <Text style={styles.userEmail}>{usr.email}</Text>
+                    <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
+                    <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
+                    <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
+                      <Ionicons name="refresh" size={16} color="#FFF" />
+                      <Text style={styles.resetButtonText}>Reset</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
+          )}
         </LinearGradient>
 
         {/* Pending Wallets */}
