@@ -445,18 +445,18 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
                       <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
                       <Text style={styles.userEmail}>{wallet.email}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                        <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
-                          {wallet.btc_wallet_address}
-                        </Text>
                         <TouchableOpacity 
                           onPress={async () => {
                             await Clipboard.setString(wallet.btc_wallet_address);
                             showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
                           }}
-                          style={styles.copyButton}
+                          style={[styles.copyButton, { marginRight: 6 }]}
                         >
                           <Ionicons name="copy" size={16} color="#FFD700" />
                         </TouchableOpacity>
+                        <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
+                          {wallet.btc_wallet_address}
+                        </Text>
                       </View>
                       <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
                     </View>
