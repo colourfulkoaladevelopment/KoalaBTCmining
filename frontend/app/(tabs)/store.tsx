@@ -245,6 +245,58 @@ export default function Store() {
           </View>
         </View>
 
+        {/* Earnings Legend */}
+        <View style={styles.legendCard}>
+          <View style={styles.legendHeader}>
+            <Ionicons name="stats-chart" size={24} color="#FFD700" />
+            <Text style={styles.legendTitle}>Daily Earnings Guide</Text>
+          </View>
+          <Text style={styles.legendSubtitle}>
+            Each miner earns Bitcoin based on its hash rate:
+          </Text>
+          <View style={styles.legendGrid}>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>100 GH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00000054 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>200 GH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00000109 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>400 GH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00000217 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>1 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00000544 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>2 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00001087 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>4 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00002174 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>10 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00005435 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>15 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00008153 / day</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <Text style={styles.legendHashRate}>20 TH/s</Text>
+              <Text style={styles.legendEarning}>₿ 0.00010870 / day</Text>
+            </View>
+          </View>
+          <Text style={styles.legendNote}>
+            💡 Earnings are calculated every 5 seconds and deposited to your balance
+          </Text>
+        </View>
+
         {/* Premium Miners Header */}
         <View style={styles.premiumHeader}>
           <Text style={styles.premiumTitle}>Premium Miners</Text>
