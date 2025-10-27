@@ -3007,6 +3007,46 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
           </View>
         </Modal>
+
+        {/* Give BTC Modal */}
+        <Modal visible={giveBtcModal.visible} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>💰 Give BTC</Text>
+              <Text style={styles.modalSubtitle}>
+                Add Bitcoin to {giveBtcModal.userEmail}
+              </Text>
+              
+              <TextInput
+                style={styles.walletAddressInput}
+                placeholder="Amount in BTC (e.g., 0.00001)"
+                placeholderTextColor="#666"
+                value={giveBtcModal.amount}
+                onChangeText={(text) => setGiveBtcModal({...giveBtcModal, amount: text})}
+                keyboardType="decimal-pad"
+                autoCapitalize="none"
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' })}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={confirmGiveBtc}
+                >
+                  <LinearGradient colors={['#4CAF50', '#45A049']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Give BTC</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
       </>
     );
   }
