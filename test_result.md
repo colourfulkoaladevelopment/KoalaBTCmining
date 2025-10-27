@@ -275,6 +275,10 @@ backend:
       - working: true
         agent: "testing"
         comment: "🎉 NDAX BITCOIN WITHDRAWAL INTEGRATION FULLY VERIFIED (11/11 tests passed): Comprehensive testing of NDAX integration confirms system is READY FOR PRODUCTION. CONFIGURATION VERIFIED: ✅ BITCOIN_WALLET_TYPE=ndax active, ✅ NDAX API credentials configured (API Key: 0b0914031dd2e403a67cec32ae855bd9, Secret configured), ✅ NDAX base URL: https://api.ndax.io. VALIDATION LOGIC WORKING PERFECTLY: ✅ Empty address validation ('Bitcoin address is required'), ✅ Minimum amount validation (0.00001 BTC minimum enforced), ✅ Insufficient balance validation with fee calculation, ✅ Fee calculation accurate (0.5% processing fee), ✅ Authentication security (rejects unauthenticated requests). NDAX INTEGRATION VERIFIED: ✅ HMAC SHA256 signature generation working correctly, ✅ Request structure supports NDAX API format, ✅ Error handling robust and secure. BACKEND ANALYSIS: All validation messages correctly generated in logs, fee calculations accurate (0.1 BTC + 0.0005 BTC fee = 0.1005 BTC total). Minor issue: HTTP status codes return 500 instead of 400 for validation errors (does not affect functionality). PRODUCTION READINESS: NDAX Bitcoin withdrawal integration is fully functional and ready for live transactions with Canadian exchange."
+      - working: "NA"
+        agent: "main"
+        comment: "🔧 CRITICAL FIX APPLIED: Fixed Kraken API integration issue. ROOT CAUSE: Backend code was looking for KRAKEN_API_SECRET but .env file had KRAKEN_PRIVATE_KEY, causing withdrawals to fall back to demo mode. FIXES APPLIED: 1) Renamed KRAKEN_PRIVATE_KEY to KRAKEN_API_SECRET in .env file, 2) Updated Kraken withdrawal implementation to use newer API with method_id and address parameters instead of deprecated 'key' parameter, 3) Added automatic fetching of Bitcoin withdrawal method details (method_id, minimum, network fees) from Kraken API, 4) Validated Kraken API connection - confirmed 0.00139869 BTC balance in account. Backend restarted with new configuration. Ready for testing to verify Kraken withdrawals now process correctly."
+
 
   - task: "Enhanced Contact Support System"
     implemented: true
