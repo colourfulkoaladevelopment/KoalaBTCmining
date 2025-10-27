@@ -1252,7 +1252,7 @@ async def withdraw_bitcoin(
         amount = float(withdrawal_data.get("amount", 0))
         
         # Check wallet status first
-        user = await users_collection.find_one({"_id": ObjectId(current_user["id"])})
+        user = users_collection.find_one({"_id": current_user["id"]})  # Synchronous, use string ID
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
