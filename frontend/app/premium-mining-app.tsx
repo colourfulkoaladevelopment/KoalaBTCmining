@@ -591,6 +591,7 @@ export default function PremiumBitcoinMiningApp() {
   const [showWalletRegistrationModal, setShowWalletRegistrationModal] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [walletDebugLog, setWalletDebugLog] = useState('');
+  const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '' });
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
