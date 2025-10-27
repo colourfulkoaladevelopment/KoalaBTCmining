@@ -265,7 +265,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
   );
 
   return (
-    <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={[styles.container, { height: '100vh' }]}>
+    <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
       <ScrollView
         style={[styles.scrollView, { flex: 1 }]}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
