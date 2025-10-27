@@ -2119,9 +2119,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   'Disconnected ❌'
                 }
               </Text>
-              {walletStatus === 'pending' && (
-                <Text style={styles.walletStatusSubtext}>Awaiting admin approval...</Text>
-              )}
               {walletStatus === 'disconnected' && (
                 <Text style={styles.walletStatusSubtext}>Register your wallet to enable withdrawals</Text>
               )}
