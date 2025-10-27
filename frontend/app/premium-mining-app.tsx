@@ -1765,7 +1765,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         setWalletDebugLog('');
         showCustomAlert(
           '✅ Wallet Registered!',
-          'Your Bitcoin address has been submitted for approval. You\'ll be able to withdraw once an admin approves it.',
+          'Your address has been submitted, and should be approved within 2 business days.',
           [{ text: 'OK' }]
         );
       } else {
