@@ -463,7 +463,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "3-Way Fee Breakdown for Withdrawals"
+    - "Bitcoin Withdrawal System - Kraken Integration Fix"
+    - "Daily Miner Button Alignment Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
