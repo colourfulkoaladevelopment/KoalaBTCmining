@@ -3984,6 +3984,78 @@ async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_
         logger.error(f"Error approving wallet: {e}")
         raise HTTPException(status_code=500, detail="Failed to approve wallet")
 
+@app.delete("/api/admin/delete-user/{user_id}")
+async def delete_user(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Delete a user and all their data"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Get user info before deleting
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Delete user's miners
+        miners_deleted = miners_collection.delete_many({"user_id": user_id}).deleted_count
+        
+        # Delete user's sessions
+        user_sessions_collection.delete_many({"user_id": user_id})
+        
+        # Delete user
+        users_collection.delete_one({"_id": user_id})
+        
+        logger.info(f"Admin deleted user {user.get('email')}: Deleted {miners_deleted} miners")
+        
+        return {
+            "success": True,
+            "message": "User deleted successfully",
+            "user_email": user.get("email"),
+            "miners_deleted": miners_deleted
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete user")
+
+@app.post("/api/admin/give-btc/{user_id}")
+async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_current_user)):
+    """Give BTC to a user"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        amount = float(body.get("amount", 0))
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+        
+        # Update user balance
+        result = users_collection.update_one(
+            {"_id": user_id},
+            {"$inc": {"bitcoin_balance": amount}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user info
+        user = users_collection.find_one({"_id": user_id})
+        logger.info(f"Admin gave ₿ {amount} to user {user.get('email')}")
+        
+        return {
+            "success": True,
+            "message": f"Successfully added ₿ {amount} to {user.get('email')}",
+            "new_balance": user.get("bitcoin_balance", 0)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error giving BTC: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add BTC")
+
 # Add payment configuration to .env file
 @app.post("/api/admin/configure-payments")
 async def configure_payments(config_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
