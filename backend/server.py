@@ -3991,16 +3991,25 @@ async def delete_user(user_id: str, current_user: Dict = Depends(get_current_use
         if not is_admin(current_user):
             raise HTTPException(status_code=403, detail="Admin access required")
         
-        # Get user info before deleting
+        # Try to find user by string ID first, then by ObjectId
         user = users_collection.find_one({"_id": user_id})
+        if not user:
+            try:
+                from bson import ObjectId
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    user_id = ObjectId(user_id)  # Use ObjectId for subsequent operations
+            except:
+                pass
+        
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Delete user's miners
-        miners_deleted = miners_collection.delete_many({"user_id": user_id}).deleted_count
+        # Delete user's miners (miners use string user_id)
+        miners_deleted = miners_collection.delete_many({"user_id": str(user["_id"])}).deleted_count
         
         # Delete user's sessions
-        user_sessions_collection.delete_many({"user_id": user_id})
+        user_sessions_collection.delete_many({"user_id": str(user["_id"])})
         
         # Delete user
         users_collection.delete_one({"_id": user_id})
