@@ -961,13 +961,17 @@ export default function PremiumBitcoinMiningApp() {
       let result;
       try {
         result = await response.json();
+        console.log('Login response parsed:', { status: response.status, ok: response.ok, result });
       } catch (parseError) {
         console.error('Failed to parse response:', parseError);
+        console.log('SHOWING ALERT: Parse error');
         showCustomAlert('Error', 'Incorrect Email/Password Combination');
         return;
       }
 
+      console.log('Checking response.ok:', response.ok);
       if (response.ok) {
+        console.log('Login successful, setting user data');
         await AsyncStorage.setItem('session_token', result.access_token);
         await AsyncStorage.setItem('user_data', JSON.stringify(result.user));
         setUser(result.user);
@@ -983,7 +987,9 @@ export default function PremiumBitcoinMiningApp() {
         showCustomAlert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
       } else {
         // Show specific error message for login failures
+        console.log('Login failed, showing error alert');
         const errorMessage = isLogin ? 'Incorrect Email/Password Combination' : (result.detail || 'Registration failed');
+        console.log('SHOWING ALERT:', errorMessage);
         showCustomAlert('Error', errorMessage);
       }
     } catch (error) {
