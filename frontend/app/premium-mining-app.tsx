@@ -4215,4 +4215,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
   },
+  userActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
