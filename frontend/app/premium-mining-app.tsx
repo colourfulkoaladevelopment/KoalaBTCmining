@@ -477,12 +477,23 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
                     <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
                     <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
-                    <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.resetButton}>
-                      <Ionicons name="refresh" size={16} color="#FFF" />
-                      <Text style={styles.resetButtonText}>Reset</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
+                  <View style={styles.userActions}>
+                    <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
+                      <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.actionButton}>
+                        <Ionicons name="refresh" size={16} color="#FFF" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteUser(usr.id, usr.email)}>
+                      <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.actionButton}>
+                        <Ionicons name="trash" size={16} color="#FFF" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleGiveBtc(usr.id, usr.email)}>
+                      <LinearGradient colors={['#4CAF50', '#45A049']} style={styles.actionButton}>
+                        <Ionicons name="add-circle" size={16} color="#FFF" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </>
