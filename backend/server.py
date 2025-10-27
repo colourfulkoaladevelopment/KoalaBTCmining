@@ -1710,22 +1710,37 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
         import base64
         import time
         
+        logger.info("=" * 80)
+        logger.info(f"KRAKEN WITHDRAWAL DIAGNOSTICS - ID: {withdrawal_id}")
+        logger.info("=" * 80)
+        
         # Check if we have Kraken credentials configured
         kraken_api_key = os.getenv("KRAKEN_API_KEY", "")
         kraken_api_secret = os.getenv("KRAKEN_API_SECRET", "")
         kraken_base_url = os.getenv("KRAKEN_BASE_URL", "https://api.kraken.com")
+        
+        logger.info(f"Step 1: Checking Kraken credentials...")
+        logger.info(f"  - API Key present: {bool(kraken_api_key)}")
+        logger.info(f"  - API Key length: {len(kraken_api_key) if kraken_api_key else 0}")
+        logger.info(f"  - API Secret present: {bool(kraken_api_secret)}")
+        logger.info(f"  - API Secret length: {len(kraken_api_secret) if kraken_api_secret else 0}")
+        logger.info(f"  - Base URL: {kraken_base_url}")
         
         if not kraken_api_key or not kraken_api_secret:
             logger.warning("Kraken credentials not configured - using demo mode")
             return await demo_bitcoin_transaction(address, amount, withdrawal_id)
         
         # Fee collection address (0.5% processing fee goes here)
-        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        fee_collection_address = os.getenv("FEE_COLLECTION_BTC_ADDRESS", "13VSe3qiy3TdZNWzhcJB4pb7ossQ4766ez")
         
         # Calculate fee (0.5% of withdrawal amount)
         processing_fee = amount * 0.005
         
-        logger.info(f"Initializing Kraken withdrawal: {amount} BTC to {address}")
+        logger.info(f"Step 2: Withdrawal details...")
+        logger.info(f"  - Destination address: {address}")
+        logger.info(f"  - Amount: {amount} BTC")
+        logger.info(f"  - Processing fee (0.5%): {processing_fee} BTC")
+        logger.info(f"  - Fee collection address: {fee_collection_address}")
         
         def get_kraken_signature(urlpath, data, secret):
             """Generate HMAC-SHA512 signature for Kraken API"""
@@ -1740,6 +1755,10 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
         url_path = '/0/private/Withdraw'
         nonce = int(time.time() * 1000000)  # Microsecond precision
         
+        logger.info(f"Step 3: Preparing user withdrawal request...")
+        logger.info(f"  - URL path: {url_path}")
+        logger.info(f"  - Nonce: {nonce}")
+        
         # Kraken uses "XBT" for Bitcoin
         user_withdrawal_data = {
             'nonce': nonce,
@@ -1748,7 +1767,13 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
             'amount': str(amount)
         }
         
-        signature = get_kraken_signature(url_path, user_withdrawal_data, kraken_api_secret)
+        logger.info(f"Step 4: Generating API signature...")
+        try:
+            signature = get_kraken_signature(url_path, user_withdrawal_data, kraken_api_secret)
+            logger.info(f"  ✅ Signature generated successfully")
+        except Exception as sig_error:
+            logger.error(f"  ❌ Signature generation failed: {sig_error}")
+            raise
         
         headers = {
             'API-Key': kraken_api_key,
@@ -1756,91 +1781,62 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
             'Content-Type': 'application/x-www-form-urlencoded'
         }
         
-        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        logger.info(f"Step 5: Sending user withdrawal request to Kraken...")
+        logger.info(f"  - Full URL: {kraken_base_url}{url_path}")
         
         # Send user withdrawal
-        user_response = requests.post(
-            f"{kraken_base_url}{url_path}",
-            data=user_withdrawal_data,
-            headers=headers,
-            timeout=30
-        )
+        try:
+            user_response = requests.post(
+                f"{kraken_base_url}{url_path}",
+                data=user_withdrawal_data,
+                headers=headers,
+                timeout=30
+            )
+            logger.info(f"  - Response status: {user_response.status_code}")
+            logger.info(f"  - Response headers: {dict(user_response.headers)}")
+            logger.info(f"  - Response body: {user_response.text}")
+        except Exception as req_error:
+            logger.error(f"  ❌ Request failed: {req_error}")
+            raise
         
         user_tx_id = None
         if user_response.status_code == 200:
             result = user_response.json()
+            logger.info(f"Step 6: Parsing Kraken response...")
+            logger.info(f"  - Full response: {result}")
             
             if 'error' in result and result['error']:
                 error_msg = ', '.join(result['error'])
-                logger.error(f"Kraken API error: {error_msg}")
+                logger.error(f"  ❌ Kraken API error: {error_msg}")
                 raise Exception(f"Kraken error: {error_msg}")
             
             if 'result' in result and 'refid' in result['result']:
                 user_tx_id = result['result']['refid']
-                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+                logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
             else:
-                logger.warning(f"Unexpected Kraken response format: {result}")
+                logger.warning(f"  ⚠️ Unexpected Kraken response format: {result}")
                 # Generate reference ID if no refid returned
                 user_tx_id = f"kraken_{withdrawal_id}"
+                logger.info(f"  - Using fallback TX ID: {user_tx_id}")
         else:
             error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
-            logger.error(error_msg)
+            logger.error(f"  ❌ {error_msg}")
             raise Exception(error_msg)
         
-        # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
-        fee_tx_id = None
-        if processing_fee >= 0.00000001:
-            nonce_fee = int(time.time() * 1000000) + 1  # Increment nonce
-            
-            fee_withdrawal_data = {
-                'nonce': nonce_fee,
-                'asset': 'XBT',
-                'key': fee_collection_address,
-                'amount': str(processing_fee)
-            }
-            
-            signature_fee = get_kraken_signature(url_path, fee_withdrawal_data, kraken_api_secret)
-            
-            headers_fee = {
-                'API-Key': kraken_api_key,
-                'API-Sign': signature_fee,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-            
-            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
-            
-            try:
-                fee_response = requests.post(
-                    f"{kraken_base_url}{url_path}",
-                    data=fee_withdrawal_data,
-                    headers=headers_fee,
-                    timeout=30
-                )
-                
-                if fee_response.status_code == 200:
-                    fee_result = fee_response.json()
-                    
-                    if 'error' in fee_result and not fee_result['error']:
-                        if 'result' in fee_result and 'refid' in fee_result['result']:
-                            fee_tx_id = fee_result['result']['refid']
-                            logger.info(f"✅ Fee collection successful: {fee_tx_id}")
-                    else:
-                        logger.warning(f"Fee collection response: {fee_result}")
-                else:
-                    logger.warning(f"Fee collection HTTP error ({fee_response.status_code}): {fee_response.text}")
-            except Exception as fee_error:
-                # Fee collection failed, but don't fail the entire withdrawal
-                logger.warning(f"Fee collection failed (user withdrawal still succeeded): {fee_error}")
-        else:
-            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+        logger.info("=" * 80)
+        logger.info(f"KRAKEN WITHDRAWAL COMPLETED")
+        logger.info(f"  - User TX ID: {user_tx_id}")
+        logger.info("=" * 80)
         
         # Return user transaction ID (primary transaction)
         return user_tx_id
         
     except Exception as e:
-        logger.error(f"Kraken withdrawal failed: {e}")
-        logger.error(f"Error details: {type(e).__name__}: {str(e)}")
-        # Re-raise with a user-friendly message
+        logger.error("=" * 80)
+        logger.error(f"KRAKEN WITHDRAWAL FAILED - ID: {withdrawal_id}")
+        logger.error(f"  - Error type: {type(e).__name__}")
+        logger.error(f"  - Error message: {str(e)}")
+        logger.error("=" * 80)
         raise Exception(f"Kraken withdrawal error: {str(e)}")
 
 async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
