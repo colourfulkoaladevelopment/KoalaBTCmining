@@ -3315,6 +3315,11 @@ const styles = StyleSheet.create({
   // Main App Styles
   appContainer: {
     flex: 1,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 480,
+      marginHorizontal: 'auto',
+      width: '100%',
+    } : {}),
   },
   appHeader: {
     paddingHorizontal: 20,
