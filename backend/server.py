@@ -3955,9 +3955,9 @@ async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_
         if not is_admin(current_user):
             raise HTTPException(status_code=403, detail="Admin access required")
         
-        # Update user wallet status to connected
-        result = await users_collection.update_one(
-            {"_id": ObjectId(user_id)},
+        # Update user wallet status to connected (SYNCHRONOUS - no await)
+        result = users_collection.update_one(
+            {"_id": user_id},  # user_id is already a string, don't convert to ObjectId
             {"$set": {
                 "wallet_status": "connected",
                 "wallet_approved_at": datetime.utcnow()
@@ -3967,8 +3967,8 @@ async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_
         if result.modified_count == 0:
             raise HTTPException(status_code=404, detail="User not found or wallet already approved")
         
-        # Get user info for logging
-        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        # Get user info for logging (SYNCHRONOUS - no await)
+        user = users_collection.find_one({"_id": user_id})
         logger.info(f"Admin approved wallet for user {user.get('email')}: {user.get('btc_wallet_address')}")
         
         return {
