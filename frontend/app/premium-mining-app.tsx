@@ -3055,6 +3055,11 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 480,
+      marginHorizontal: 'auto',
+      width: '100%',
+    } : {}),
   },
   loadingScreen: {
     flex: 1,
