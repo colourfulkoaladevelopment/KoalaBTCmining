@@ -958,7 +958,14 @@ export default function PremiumBitcoinMiningApp() {
         body: JSON.stringify(body),
       });
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        showCustomAlert('Error', 'Incorrect Email/Password Combination');
+        return;
+      }
 
       if (response.ok) {
         await AsyncStorage.setItem('session_token', result.access_token);
