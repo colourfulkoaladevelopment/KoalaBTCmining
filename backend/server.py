@@ -712,7 +712,7 @@ async def register_btc_wallet(
         
         return {
             "success": True,
-            "message": "Wallet registered successfully. Awaiting admin approval.",
+            "message": "Your address has been submitted, and should be approved within 2 business days.",
             "wallet_status": "pending"
         }
         
