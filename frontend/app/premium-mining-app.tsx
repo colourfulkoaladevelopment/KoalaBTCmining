@@ -3530,10 +3530,12 @@ const styles = StyleSheet.create({
   actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   actionButtonText: {
     flex: 1,
     marginLeft: 12,
+    marginRight: 8,
   },
   actionButtonTitle: {
     fontSize: 16,
