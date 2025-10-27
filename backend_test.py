@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 """
-Backend Testing Suite for Bitcoin Mining App
-Focus: Enhanced Store System Testing (Issues #9-11)
+Backend Testing Suite for Bitcoin Mining App - Kraken Withdrawal Integration Focus
+Testing Agent - Comprehensive API Testing
 """
 
 import requests
 import json
-import uuid
-from datetime import datetime
-import sys
+import time
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from datetime import datetime
+import uuid
 
 # Configuration
-BACKEND_URL = os.getenv("EXPO_PUBLIC_BACKEND_URL", "https://koala-mining-app.preview.emergentagent.com")
-API_BASE = f"{BACKEND_URL}/api"
-TEST_USER_EMAIL = f"storetest_{uuid.uuid4().hex[:8]}@example.com"
-TEST_USER_PASSWORD = "TestPassword123!"
-TEST_USER_NAME = "Store Test User"
+BACKEND_URL = "https://koala-mining-app.preview.emergentagent.com/api"
+TEST_USER_EMAIL = "kraken.test.user@bitcoinminer.com"
+TEST_USER_PASSWORD = "KrakenTest2024!"
+TEST_USER_NAME = "Kraken Test User"
+
+# Test Bitcoin addresses (testnet/mainnet compatible)
+VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"  # Valid bech32 address
+INVALID_BTC_ADDRESS = "invalid_address_format"
 
 class BackendTester:
     def __init__(self):
