@@ -22,7 +22,7 @@ MONGO_URL = "mongodb://localhost:27017"
 DB_NAME = "test_database"
 
 # Test Bitcoin addresses
-VALID_BTC_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+VALID_BTC_ADDRESS = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"  # Different valid address
 
 class KrakenBypassTester:
     def __init__(self):
