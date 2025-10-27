@@ -3057,7 +3057,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...(Platform.OS === 'web' ? {
       maxWidth: 480,
-      marginHorizontal: 'auto',
+      alignSelf: 'center',
       width: '100%',
     } : {}),
   },
