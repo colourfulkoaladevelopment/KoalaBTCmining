@@ -2133,7 +2133,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 } else if (walletStatus === 'pending') {
                   showCustomAlert(
                     'Pending Approval ⏳',
-                    'Your Bitcoin wallet address is awaiting admin approval. You\'ll be able to withdraw once approved.'
+                    'Your address has been submitted, and should be approved within 2 business days.'
                   );
                 } else {
                   // Fetch network fee before showing modal
