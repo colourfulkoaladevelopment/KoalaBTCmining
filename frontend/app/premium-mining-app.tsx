@@ -975,7 +975,9 @@ export default function PremiumBitcoinMiningApp() {
         setActiveTab('dashboard');
         showCustomAlert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
       } else {
-        showCustomAlert('Error', result.detail || 'Authentication failed');
+        // Show specific error message for login failures
+        const errorMessage = isLogin ? 'Incorrect Email/Password Combination' : (result.detail || 'Registration failed');
+        showCustomAlert('Error', errorMessage);
       }
     } catch (error) {
       console.error('Login/Register error:', error);
