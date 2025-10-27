@@ -4040,6 +4040,20 @@ async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_cu
         if amount <= 0:
             raise HTTPException(status_code=400, detail="Amount must be greater than 0")
         
+        # Try to find user by string ID first, then by ObjectId
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            try:
+                from bson import ObjectId
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    user_id = ObjectId(user_id)  # Use ObjectId for update
+            except:
+                pass
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
         # Update user balance
         result = users_collection.update_one(
             {"_id": user_id},
@@ -4049,7 +4063,7 @@ async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_cu
         if result.modified_count == 0:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Get user info
+        # Get updated user info
         user = users_collection.find_one({"_id": user_id})
         logger.info(f"Admin gave ₿ {amount} to user {user.get('email')}")
         
