@@ -3283,8 +3283,10 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 20,
+    gap: 10,
   },
   cancelButton: {
     flex: 1,
