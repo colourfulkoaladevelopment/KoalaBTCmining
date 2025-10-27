@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv("/app/backend/.env")
 
 # Backend URL
-BASE_URL = "https://koala-mining.preview.emergentagent.com/api"
+BASE_URL = "https://koala-mining-app.preview.emergentagent.com/api"
 
 class CoinbaseWithdrawalTester:
     def __init__(self):
