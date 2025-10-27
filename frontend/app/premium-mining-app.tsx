@@ -255,8 +255,6 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
     );
   };
 
-  const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '' });
-
   const handleGiveBtc = (userId, userEmail) => {
     setGiveBtcModal({ visible: true, userId, userEmail, amount: '' });
   };
