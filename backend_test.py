@@ -28,19 +28,24 @@ class BackendTester:
         self.user_id = None
         self.test_results = []
         
-    def log_test(self, test_name, success, details=""):
+    def log_test(self, test_name, success, message, details=None):
         """Log test result"""
-        status = "✅ PASS" if success else "❌ FAIL"
         result = {
             "test": test_name,
             "success": success,
+            "message": message,
             "details": details,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.utcnow().isoformat()
         }
         self.test_results.append(result)
+        
+        status = "✅ PASS" if success else "❌ FAIL"
         print(f"{status}: {test_name}")
+        print(f"   {message}")
         if details:
             print(f"   Details: {details}")
+        print()
+        
         return success
     
     def register_test_user(self):
