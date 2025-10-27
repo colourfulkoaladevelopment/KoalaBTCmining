@@ -1752,6 +1752,7 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
             return sigdigest.decode()
         
         # Transaction 1: Send withdrawal amount to user's address
+        # Using Kraken's Withdraw API v2 (newer method)
         url_path = '/0/private/Withdraw'
         nonce = int(time.time() * 1000000)  # Microsecond precision
         
@@ -1759,11 +1760,71 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -
         logger.info(f"  - URL path: {url_path}")
         logger.info(f"  - Nonce: {nonce}")
         
+        # Get Bitcoin withdrawal method ID from Kraken
+        # First, we need to get available withdrawal methods
+        methods_url_path = '/0/private/WithdrawMethods'
+        methods_data = {
+            'nonce': nonce,
+            'asset': 'XBT'
+        }
+        
+        logger.info(f"Step 3a: Fetching Bitcoin withdrawal methods...")
+        methods_signature = get_kraken_signature(methods_url_path, methods_data, kraken_api_secret)
+        methods_headers = {
+            'API-Key': kraken_api_key,
+            'API-Sign': methods_signature,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
+        methods_response = requests.post(
+            f"{kraken_base_url}{methods_url_path}",
+            data=methods_data,
+            headers=methods_headers,
+            timeout=30
+        )
+        
+        logger.info(f"  - Methods response status: {methods_response.status_code}")
+        logger.info(f"  - Methods response: {methods_response.text}")
+        
+        if methods_response.status_code != 200:
+            raise Exception(f"Failed to fetch withdrawal methods: {methods_response.text}")
+        
+        methods_result = methods_response.json()
+        if 'error' in methods_result and methods_result['error']:
+            raise Exception(f"Withdrawal methods error: {', '.join(methods_result['error'])}")
+        
+        # Find Bitcoin (not Lightning) method
+        bitcoin_method = None
+        if 'result' in methods_result and isinstance(methods_result['result'], list):
+            for method in methods_result['result']:
+                if method.get('method') == 'Bitcoin' and method.get('network') == 'Bitcoin':
+                    bitcoin_method = method
+                    break
+        
+        if not bitcoin_method:
+            raise Exception("Bitcoin withdrawal method not found in Kraken account")
+        
+        method_id = bitcoin_method['method_id']
+        min_withdrawal = float(bitcoin_method['minimum'])
+        network_fee = float(bitcoin_method['fee']['fee'])
+        
+        logger.info(f"  ✅ Found Bitcoin withdrawal method:")
+        logger.info(f"     - Method ID: {method_id}")
+        logger.info(f"     - Minimum: {min_withdrawal} BTC")
+        logger.info(f"     - Network Fee: {network_fee} BTC")
+        
+        # Check if amount meets minimum
+        if amount < min_withdrawal:
+            raise Exception(f"Amount {amount} BTC is below Kraken minimum of {min_withdrawal} BTC")
+        
         # Kraken uses "XBT" for Bitcoin
+        # Use method_id for direct address withdrawal
+        nonce = int(time.time() * 1000000)  # New nonce for withdrawal
         user_withdrawal_data = {
             'nonce': nonce,
             'asset': 'XBT',
-            'key': address,  # Direct Bitcoin address
+            'method_id': method_id,
+            'address': address,  # Direct Bitcoin address
             'amount': str(amount)
         }
         
