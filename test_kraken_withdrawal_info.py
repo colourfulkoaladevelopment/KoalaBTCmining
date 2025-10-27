@@ -77,28 +77,37 @@ def test_withdrawal_methods():
                 methods = result['result']
                 print(f"\n✅ Withdrawal Methods Retrieved")
                 print(f"\n2. Available Withdrawal Methods:")
+                print(f"   Raw result: {methods}")
                 
-                if not methods:
-                    print(f"   ⚠️  NO WITHDRAWAL METHODS FOUND!")
-                    print(f"   ")
-                    print(f"   This means you have NO whitelisted Bitcoin addresses in Kraken.")
-                    print(f"   ")
-                    print(f"   TO FIX THIS:")
-                    print(f"   1. Login to your Kraken account at https://www.kraken.com")
-                    print(f"   2. Go to 'Funding' → 'Withdraw'")
-                    print(f"   3. Select 'Bitcoin (XBT)'")
-                    print(f"   4. Click 'Add Address' or 'Add Withdrawal Address'")
-                    print(f"   5. Enter a Bitcoin address and give it a description/name")
-                    print(f"   6. Complete verification (email/2FA)")
-                    print(f"   7. Wait for Kraken to approve the address (can take a few minutes)")
-                    print(f"   ")
-                    print(f"   IMPORTANT: Kraken requires addresses to be whitelisted for security.")
-                    print(f"   You cannot withdraw to random addresses via API!")
-                    return False
-                
-                for key, method in methods.items():
-                    print(f"\n   Method Key: {key}")
-                    print(f"   Details: {method}")
+                # Check if methods is a list or dict
+                if isinstance(methods, list):
+                    if not methods:
+                        print(f"\n   ⚠️  NO WITHDRAWAL METHODS FOUND!")
+                        print(f"   ")
+                        print(f"   This means you have NO whitelisted Bitcoin addresses in Kraken.")
+                        print(f"   ")
+                        print(f"   TO FIX THIS:")
+                        print(f"   1. Login to your Kraken account at https://www.kraken.com")
+                        print(f"   2. Go to 'Funding' → 'Withdraw'")
+                        print(f"   3. Select 'Bitcoin (XBT)'")
+                        print(f"   4. Click 'Add Address' or 'Add Withdrawal Address'")
+                        print(f"   5. Enter a Bitcoin address and give it a description/name")
+                        print(f"   6. Complete verification (email/2FA)")
+                        print(f"   7. Wait for Kraken to approve the address (can take a few minutes)")
+                        print(f"   ")
+                        print(f"   IMPORTANT: Kraken requires addresses to be whitelisted for security.")
+                        print(f"   You cannot withdraw to random addresses via API!")
+                        return False
+                    else:
+                        for method in methods:
+                            print(f"\n   Method: {method}")
+                elif isinstance(methods, dict):
+                    if not methods:
+                        print(f"\n   ⚠️  NO WITHDRAWAL METHODS FOUND! (See instructions above)")
+                        return False
+                    for key, method in methods.items():
+                        print(f"\n   Method Key: {key}")
+                        print(f"   Details: {method}")
                 
                 return True
         else:
