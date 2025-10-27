@@ -3968,9 +3968,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 15,
     gap: 10,
+    justifyContent: 'space-between',
   },
   statCard: {
-    width: (width - 40) / 2,
+    width: '48%',
+    minWidth: 150,
     padding: 15,
     borderRadius: 15,
     alignItems: 'center',
