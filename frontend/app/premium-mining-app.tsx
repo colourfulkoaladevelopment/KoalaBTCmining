@@ -1593,7 +1593,8 @@ This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
             
             const requestBody = {
               address: withdrawForm.address,
-              amount: amount
+              amount: amount,
+              network: withdrawForm.network || 'bitcoin'  // Pass selected network
             };
             debugInfo += `Request Body: ${JSON.stringify(requestBody, null, 2)}\n`;
             console.log('Request body:', requestBody);
