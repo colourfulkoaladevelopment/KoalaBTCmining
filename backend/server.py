@@ -1794,29 +1794,51 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
         if 'error' in methods_result and methods_result['error']:
             raise Exception(f"Withdrawal methods error: {', '.join(methods_result['error'])}")
         
-        # Find Bitcoin (not Lightning) method
+        # Find Bitcoin and Lightning methods
         bitcoin_method = None
+        lightning_method = None
+        
         if 'result' in methods_result and isinstance(methods_result['result'], list):
             for method in methods_result['result']:
                 if method.get('method') == 'Bitcoin' and method.get('network') == 'Bitcoin':
                     bitcoin_method = method
-                    break
+                elif method.get('method') == 'Bitcoin Lightning' and method.get('network') == 'Lightning':
+                    lightning_method = method
         
-        if not bitcoin_method:
-            raise Exception("Bitcoin withdrawal method not found in Kraken account")
+        # Select method based on network
+        if network.lower() == 'lightning':
+            selected_method = lightning_method
+            if not selected_method:
+                raise Exception("Lightning Network withdrawal method not found in Kraken account")
+        else:
+            selected_method = bitcoin_method
+            if not selected_method:
+                raise Exception("Bitcoin withdrawal method not found in Kraken account")
         
-        method_id = bitcoin_method['method_id']
-        min_withdrawal = float(bitcoin_method['minimum'])
-        network_fee = float(bitcoin_method['fee']['fee'])
+        method_id = selected_method['method_id']
+        min_withdrawal = float(selected_method['minimum'])
+        network_fee = float(selected_method['fee']['fee'])
         
-        logger.info(f"  ✅ Found Bitcoin withdrawal method:")
+        logger.info(f"  ✅ Found {selected_method['method']} withdrawal method:")
+        logger.info(f"     - Network: {selected_method['network']}")
         logger.info(f"     - Method ID: {method_id}")
         logger.info(f"     - Minimum: {min_withdrawal} BTC")
         logger.info(f"     - Network Fee: {network_fee} BTC")
         
-        # Check if amount meets minimum
-        if amount < min_withdrawal:
-            raise Exception(f"Amount {amount} BTC is below Kraken minimum of {min_withdrawal} BTC")
+        # Apply app-specific minimum amounts
+        # Lightning: 0.00001 - 0.00019999 BTC
+        # Bitcoin: 0.0002 BTC minimum
+        if network.lower() == 'lightning':
+            app_min = 0.00001
+            app_max = 0.00019999
+            if amount < app_min:
+                raise Exception(f"Amount {amount} BTC is below Lightning minimum of {app_min} BTC")
+            if amount >= 0.0002:
+                raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.0002 BTC")
+        else:
+            app_min = 0.0002
+            if amount < app_min:
+                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC. For amounts below 0.0002 BTC, please use Lightning Network")
         
         # Kraken uses "XBT" for Bitcoin
         # Use method_id for direct address withdrawal
