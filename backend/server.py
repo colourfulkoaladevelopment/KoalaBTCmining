@@ -1739,6 +1739,7 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
         logger.info(f"Step 2: Withdrawal details...")
         logger.info(f"  - Destination address: {address}")
         logger.info(f"  - Amount: {amount} BTC")
+        logger.info(f"  - Network: {network}")
         logger.info(f"  - Processing fee (0.5%): {processing_fee} BTC")
         logger.info(f"  - Fee collection address: {fee_collection_address}")
         
