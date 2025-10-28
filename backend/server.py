@@ -1700,8 +1700,8 @@ async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str)
         # Re-raise with a user-friendly message
         raise Exception(f"Coinbase withdrawal error: {str(e)}")
 
-async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
-    """Send Bitcoin using Kraken API with fee collection"""
+async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, network: str = "bitcoin") -> str:
+    """Send Bitcoin using Kraken API with support for Bitcoin and Lightning networks"""
     try:
         import requests
         import urllib.parse
