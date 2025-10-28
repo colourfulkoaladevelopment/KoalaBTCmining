@@ -1447,7 +1447,7 @@ async def withdraw_bitcoin(
         logger.error(f"Error processing Bitcoin withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
 
-async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id: str) -> str:
+async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id: str, network: str = "bitcoin") -> str:
     """Process Bitcoin withdrawal using configured wallet service"""
     
     if BITCOIN_WALLET_TYPE == "bitgo":
@@ -1455,7 +1455,7 @@ async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id:
     elif BITCOIN_WALLET_TYPE == "coinbase":
         return await coinbase_send_bitcoin(address, amount, withdrawal_id)
     elif BITCOIN_WALLET_TYPE == "kraken":
-        return await kraken_send_bitcoin(address, amount, withdrawal_id)
+        return await kraken_send_bitcoin(address, amount, withdrawal_id, network)
     elif BITCOIN_WALLET_TYPE == "ndax":
         return await ndax_send_bitcoin(address, amount, withdrawal_id)
     elif BITCOIN_WALLET_TYPE == "blockchain":
