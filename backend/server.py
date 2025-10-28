@@ -1340,6 +1340,7 @@ async def withdraw_bitcoin(
             "_id": withdrawal_id,
             "user_id": current_user["id"],
             "bitcoin_address": address,
+            "network": network,  # bitcoin or lightning
             "amount_btc": amount,
             "processing_fee_btc": processing_fee,
             "total_deducted_btc": total_deduction,
@@ -1371,17 +1372,17 @@ async def withdraw_bitcoin(
             "type": "withdrawal",
             "amount": -total_deduction,  # Negative for withdrawal (includes fee)
             "balance_after": new_balance,
-            "description": f"Bitcoin withdrawal to {address[:10]}...{address[-6:]} + 0.5% fee",
+            "description": f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal to {address[:10]}...{address[-6:]} + 0.5% fee",
             "withdrawal_id": withdrawal_id,
             "created_at": datetime.utcnow()
         }
         transactions_collection.insert_one(transaction_record)
         
-        logger.info(f"Bitcoin withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
+        logger.info(f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
         
         try:
             # Process actual Bitcoin transaction from backend wallet to user address
-            tx_hash = await process_bitcoin_withdrawal(address, amount, withdrawal_id)
+            tx_hash = await process_bitcoin_withdrawal(address, amount, withdrawal_id, network)
             
             if tx_hash:
                 # Update withdrawal record with successful transaction
