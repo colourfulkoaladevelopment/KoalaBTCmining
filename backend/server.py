@@ -1246,10 +1246,15 @@ async def withdraw_bitcoin(
     withdrawal_data: Dict[str, Any],
     current_user: Dict = Depends(get_current_user)
 ):
-    """Process Bitcoin withdrawal to external wallet"""
+    """Process Bitcoin withdrawal to external wallet (Bitcoin or Lightning Network)"""
     try:
         address = withdrawal_data.get("address", "").strip()
         amount = float(withdrawal_data.get("amount", 0))
+        network = withdrawal_data.get("network", "bitcoin").lower()  # bitcoin or lightning
+        
+        # Validate network type
+        if network not in ["bitcoin", "lightning"]:
+            raise HTTPException(status_code=400, detail="Invalid network. Must be 'bitcoin' or 'lightning'")
         
         # Check wallet status first
         user = users_collection.find_one({"_id": current_user["id"]})  # Synchronous, use string ID
@@ -1270,10 +1275,32 @@ async def withdraw_bitcoin(
                 )
         
         if not address:
-            raise HTTPException(status_code=400, detail="Bitcoin address is required")
+            raise HTTPException(status_code=400, detail=f"{'Lightning invoice' if network == 'lightning' else 'Bitcoin address'} is required")
         
         if amount <= 0:
             raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than 0")
+        
+        # Network-specific validation
+        if network == "lightning":
+            min_withdrawal = 0.00001  # 0.00001 BTC
+            max_withdrawal = 0.00019999  # Just below 0.0002 BTC
+            if amount < min_withdrawal:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Lightning Network minimum is {min_withdrawal} BTC"
+                )
+            if amount >= 0.0002:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Amount {amount} BTC exceeds Lightning Network maximum of {max_withdrawal} BTC. Please use Bitcoin network for amounts >= 0.0002 BTC"
+                )
+        else:
+            min_withdrawal = 0.0002  # 0.0002 BTC for Bitcoin network
+            if amount < min_withdrawal:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC. For amounts below 0.0002 BTC, please use Lightning Network"
+                )
         
         # Check user balance
         user = users_collection.find_one({"_id": current_user["id"]})
@@ -1281,14 +1308,6 @@ async def withdraw_bitcoin(
             raise HTTPException(status_code=404, detail="User not found")
             
         current_balance = user.get("bitcoin_balance", 0)
-        
-        # Minimum withdrawal check
-        min_withdrawal = 0.00001  # Minimum 0.00001 BTC as requested
-        if amount < min_withdrawal:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Minimum withdrawal amount is {min_withdrawal} BTC"
-            )
         
         # Calculate processing fee (0.5% as requested)
         processing_fee = amount * 0.005  # 0.5% fee
