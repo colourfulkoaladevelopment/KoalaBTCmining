@@ -887,7 +887,23 @@ export default function PremiumBitcoinMiningApp() {
         });
         setCanActivateFreeMiner(!hasFreeMinerToday);
         
-        // Separate active/inactive and expired miners
+        // Categorize miners by type
+        // Free miners: daily free + ad rewards
+        const freeMiners = allMiners.filter(miner => 
+          (miner.miner_type === 'free' || miner.miner_type === 'ad' || miner.miner_type === 'ad_reward') && miner.status !== 'expired'
+        );
+        
+        // Premium miners: purchased miners (active or expired with renew option)
+        const premiumMiners = allMiners.filter(miner => 
+          miner.miner_type === 'premium'
+        );
+        
+        // Referral miners: rewards from referrals
+        const referralMiners = allMiners.filter(miner => 
+          (miner.miner_type === 'referral_reward' || miner.miner_type === 'referral_commission') && miner.status !== 'expired'
+        );
+        
+        // Keep old structure for compatibility (all active miners)
         const activeMiners = allMiners.filter(miner => 
           miner.status !== 'expired' || miner.miner_type === 'premium'
         );
@@ -897,6 +913,14 @@ export default function PremiumBitcoinMiningApp() {
         
         setMiners(activeMiners);
         setExpiredMiners(expiredMiners);
+        
+        // Store categorized miners for new UI
+        setUser(prev => ({
+          ...prev,
+          freeMiners,
+          premiumMiners,
+          referralMiners
+        }));
       }
 
       if (storeResponse.ok) {
