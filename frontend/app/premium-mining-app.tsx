@@ -13,6 +13,7 @@ import {
   SafeAreaView,
   Share,
   Clipboard,
+  Image,
   RefreshControl,
   Modal,
   Linking,
