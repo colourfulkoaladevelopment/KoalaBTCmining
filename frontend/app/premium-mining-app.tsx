@@ -3758,7 +3758,7 @@ const styles = StyleSheet.create({
   actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     width: '100%',
   },
   actionButtonText: {
