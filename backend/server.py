@@ -3599,11 +3599,17 @@ async def watch_ad(
             
             miners_collection.insert_one(ad_miner)
         
-        # Update daily counter for ALL ad types
-        db.daily_ad_counters.update_one(
-            {"user_id": current_user["id"], "date": today.isoformat()},
-            {"$inc": {"ads_watched": 1}, "$set": {"updated_at": datetime.utcnow()}}
-        )
+        # Update daily counter ONLY for rewarded ads (miner_activation)
+        if ad_type == 'miner_activation':
+            db.daily_ad_counters.update_one(
+                {"user_id": current_user["id"], "date": today.isoformat()},
+                {"$inc": {"ads_watched": 1}, "$set": {"updated_at": datetime.utcnow()}}
+            )
+            # Get updated stats after increment
+            new_ads_watched = ads_watched + 1
+        else:
+            # For non-rewarded ads (app_launch, withdrawal), don't increment counter
+            new_ads_watched = ads_watched
         
         # Record ad view transaction
         now = datetime.utcnow()
