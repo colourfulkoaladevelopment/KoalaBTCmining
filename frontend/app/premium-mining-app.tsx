@@ -2432,33 +2432,71 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </View>
             </LinearGradient>
 
-            {/* Your Miners - Collapsible */}
-            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
-              <TouchableOpacity 
-                style={styles.cardHeader} 
-                onPress={() => setShowActiveMiners(!showActiveMiners)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="hardware-chip" size={24} color="#FFD700" />
-                <Text style={styles.cardTitle}>Your Miners ({miners.length})</Text>
-                <Ionicons 
-                  name={showActiveMiners ? "chevron-up" : "chevron-down"} 
-                  size={24} 
-                  color="#FFD700" 
-                  style={{ marginLeft: 'auto' }}
-                />
-              </TouchableOpacity>
-              
-              {showActiveMiners && (
-                <>
-                  {miners.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Ionicons name="hardware-chip" size={48} color="#666" />
-                      <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
-                      <Text style={styles.emptyStateSubtitle}>Activate your free daily miner to get started</Text>
-                    </View>
-                  ) : (
-                    miners.map((miner) => (
+            {/* Free Miners - Collapsible */}
+            {(user.freeMiners && user.freeMiners.length > 0) && (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+                <TouchableOpacity 
+                  style={styles.cardHeader} 
+                  onPress={() => setShowFreeMiners(!showFreeMiners)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="gift" size={24} color="#4CAF50" />
+                  <Text style={styles.cardTitle}>Free Miners ({user.freeMiners.length})</Text>
+                  <Ionicons 
+                    name={showFreeMiners ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#4CAF50" 
+                    style={{ marginLeft: 'auto' }}
+                  />
+                </TouchableOpacity>
+                
+                {showFreeMiners && (
+                  <>
+                    {user.freeMiners.map((miner) => (
+                      <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                        <View style={styles.minerHeader}>
+                          <Text style={styles.minerName}>{miner.name}</Text>
+                          <LinearGradient 
+                            colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                            style={styles.minerStatus}
+                          >
+                            <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                          </LinearGradient>
+                        </View>
+                        
+                        <View style={styles.minerStats}>
+                          <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                          <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
+                          <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
+                        </View>
+                      </LinearGradient>
+                    ))}
+                  </>
+                )}
+              </LinearGradient>
+            )}
+
+            {/* Premium Miners - Collapsible */}
+            {(user.premiumMiners && user.premiumMiners.length > 0) && (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+                <TouchableOpacity 
+                  style={styles.cardHeader} 
+                  onPress={() => setShowPremiumMiners(!showPremiumMiners)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="diamond" size={24} color="#FFD700" />
+                  <Text style={styles.cardTitle}>Premium Miners ({user.premiumMiners.length})</Text>
+                  <Ionicons 
+                    name={showPremiumMiners ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#FFD700" 
+                    style={{ marginLeft: 'auto' }}
+                  />
+                </TouchableOpacity>
+                
+                {showPremiumMiners && (
+                  <>
+                    {user.premiumMiners.map((miner) => (
                       <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
                         <View style={styles.minerHeader}>
                           <Text style={styles.minerName}>{miner.name}</Text>
@@ -2476,7 +2514,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                           <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
                         </View>
 
-                        {miner.miner_type === 'premium' && miner.status === 'expired' && (
+                        {miner.status === 'expired' && (
                           <TouchableOpacity 
                             style={styles.renewButton}
                             onPress={() => renewMiner(miner)}
@@ -2487,11 +2525,11 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                           </TouchableOpacity>
                         )}
                       </LinearGradient>
-                    ))
-                  )}
-                </>
-              )}
-            </LinearGradient>
+                    ))}
+                  </>
+                )}
+              </LinearGradient>
+            )}
 
             {/* Expired Miners Section - Collapsible */}
             {expiredMiners.length > 0 && (
