@@ -1718,6 +1718,110 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
     );
   };
 
+
+  const handleAvatarPress = async () => {
+    try {
+      // Dynamically import expo-image-picker
+      const ImagePicker = await import('expo-image-picker');
+      
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        showCustomAlert('Permission Denied', 'We need camera roll permissions to upload an avatar');
+        return;
+      }
+
+      // Show action sheet
+      showCustomAlert(
+        'Update Avatar',
+        'Choose an option',
+        [
+          {
+            text: 'Choose from Library',
+            onPress: async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5, // Reduce quality to keep under 2MB
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets[0].base64) {
+                await uploadAvatar(result.assets[0].base64, result.assets[0].mimeType || 'image/jpeg');
+              }
+            }
+          },
+          {
+            text: user?.avatar ? 'Remove Avatar' : 'Cancel',
+            onPress: async () => {
+              if (user?.avatar) {
+                await removeAvatar();
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error handling avatar:', error);
+      showCustomAlert('Error', 'Failed to access photo library');
+    }
+  };
+
+  const uploadAvatar = async (base64, mimeType) => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/user/avatar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ avatar: dataUrl })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setUser(prev => ({ ...prev, avatar: dataUrl }));
+        showCustomAlert('Success', 'Avatar updated successfully!');
+      } else {
+        showCustomAlert('Error', result.detail || 'Failed to upload avatar');
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      showCustomAlert('Error', 'Failed to upload avatar');
+    }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/user/avatar`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setUser(prev => ({ ...prev, avatar: null }));
+        showCustomAlert('Success', 'Avatar removed successfully!');
+      } else {
+        showCustomAlert('Error', result.detail || 'Failed to remove avatar');
+      }
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      showCustomAlert('Error', 'Failed to remove avatar');
+    }
+  };
+
   const submitContactForm = async () => {
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       showCustomAlert('Error', 'Please fill in all required fields');
