@@ -590,6 +590,66 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     user_sessions_collection.delete_one({"session_token": token})
     return {"message": "Logout successful"}
 
+
+# User Profile Management
+@app.put("/api/user/avatar")
+async def update_avatar(
+    avatar_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Update user avatar (base64 image)"""
+    try:
+        avatar_base64 = avatar_data.get("avatar")
+        
+        if not avatar_base64:
+            raise HTTPException(status_code=400, detail="Avatar data is required")
+        
+        # Basic validation: check if it's a data URL or just base64
+        if not avatar_base64.startswith('data:image'):
+            raise HTTPException(status_code=400, detail="Invalid image format. Must be a data URL")
+        
+        # Check size (rough estimate: base64 is ~1.37x original size, so 2MB = ~2.74MB base64)
+        if len(avatar_base64) > 3000000:  # ~2.2MB in base64
+            raise HTTPException(status_code=400, detail="Image too large. Maximum size is 2MB")
+        
+        # Update user avatar
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$set": {"avatar": avatar_base64, "updated_at": datetime.utcnow()}}
+        )
+        
+        logger.info(f"User {current_user['id']} updated avatar")
+        
+        return {
+            "success": True,
+            "message": "Avatar updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating avatar: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update avatar")
+
+@app.delete("/api/user/avatar")
+async def delete_avatar(current_user: Dict = Depends(get_current_user)):
+    """Remove user avatar"""
+    try:
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$unset": {"avatar": ""}, "$set": {"updated_at": datetime.utcnow()}}
+        )
+        
+        logger.info(f"User {current_user['id']} deleted avatar")
+        
+        return {
+            "success": True,
+            "message": "Avatar removed successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error deleting avatar: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete avatar")
+
 # Device management
 @app.post("/api/devices/register")
 async def register_device(
