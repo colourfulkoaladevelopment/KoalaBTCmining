@@ -2670,6 +2670,50 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
             )}
 
+            {/* Referral Rewards Miners - Collapsible */}
+            {(user.referralMiners && user.referralMiners.length > 0) && (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+                <TouchableOpacity 
+                  style={styles.cardHeader} 
+                  onPress={() => setShowActiveMiners(!showActiveMiners)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="people" size={24} color="#9C27B0" />
+                  <Text style={styles.cardTitle}>Referral Rewards ({user.referralMiners.length})</Text>
+                  <Ionicons 
+                    name={showActiveMiners ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#9C27B0" 
+                    style={{ marginLeft: 'auto' }}
+                  />
+                </TouchableOpacity>
+                
+                {showActiveMiners && (
+                  <>
+                    {user.referralMiners.map((miner) => (
+                      <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                        <View style={styles.minerHeader}>
+                          <Text style={styles.minerName}>{miner.name}</Text>
+                          <LinearGradient 
+                            colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                            style={styles.minerStatus}
+                          >
+                            <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                          </LinearGradient>
+                        </View>
+                        
+                        <View style={styles.minerStats}>
+                          <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                          <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
+                          <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
+                        </View>
+                      </LinearGradient>
+                    ))}
+                  </>
+                )}
+              </LinearGradient>
+            )}
+
             <TouchableOpacity style={styles.shareButton} onPress={() => {
               const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\nDownload: https://koalamining.app`;
               Share.share({ message });
