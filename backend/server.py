@@ -3627,7 +3627,6 @@ async def watch_ad(
         transactions_collection.insert_one(ad_transaction)
         
         # Get updated stats
-        new_ads_watched = ads_watched + 1
         remaining_ads = MAX_DAILY_ADS - new_ads_watched
         
         # Prepare response based on ad type
