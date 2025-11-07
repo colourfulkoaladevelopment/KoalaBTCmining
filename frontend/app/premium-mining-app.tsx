@@ -3529,11 +3529,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   actionButtonText: {
     flex: 1,
     marginLeft: 12,
     marginRight: 8,
+    minWidth: 0,
   },
   actionButtonTitle: {
     fontSize: 16,
