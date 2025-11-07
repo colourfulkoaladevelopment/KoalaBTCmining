@@ -2781,20 +2781,20 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
                 <TouchableOpacity 
                   style={styles.cardHeader} 
-                  onPress={() => setShowActiveMiners(!showActiveMiners)}
+                  onPress={() => setShowReferralMiners(!showReferralMiners)}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="people" size={24} color="#9C27B0" />
                   <Text style={styles.cardTitle}>Referral Rewards ({user.referralMiners.length})</Text>
                   <Ionicons 
-                    name={showActiveMiners ? "chevron-up" : "chevron-down"} 
+                    name={showReferralMiners ? "chevron-up" : "chevron-down"} 
                     size={24} 
                     color="#9C27B0" 
                     style={{ marginLeft: 'auto' }}
                   />
                 </TouchableOpacity>
                 
-                {showActiveMiners && (
+                {showReferralMiners && (
                   <>
                     {user.referralMiners.map((miner) => (
                       <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
