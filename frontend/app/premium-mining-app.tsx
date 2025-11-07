@@ -3763,6 +3763,7 @@ const styles = StyleSheet.create({
   // Miners Cards
   minersCard: {
     marginHorizontal: 15,
+    marginTop: 15,
     marginBottom: 15,
     padding: 20,
     borderRadius: 15,
