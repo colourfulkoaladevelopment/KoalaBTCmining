@@ -536,6 +536,7 @@ export default function PremiumBitcoinMiningApp() {
   const [showExpiredMiners, setShowExpiredMiners] = useState(false);
   const [showFreeMiners, setShowFreeMiners] = useState(false);
   const [showPremiumMiners, setShowPremiumMiners] = useState(false);
+  const [showReferralMiners, setShowReferralMiners] = useState(false);
   
   // Form states
   const [contactForm, setContactForm] = useState({
