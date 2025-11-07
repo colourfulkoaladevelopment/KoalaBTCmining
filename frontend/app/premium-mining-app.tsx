@@ -1722,51 +1722,32 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
   const handleAvatarPress = async () => {
     try {
-      // Dynamically import expo-image-picker
-      const ImagePicker = await import('expo-image-picker');
+      // Import expo-image-picker
+      const * as ImagePicker = require('expo-image-picker');
       
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        showCustomAlert('Permission Denied', 'We need camera roll permissions to upload an avatar');
+        showCustomAlert('Permission Denied', 'We need camera roll permissions to upload an avatar', [{ text: 'OK' }]);
         return;
       }
 
-      // Show action sheet
-      showCustomAlert(
-        'Update Avatar',
-        'Choose an option',
-        [
-          {
-            text: 'Choose from Library',
-            onPress: async () => {
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5, // Reduce quality to keep under 2MB
-                base64: true,
-              });
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5, // Reduce quality to keep under 2MB
+        base64: true,
+      });
 
-              if (!result.canceled && result.assets[0].base64) {
-                await uploadAvatar(result.assets[0].base64, result.assets[0].mimeType || 'image/jpeg');
-              }
-            }
-          },
-          {
-            text: user?.avatar ? 'Remove Avatar' : 'Cancel',
-            onPress: async () => {
-              if (user?.avatar) {
-                await removeAvatar();
-              }
-            }
-          }
-        ]
-      );
+      if (!result.canceled && result.assets && result.assets[0].base64) {
+        await uploadAvatar(result.assets[0].base64, result.assets[0].mimeType || 'image/jpeg');
+      }
     } catch (error) {
       console.error('Error handling avatar:', error);
-      showCustomAlert('Error', 'Failed to access photo library');
+      showCustomAlert('Error', 'Failed to access photo library: ' + error.message, [{ text: 'OK' }]);
     }
   };
 
