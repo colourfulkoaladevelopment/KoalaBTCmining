@@ -2582,7 +2582,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             )}
 
             {/* Premium Miners - Collapsible */}
-            {(user.premiumMiners && user.premiumMiners.length > 0) && (
+            {(user?.premiumMiners && user.premiumMiners.length > 0) && (
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
                 <TouchableOpacity 
                   style={styles.cardHeader} 
