@@ -2742,9 +2742,26 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
           >
             {/* User Profile */}
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.userCard}>
-              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.avatarContainer}>
-                <Ionicons name="person" size={48} color="#000" />
-              </LinearGradient>
+              <TouchableOpacity 
+                style={styles.avatarContainer}
+                onPress={handleAvatarPress}
+              >
+                {user?.avatar ? (
+                  <Image 
+                    source={{ uri: user.avatar }} 
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarInitials}>
+                      {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                    </Text>
+                  </LinearGradient>
+                )}
+                <View style={styles.avatarEditIcon}>
+                  <Ionicons name="camera" size={16} color="#000" />
+                </View>
+              </TouchableOpacity>
               
               <View style={styles.userInfo}>
                 <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">{user?.name}</Text>
