@@ -1723,7 +1723,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
   const handleAvatarPress = async () => {
     try {
       // Import expo-image-picker
-      const * as ImagePicker = require('expo-image-picker');
+      const ImagePicker = require('expo-image-picker');
       
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
