@@ -2776,7 +2776,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             )}
 
             {/* Referral Rewards Miners - Collapsible */}
-            {(user.referralMiners && user.referralMiners.length > 0) && (
+            {(user?.referralMiners && user.referralMiners.length > 0) && (
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
                 <TouchableOpacity 
                   style={styles.cardHeader} 
