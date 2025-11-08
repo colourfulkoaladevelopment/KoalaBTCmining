@@ -494,7 +494,6 @@ metadata:
 test_plan:
   current_focus:
     - "Separate Contact Support and Suggest Feature Modals"
-    - "Activity Feed Ticker Implementation"
     - "PayPal Button Functionality Verification"
   stuck_tasks: []
   test_all: false
