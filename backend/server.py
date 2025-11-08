@@ -1343,23 +1343,23 @@ async def withdraw_bitcoin(
         # Network-specific validation
         if network == "lightning":
             min_withdrawal = 0.00001  # 0.00001 BTC
-            max_withdrawal = 0.00019999  # Just below 0.0002 BTC
+            max_withdrawal = 0.001  # 0.001 BTC maximum for Lightning
             if amount < min_withdrawal:
                 raise HTTPException(
                     status_code=400, 
                     detail=f"Lightning Network minimum is {min_withdrawal} BTC"
                 )
-            if amount >= 0.0002:
+            if amount >= 0.001:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Amount {amount} BTC exceeds Lightning Network maximum of {max_withdrawal} BTC. Please use Bitcoin network for amounts >= 0.0002 BTC"
+                    detail=f"Amount {amount} BTC exceeds Lightning Network maximum of {max_withdrawal} BTC. Please use Bitcoin network for amounts >= 0.001 BTC"
                 )
         else:
-            min_withdrawal = 0.0002  # 0.0002 BTC for Bitcoin network
+            min_withdrawal = 0.001  # 0.001 BTC for Bitcoin network
             if amount < min_withdrawal:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC. For amounts below 0.0002 BTC, please use Lightning Network"
+                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC. For amounts below 0.001 BTC, please use Lightning Network"
                 )
         
         # Check user balance
