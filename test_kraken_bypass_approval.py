@@ -12,7 +12,7 @@ from datetime import datetime
 from pymongo import MongoClient
 
 # Configuration
-BACKEND_URL = "https://koala-mining-app.preview.emergentagent.com/api"
+BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
 TEST_USER_EMAIL = "kraken.bypass.test@bitcoinminer.com"
 TEST_USER_PASSWORD = "KrakenBypassTest2024!"
 TEST_USER_NAME = "Kraken Bypass Test User"

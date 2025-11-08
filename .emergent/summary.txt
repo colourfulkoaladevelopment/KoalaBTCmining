@@ -1,96 +1,88 @@
 <analysis>
-The trajectory details iterative development on the Koala Mining app, covering UI/UX enhancements, AdMob integration fixes, and persistent cryptocurrency withdrawal challenges. Initially, the AI engineer resolved EAS build issues, app icon scaling, and fixed  inconsistencies. A major focus was the Network Error on login, traced to  web incompatibility, resolved by creating a platform-specific AdMob stub.
-
-Coinbase withdrawal issues (, ) consumed significant effort, stemming from API key type mismatches (legacy vs. Advanced Trade vs. CDP). After multiple failed attempts to integrate Coinbase and then NDAX due to API complexities and format requirements, withdrawals were temporarily set to demo mode.
-
-Most recently, a temporary withdrawal popup was added. The AI engineer then started implementing an admin panel, removed Est. Daily text from miner displays, and triggered a new build incorporating these changes, awaiting user review for further tasks like color scheme consistency and executing a factory reset.
+The AI engineer's work involved an iterative and robust process of enhancing the Koala Mining application, driven by detailed user feedback and critical bug reports. The development journey encompassed significant architectural refinements, moving from demo features to live Kraken payment integration, and addressing complex UI/UX issues. Key challenges included recurring data type mismatches (e.g., MongoDB  vs. string UUIDs), backend async/sync conflicts, and persistent frontend layout problems (button alignment, modal rendering, dropdown glitches). The agent demonstrated strong debugging skills, often leveraging a  to diagnose root causes like race conditions and duplicate styles. Important features like Lightning Network withdrawals, avatar uploads, and password visibility toggles were implemented. A notable aspect was the frequent environment forking, which led to user frustration over lost account data and build issues, prompting the agent to focus on robust build processes and comprehensive handover documentation. The work concluded with a partial fix of several reported issues and a clear plan for the next iteration.
 </analysis>
 
 <product_requirements>
-The Koala Mining app is a Bitcoin mining simulator featuring Google/email authentication, a black marble and gold UI, password reset, and real BTC withdrawals (min 0.00001 BTC, 0.5% fee). Miners activate automatically with real-time balance updates. Monetization uses Google AdMob for various ad types and previously attempted Coinbase (now demo mode) and NDAX (failed) for withdrawals, with Kraken as a pending alternative.
+The Koala Mining app simulates Bitcoin mining with Google/email authentication, a black marble and gold UI, and password reset. The core problem it solves is enabling real BTC withdrawals (originally min 0.00001 BTC, 0.5% fee) with automated miner activation and real-time balance updates, monetized by Google AdMob. Initial demo withdrawals were to be replaced by Kraken integration.
 
-Recent user-requested features and fixes include:
-- Removing Simulated ad text, fixing ad modal overlap, and improving app icon.
-- Converting miner time formats to .
-- Displaying Total Estimated Daily Bitcoin without a green dot.
-- Implementing expandable Your Miners and Expired Miners.
-- Refactoring Watch Ad and Daily Free Miner buttons.
-- Adding a Suggest a Feature button.
-- Removing est. B xx.xx per day from all miner cards.
-- Adding a temporary withdrawals disabled popup.
-- **New additions:** Admin panel for  including total BTC owed, consistent black/gold color scheme for all popups, and a factory reset option for all user accounts (retaining usernames/passwords).
+Explicit user requests and implemented features include:
+-   **UI/UX**: Remove Simulated text, improve app icon, fix miner time formats, display Total Estimated Daily Bitcoin, expandable miner sections, refactored Watch Ad and Daily Free Miner buttons, Suggest a Feature button, remove est. B xx.xx per day., add password visibility toggle, fix daily earning estimate format, always-visible miner dropdowns.
+-   **Withdrawal**: Transition to Kraken, dynamic network fee, 3-way fee breakdown, updated withdrawal button labels, specific wallet registration modal text. Key implementations: Lightning Network withdrawals (0.00001-0.001 BTC) and Bitcoin Network (min 0.001 BTC), Lightning field changed to Invoice.
+-   **Admin Panel**: Access for , total BTC owed, user management, broadcast notification, consistent black/gold popups, factory reset, Total Miner Revenue (30 days/all-time), one-click copy for BTC addresses, delete user, give BTC.
+-   **Core Features**: Avatar upload with initials as default and 2MB limit (local storage/MongoDB base64), notification feed (real/fake activity), persistent profile pictures.
+-   **Stability/Fixes**: Kraken withdrawal processing, login screen errors, Expo Go crashes, daily miner button alignment, PayPal button functionality, correct Contact Support and Suggest a Feature popups with functional Send Message buttons.
 </product_requirements>
 
 <key_technical_concepts>
-- **Mobile Framework**: Expo (React Native)
-- **Backend**: FastAPI (Python)
-- **Database**: MongoDB
-- **Navigation**:  (via )
-- **Payments**: Coinbase Advanced Trade API, NDAX API, PayPal SDK, Kraken API (planned)
-- **Advertising**: Google AdMob ()
-- **Build System**: EAS Build, custom Expo config plugins
-- **Environment Variables**: , , 
+-   **Mobile Framework**: Expo (React Native)
+-   **Backend**: FastAPI (Python)
+-   **Database**: MongoDB (using PyMongo)
+-   **Navigation**:  (custom tab-based via )
+-   **Payments**: PayPal SDK, Kraken API
+-   **Advertising**: Google AdMob ()
+-   **Build System**: EAS Build
+-   **State Management**: React , 
+-   **Authentication**: JWT tokens
+-   **Image Handling**: , base64 encoding
 </key_technical_concepts>
 
 <code_architecture>
-The application uses an Expo (React Native) frontend, a FastAPI backend, and a MongoDB database. Frontend routing is primarily managed within  for its tab-based navigation, effectively overriding the  file-based routing.
+The application utilizes an Expo (React Native) frontend, a FastAPI backend, and a MongoDB database. Frontend routing is primarily handled by a custom tab-based navigation implemented within , overriding default  behavior for core user screens.
 
 
 
 -   ****
-    -   **Importance**: Core API endpoints (auth, user data, miner management, earnings, referrals, payments, crypto withdrawals).
-    -   **Changes**:
-        -   Withdrawal logic heavily modified: initially Coinbase, then NDAX, now temporarily  mode due to API integration challenges.
-        -   Added extensive logging for Coinbase/NDAX withdrawal attempts.
-        -   Integrated admin endpoints for user management (, , , , ).
-        -   Updated  in  based on active provider (Coinbase, NDAX, demo).
+    -   **Importance**: Contains all backend API logic for user management, mining, referrals, payments, and crypto withdrawals.
+    -   **Changes Made**:
+        -   **Kraken Integration**: Corrected  usage and adapted  for new API parameters ( instead of ). Implemented support for both Bitcoin and Lightning Network withdrawals with distinct limits (Lightning: 0.00001-0.001 BTC; Bitcoin: min 0.001 BTC).
+        -   **Ad Tracking**: Modified  to only count  ads towards the daily counter.
+        -   **User Profile**: Added  for avatar uploads and updated  to return the  field.
+        -   **Error Handling**: Removed  from PyMongo calls, and applied various Object ID vs. string UUID fixes.
+
+-   ****
+    -   **Importance**: The primary frontend component handling most UI rendering, state management, and user interaction logic, including custom tab-based navigation.
+    -   **Changes Made**:
+        -   **UI Fixes**: Fixed Daily Miner button alignment by resolving duplicate styles and adding width constraints. Added  to  for better spacing.
+        -   **Withdrawal UI**: Removed Minimum withdrawal text from the button. Dynamic placeholder text for withdrawal addresses (Bitcoin Address/Invoice). Updated displayed withdrawal limits.
+        -   **Miner Display**: Split into always-visible Free Miners, Premium Miners, Referral Rewards (on Invites tab). Resolved glitches by initializing  state with empty miner arrays and using optional chaining. Removed old  and  state to prevent crashes.
+        -   **Ad/Reward System**:  now called immediately after successful ad watch.
+        -   **Authentication/Profile**: Added password visibility toggle. Implemented avatar upload using  with initials fallback.  now merges user state to preserve miner categorization.  updated for new miner state structure.
+        -   **Referral Section**: Relocated Share Referral Code button, added referral description.
+        -   **PayPal**: Added  import.
+        -   **Modals**: Corrected Contact Support modal title, added  state for a separate Suggest a Feature modal (JSX and functionality pending).
+        -   **Error Handling**: Added optional chaining for user object access, removed duplicate  import.
+
+-   ****
+    -   **Importance**: Expo app configuration.
+    -   **Changes Made**:  was iteratively incremented from 12 to 25.
+
 -   ****
     -   **Importance**: Backend environment variables.
-    -   **Changes**:  updated to  (currently), previously , . , , ,  were added/updated during troubleshooting.
+    -   **Changes Made**: Verified . Corrected  to .
+
 -   ****
-    -   **Importance**: Primary UI, controls most user interactions and feature displays (Dashboard, Profile, Store).
-    -   **Changes**:
-        -   Fixed login Network Error by refactoring AdMob imports for web compatibility.
-        -   Corrected rewarded ad event listeners (used ).
-        -   Removed est. B x.xx/day from store miner cards.
-        -   Removed green dot from Mining Status, updated text to Total Estimated Daily Bitcoin.
-        -   Removed  from ad confirmation message.
-        -   Added comprehensive logging and an on-screen debug info display for withdrawal errors.
-        -   Centered Watch Ad button text by adding .
-        -   Implemented a temporary  popup for withdrawal button tap, stating withdrawals are disabled.
-        -   Removed Est. Daily B x.xxxxxxxxxxxxxx from Your Miners and Expired Miners sections.
--   ****
-    -   **Importance**: Encapsulates Google AdMob initialization, loading, and display logic for native builds.
-    -   **Changes**: Refactored rewarded ad event listeners to use  and .
--   **** (New File)
-    -   **Importance**: Provides stub functions for AdMob methods, enabling web compatibility by preventing native-only AdMob modules from loading on web.
--   **** (New File)
-    -   **Importance**: Frontend entry point for the new admin panel functionality.
-    -   **Changes**: Initial file created with basic structure.
+    -   **Importance**: New file created to summarize the project's state, credentials, and pending tasks for seamless handover.
+
 </code_architecture>
 
 <pending_tasks>
-- Update all gray popups (e.g., login success, alerts) to match the black/gold color scheme of the Watch Ad popup.
-- Execute the factory reset for all user accounts, retaining usernames and passwords (an admin endpoint exists, but the user requested the action).
-- Fully re-enable real Bitcoin withdrawals (currently in demo mode) using Kraken once user's KYC is complete, or another suitable provider.
+-   Complete the Suggest a Feature modal's JSX and full functionality, including the Send Message button.
+-   Implement the Send Message button functionality for the Contact Support modal to send emails.
+-   Investigate and fix the Pay with PayPal button, which is still not working.
+-   Implement the activity feed with real and fake data on the Dashboard as per user's request.
 </pending_tasks>
 
 <current_work>
-Immediately prior to this summary, the AI engineer completed several significant tasks:
+Immediately prior to this summary, the AI engineer was addressing five specific issues reported by the user, related to UI persistence, text accuracy, modal separation, and button functionality:
+1.  **Profile picture not persisting**: Resolved by modifying 's  endpoint to return the  field, ensuring the frontend  can correctly load and display it upon relogin.
+2.  **Incorrect minimum withdrawal text**: Resolved by updating  to dynamically display the correct withdrawal limits (0.00001-0.001 BTC for Lightning, min 0.001 BTC for Bitcoin).
+3.  **Merged Contact Support and Suggest a Feature popups**: The engineer started to address this by introducing a new state variable, , in  to manage a separate modal. However, the actual JSX for the Suggest a Feature modal and the full functionality for both Send Message buttons are explicitly pending.
+4.  **Send Message button not working**: This is directly tied to the modal separation and email sending functionality, which remains unimplemented.
+5.  **Pay with PayPal button not working**: This issue was reported as still unresolved by the user, indicating that an earlier fix (adding  import) was insufficient.
 
-1.  **Admin Panel Implementation:**
-    -   A new frontend file  was created.
-    -   New backend API endpoints were added to  for admin functionalities, including ,  (calculating all future earnings from active miners), , , and . This panel is accessible by logging in with .
-
-2.  **Est. Daily Removal from Miners:**
-    -   The display text Est. Daily B x.xxxxxxxxxxxxxx was removed from both Your Miners and Expired Miners sections within . This aligns the miner card display with the earlier removal of similar text from the store page.
-
-3.  **Withdrawal Popup:**
-    -   A temporary  popup was implemented in  that appears when the withdrawal button is tapped. It states that withdrawals are temporarily disabled and will be available soon, to manage user expectations during the ongoing real withdrawal integration challenges.
-
-All these changes (admin panel, Est. Daily removal, and the withdrawal popup) have been committed to git (latest commit ) and a new EAS build () has been triggered. The current work involved setting up the infrastructure for the admin features and refining the UI per user requests, with the build processing on EAS servers for user testing.
+At the point of this summary request, the first two issues were completed, and work on the third had begun with a state change. The remaining aspects of issue #3, and all of issues #4 and #5 are still pending. A  document was created to aid the next agent in continuing this work efficiently.
 </current_work>
 
 <optional_next_step>
-Implement the consistent black/gold color scheme for all gray popups, mirroring the Watch Ad popup design.
+The next step is to complete the full implementation of the Suggest a Feature modal and its Send Message functionality, the Send Message button for the Contact Support modal, and investigate/fix the Pay with PayPal button.
 </optional_next_step>

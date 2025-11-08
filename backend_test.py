@@ -12,7 +12,7 @@ from datetime import datetime
 import uuid
 
 # Configuration
-BACKEND_URL = "https://koala-mining-app.preview.emergentagent.com/api"
+BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
 TEST_USER_EMAIL = "kraken.test.user@bitcoinminer.com"
 TEST_USER_PASSWORD = "KrakenTest2024!"
 TEST_USER_NAME = "Kraken Test User"
