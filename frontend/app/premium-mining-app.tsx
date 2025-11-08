@@ -536,7 +536,6 @@ export default function PremiumBitcoinMiningApp() {
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showActiveMiners, setShowActiveMiners] = useState(false);
-  const [showExpiredMiners, setShowExpiredMiners] = useState(false);
   const [showFreeMiners, setShowFreeMiners] = useState(false);
   const [showPremiumMiners, setShowPremiumMiners] = useState(false);
   const [showReferralMiners, setShowReferralMiners] = useState(false);
