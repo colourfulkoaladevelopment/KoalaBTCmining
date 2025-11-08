@@ -2586,24 +2586,23 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             )}
 
             {/* Premium Miners - Collapsible */}
-            {(user?.premiumMiners && user.premiumMiners.length > 0) && (
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
-                <TouchableOpacity 
-                  style={styles.cardHeader} 
-                  onPress={() => setShowPremiumMiners(!showPremiumMiners)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="diamond" size={24} color="#FFD700" />
-                  <Text style={styles.cardTitle}>Premium Miners ({user.premiumMiners.length})</Text>
-                  <Ionicons 
-                    name={showPremiumMiners ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#FFD700" 
-                    style={{ marginLeft: 'auto' }}
-                  />
-                </TouchableOpacity>
-                
-                {showPremiumMiners && (
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+              <TouchableOpacity 
+                style={styles.cardHeader} 
+                onPress={() => setShowPremiumMiners(!showPremiumMiners)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="diamond" size={24} color="#FFD700" />
+                <Text style={styles.cardTitle}>Premium Miners ({user?.premiumMiners?.length || 0})</Text>
+                <Ionicons 
+                  name={showPremiumMiners ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color="#FFD700" 
+                  style={{ marginLeft: 'auto' }}
+                />
+              </TouchableOpacity>
+              
+              {showPremiumMiners && (
                   <>
                     {(user.premiumMiners && user.premiumMiners.length > 0) ? (
                       user.premiumMiners?.map((miner) => (
