@@ -940,7 +940,7 @@ export default function PremiumBitcoinMiningApp() {
       // Update user data with latest total_earnings and total_cashed_out
       if (userResponse.ok) {
         const userResult = await userResponse.json();
-        setUser(userResult);
+        setUser(prev => ({ ...prev, ...userResult }));
       }
 
       // Load ad stats
