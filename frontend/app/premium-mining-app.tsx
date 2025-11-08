@@ -553,6 +553,13 @@ export default function PremiumBitcoinMiningApp() {
     message: ''
   });
   
+  const [suggestForm, setSuggestForm] = useState({
+    name: '',
+    email: '',
+    feature: '',
+    description: ''
+  });
+  
   const [withdrawForm, setWithdrawForm] = useState({
     address: '',
     amount: '',
@@ -563,6 +570,10 @@ export default function PremiumBitcoinMiningApp() {
   const [networkFee, setNetworkFee] = useState(0.00001); // Default network fee in BTC
   
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  
+  // Activity feed state
+  const [currentActivity, setCurrentActivity] = useState(null);
+  const [activityTimer, setActivityTimer] = useState(null);
 
   // Facebook Ads state
   const [adStats, setAdStats] = useState({
