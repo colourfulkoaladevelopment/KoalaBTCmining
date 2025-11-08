@@ -3382,6 +3382,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 15,
   },
+  passwordToggle: {
+    padding: 10,
+    marginLeft: 10,
+  },
   input: {
     flex: 1,
     paddingVertical: 18,
