@@ -908,17 +908,6 @@ export default function PremiumBitcoinMiningApp() {
           (miner.miner_type === 'referral_reward' || miner.miner_type === 'referral_commission') && miner.status !== 'expired'
         );
         
-        // Keep old structure for compatibility (all active miners)
-        const activeMiners = allMiners.filter(miner => 
-          miner.status !== 'expired' || miner.miner_type === 'premium'
-        );
-        const expiredMiners = allMiners.filter(miner => 
-          miner.status === 'expired' && miner.miner_type !== 'premium'
-        );
-        
-        setMiners(activeMiners);
-        setExpiredMiners(expiredMiners);
-        
         // Store categorized miners for new UI
         setUser(prev => ({
           ...prev,
