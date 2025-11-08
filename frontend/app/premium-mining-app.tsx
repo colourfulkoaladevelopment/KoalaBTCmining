@@ -1460,8 +1460,11 @@ Your miner is now active and earning Bitcoin!`,
       const result = await response.json();
 
       if (response.ok) {
-        // Refresh ad stats after watching any ad
-        await loadAdStats();
+        // Refresh ad stats and app data immediately
+        await Promise.all([
+          loadAdStats(),
+          loadAppData() // Load immediately to update UI faster
+        ]);
         
         // Handle based on ad type
         if (currentAdType === 'miner_activation') {
@@ -1474,12 +1477,7 @@ Mining Power: +${result.ad_miner.hash_rate} GH/s
 Duration: ${result.ad_miner.duration_hours} hours
 
 ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
-            [{ 
-              text: 'Awesome!', 
-              onPress: () => {
-                loadAppData(); // Refresh app data to show new miner
-              }
-            }]
+            [{ text: 'Awesome!' }]
           );
         } else if (currentAdType === 'withdrawal') {
           // Withdrawal ad - proceed with withdrawal
