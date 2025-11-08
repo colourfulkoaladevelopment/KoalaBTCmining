@@ -148,9 +148,12 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
               await AsyncStorage.removeItem('user_data');
               await AsyncStorage.removeItem('app_launch_ad_shown');
               // Reset all app state
-              setUser(null);
+              setUser({
+                freeMiners: [],
+                premiumMiners: [],
+                referralMiners: []
+              });
               setWalletData(null);
-              setMiners([]);
               setCurrentScreen('auth');
               setIsAdmin(false);
             } catch (error) {
