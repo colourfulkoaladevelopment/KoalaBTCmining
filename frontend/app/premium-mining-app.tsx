@@ -3249,6 +3249,77 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
           </View>
         </Modal>
 
+        {/* Suggest a Feature Modal */}
+        <Modal visible={showSuggestForm} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Suggest a Feature</Text>
+              <Text style={styles.modalSubtitle}>We'd love to hear your ideas!</Text>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="person" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your Name"
+                  placeholderTextColor="#666"
+                  value={suggestForm.name}
+                  onChangeText={(text) => setSuggestForm({...suggestForm, name: text})}
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor="#666"
+                  value={suggestForm.email}
+                  onChangeText={(text) => setSuggestForm({...suggestForm, email: text})}
+                  keyboardType="email-address"
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="bulb" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Feature Name"
+                  placeholderTextColor="#666"
+                  value={suggestForm.feature}
+                  onChangeText={(text) => setSuggestForm({...suggestForm, feature: text})}
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Ionicons name="document-text" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.messageInput]}
+                  placeholder="Feature Description"
+                  placeholderTextColor="#666"
+                  value={suggestForm.description}
+                  onChangeText={(text) => setSuggestForm({...suggestForm, description: text})}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={() => setShowSuggestForm(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={submitSuggestForm}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>Send Message</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
+
         {/* FAQ Modal removed */}
 
         {/* Facebook Ad Modal */}
