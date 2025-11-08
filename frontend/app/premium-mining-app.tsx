@@ -2908,7 +2908,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.supportButton} onPress={() => setShowContactForm(true)}>
+            <TouchableOpacity style={styles.supportButton} onPress={() => setShowSuggestForm(true)}>
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.supportButtonGradient}>
                 <Ionicons name="headset" size={20} color="#2196F3" />
                 <Text style={styles.supportButtonText}>Suggest a Feature</Text>
