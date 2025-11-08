@@ -490,8 +490,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bitcoin Withdrawal System - Kraken Integration Fix"
-    - "Daily Miner Button Alignment Fix"
+    - "Separate Contact Support and Suggest Feature Modals"
+    - "Activity Feed Ticker Implementation"
+    - "PayPal Button Functionality Verification"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
