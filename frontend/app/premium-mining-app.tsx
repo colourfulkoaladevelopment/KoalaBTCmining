@@ -2572,8 +2572,15 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                           <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
                         </View>
                       </LinearGradient>
-                    ))}
-                  </>
+                    ))
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Ionicons name="gift" size={48} color="#666" />
+                      <Text style={styles.emptyStateTitle}>No Free Miners</Text>
+                      <Text style={styles.emptyStateSubtitle}>Watch ads to activate free miners</Text>
+                    </View>
+                  )}
+                </>
                 )}
               </LinearGradient>
             )}
