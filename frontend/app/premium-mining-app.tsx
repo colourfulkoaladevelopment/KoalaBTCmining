@@ -1824,25 +1824,52 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
     }
 
     try {
-      const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/support/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(contactForm)
-      });
-
-      if (response.ok) {
-        showCustomAlert('Message Sent! 📧', 'Your support request has been submitted. We\'ll get back to you soon!');
+      // Use device native email via mailto:
+      const subject = encodeURIComponent(contactForm.subject || 'Support Request');
+      const body = encodeURIComponent(
+        `Name: ${contactForm.name}\nEmail: ${contactForm.email}\n\nMessage:\n${contactForm.message}`
+      );
+      const mailtoUrl = `mailto:colourfulkoaladevelopment@gmail.com?subject=${subject}&body=${body}`;
+      
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+        showCustomAlert('Email App Opened 📧', 'Your email app has been opened. Please send the email to submit your support request.');
         setShowContactForm(false);
         setContactForm({ name: '', email: '', subject: '', message: '' });
       } else {
-        showCustomAlert('Error', 'Failed to submit support request');
+        showCustomAlert('Error', 'Could not open email app. Please email us at colourfulkoaladevelopment@gmail.com');
       }
     } catch (error) {
-      showCustomAlert('Error', 'Network error occurred');
+      showCustomAlert('Error', 'Failed to open email app. Please email us at colourfulkoaladevelopment@gmail.com');
+    }
+  };
+  
+  const submitSuggestForm = async () => {
+    if (!suggestForm.name || !suggestForm.email || !suggestForm.feature || !suggestForm.description) {
+      showCustomAlert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    try {
+      // Use device native email via mailto:
+      const subject = encodeURIComponent(`Feature Suggestion: ${suggestForm.feature}`);
+      const body = encodeURIComponent(
+        `Name: ${suggestForm.name}\nEmail: ${suggestForm.email}\n\nFeature: ${suggestForm.feature}\n\nDescription:\n${suggestForm.description}`
+      );
+      const mailtoUrl = `mailto:colourfulkoaladevelopment@gmail.com?subject=${subject}&body=${body}`;
+      
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+        showCustomAlert('Email App Opened 💡', 'Your email app has been opened. Please send the email to submit your feature suggestion.');
+        setShowSuggestForm(false);
+        setSuggestForm({ name: '', email: '', feature: '', description: '' });
+      } else {
+        showCustomAlert('Error', 'Could not open email app. Please email us at colourfulkoaladevelopment@gmail.com');
+      }
+    } catch (error) {
+      showCustomAlert('Error', 'Failed to open email app. Please email us at colourfulkoaladevelopment@gmail.com');
     }
   };
 
