@@ -580,6 +580,7 @@ async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
         "total_earnings": current_total_earnings,
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0),
         "total_cashed_out": current_user.get("total_cashed_out", 0.0),
+        "avatar": current_user.get("avatar"),  # Include avatar
         "created_at": current_user["created_at"]
     }
 
