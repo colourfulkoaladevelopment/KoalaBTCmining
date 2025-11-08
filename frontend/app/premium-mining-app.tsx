@@ -2557,6 +2557,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               />
             }
           >
+            {/* Activity Feed Ticker */}
+            {currentActivity && (
+              <LinearGradient 
+                colors={['#1a4d1a', '#0d260d']} 
+                style={styles.activityTicker}
+              >
+                <Ionicons name="pulse" size={16} color="#4CAF50" style={{ marginRight: 8 }} />
+                <Text style={styles.activityText} numberOfLines={1}>
+                  {currentActivity.message}
+                </Text>
+              </LinearGradient>
+            )}
+            
             {/* Wallet Overview */}
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.walletCard}>
               <View style={styles.cardHeader}>
