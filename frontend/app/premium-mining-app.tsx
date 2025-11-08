@@ -2775,25 +2775,33 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 
                 {showReferralMiners && (
                   <>
-                    {user.referralMiners?.map((miner) => (
-                      <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
-                        <View style={styles.minerHeader}>
-                          <Text style={styles.minerName}>{miner.name}</Text>
-                          <LinearGradient 
-                            colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
-                            style={styles.minerStatus}
-                          >
-                            <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
-                          </LinearGradient>
-                        </View>
-                        
-                        <View style={styles.minerStats}>
-                          <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
-                          <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
-                          <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
-                        </View>
-                      </LinearGradient>
-                    ))}
+                    {(user.referralMiners && user.referralMiners.length > 0) ? (
+                      user.referralMiners?.map((miner) => (
+                        <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                          <View style={styles.minerHeader}>
+                            <Text style={styles.minerName}>{miner.name}</Text>
+                            <LinearGradient 
+                              colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                              style={styles.minerStatus}
+                            >
+                              <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
+                            </LinearGradient>
+                          </View>
+                          
+                          <View style={styles.minerStats}>
+                            <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                            <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
+                            <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
+                          </View>
+                        </LinearGradient>
+                      ))
+                    ) : (
+                      <View style={styles.emptyState}>
+                        <Ionicons name="people" size={48} color="#666" />
+                        <Text style={styles.emptyStateTitle}>No Referral Rewards</Text>
+                        <Text style={styles.emptyStateSubtitle}>Invite friends to earn rewards</Text>
+                      </View>
+                    )}
                   </>
                 )}
               </LinearGradient>
