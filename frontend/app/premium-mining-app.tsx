@@ -2071,10 +2071,20 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   placeholderTextColor="#666"
                   value={formData.password}
                   onChangeText={(text) => setFormData({...formData, password: text})}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   editable={!isLoading}
                 />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.passwordToggle}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#FFD700" 
+                  />
+                </TouchableOpacity>
               </View>
 
               {!isLogin && (
