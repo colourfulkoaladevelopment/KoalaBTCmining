@@ -2609,38 +2609,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </LinearGradient>
             )}
 
-            {/* Expired Miners Section - Collapsible */}
-            {expiredMiners.length > 0 && (
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.expiredMinersCard}>
-                <TouchableOpacity 
-                  style={styles.cardHeader}
-                  onPress={() => setShowExpiredMiners(!showExpiredMiners)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="time" size={24} color="#666" />
-                  <Text style={styles.cardTitle}>Expired Miners ({expiredMiners.length})</Text>
-                  <Ionicons 
-                    name={showExpiredMiners ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#666" 
-                    style={{ marginLeft: 'auto' }}
-                  />
-                </TouchableOpacity>
-                
-                {showExpiredMiners && (
-                  <>
-                    {expiredMiners.map((miner) => (
-                      <View key={miner.id} style={styles.expiredMinerItem}>
-                        <Text style={styles.expiredMinerName}>{miner.name}</Text>
-                        <Text style={styles.expiredMinerDetails}>
-                          Earned: ₿ {miner.total_earned?.toFixed(14)} | {miner.hash_rate} GH/s
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                )}
-              </LinearGradient>
-            )}
           </ScrollView>
         );
 
