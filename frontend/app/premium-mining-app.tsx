@@ -509,8 +509,7 @@ export default function PremiumBitcoinMiningApp() {
     referralMiners: []
   });
   const [walletData, setWalletData] = useState(null);
-  const [miners, setMiners] = useState([]);
-  const [expiredMiners, setExpiredMiners] = useState([]);
+  // Removed miners and expiredMiners state - using user.freeMiners, user.premiumMiners, user.referralMiners instead
   const [storeMiners, setStoreMiners] = useState([]);
   const [referralStats, setReferralStats] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
