@@ -2605,36 +2605,44 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 
                 {showPremiumMiners && (
                   <>
-                    {user.premiumMiners?.map((miner) => (
-                      <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
-                        <View style={styles.minerHeader}>
-                          <Text style={styles.minerName}>{miner.name}</Text>
-                          <LinearGradient 
-                            colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
-                            style={styles.minerStatus}
-                          >
-                            <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
-                          </LinearGradient>
-                        </View>
-                        
-                        <View style={styles.minerStats}>
-                          <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
-                          <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
-                          <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
-                        </View>
-
-                        {miner.status === 'expired' && (
-                          <TouchableOpacity 
-                            style={styles.renewButton}
-                            onPress={() => renewMiner(miner)}
-                          >
-                            <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
-                              <Text style={styles.renewButtonText}>Renew for 30 Days</Text>
+                    {(user.premiumMiners && user.premiumMiners.length > 0) ? (
+                      user.premiumMiners?.map((miner) => (
+                        <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
+                          <View style={styles.minerHeader}>
+                            <Text style={styles.minerName}>{miner.name}</Text>
+                            <LinearGradient 
+                              colors={miner.status === 'active' ? ['#4CAF50', '#45a049'] : ['#666', '#555']}
+                              style={styles.minerStatus}
+                            >
+                              <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
                             </LinearGradient>
-                          </TouchableOpacity>
-                        )}
-                      </LinearGradient>
-                    ))}
+                          </View>
+                          
+                          <View style={styles.minerStats}>
+                            <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+                            <Text style={styles.minerStat}>Earned: ₿ {miner.total_earned?.toFixed(14)}</Text>
+                            <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
+                          </View>
+
+                          {miner.status === 'expired' && (
+                            <TouchableOpacity 
+                              style={styles.renewButton}
+                              onPress={() => renewMiner(miner)}
+                            >
+                              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                                <Text style={styles.renewButtonText}>Renew for 30 Days</Text>
+                              </LinearGradient>
+                            </TouchableOpacity>
+                          )}
+                        </LinearGradient>
+                      ))
+                    ) : (
+                      <View style={styles.emptyState}>
+                        <Ionicons name="diamond" size={48} color="#666" />
+                        <Text style={styles.emptyStateTitle}>No Premium Miners</Text>
+                        <Text style={styles.emptyStateSubtitle}>Purchase miners from the store</Text>
+                      </View>
+                    )}
                   </>
                 )}
               </LinearGradient>
