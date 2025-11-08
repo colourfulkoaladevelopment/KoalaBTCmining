@@ -2962,7 +2962,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <Ionicons name="wallet" size={20} color="#FFD700" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Bitcoin Address"
+                  placeholder={withdrawForm.network === 'lightning' ? "Lightning Invoice" : "Bitcoin Address"}
                   placeholderTextColor="#666"
                   value={withdrawForm.address}
                   onChangeText={(text) => setWithdrawForm({...withdrawForm, address: text})}
