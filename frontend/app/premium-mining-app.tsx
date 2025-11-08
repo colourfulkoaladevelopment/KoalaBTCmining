@@ -2535,26 +2535,26 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             </LinearGradient>
 
             {/* Free Miners - Collapsible */}
-            {(user?.freeMiners && user.freeMiners.length > 0) && (
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
-                <TouchableOpacity 
-                  style={styles.cardHeader} 
-                  onPress={() => setShowFreeMiners(!showFreeMiners)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="gift" size={24} color="#4CAF50" />
-                  <Text style={styles.cardTitle}>Free Miners ({user.freeMiners.length})</Text>
-                  <Ionicons 
-                    name={showFreeMiners ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#4CAF50" 
-                    style={{ marginLeft: 'auto' }}
-                  />
-                </TouchableOpacity>
-                
-                {showFreeMiners && (
-                  <>
-                    {user.freeMiners?.map((miner) => (
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+              <TouchableOpacity 
+                style={styles.cardHeader} 
+                onPress={() => setShowFreeMiners(!showFreeMiners)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="gift" size={24} color="#4CAF50" />
+                <Text style={styles.cardTitle}>Free Miners ({user?.freeMiners?.length || 0})</Text>
+                <Ionicons 
+                  name={showFreeMiners ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color="#4CAF50" 
+                  style={{ marginLeft: 'auto' }}
+                />
+              </TouchableOpacity>
+              
+              {showFreeMiners && (
+                <>
+                  {(user?.freeMiners && user.freeMiners.length > 0) ? (
+                    user.freeMiners?.map((miner) => (
                       <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
                         <View style={styles.minerHeader}>
                           <Text style={styles.minerName}>{miner.name}</Text>
