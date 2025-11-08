@@ -757,7 +757,16 @@ export default function PremiumBitcoinMiningApp() {
     if (currentScreen === 'app' && user) {
       loadAppData();
       loadBitcoinPrice(); // Load Bitcoin price when app loads
+      loadActivityFeed(); // Load initial activity
+      startActivityFeedTimer(); // Start activity feed timer
     }
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (activityTimer) {
+        clearTimeout(activityTimer);
+      }
+    };
   }, [currentScreen, user]);
 
   const checkAuthStatus = async () => {
