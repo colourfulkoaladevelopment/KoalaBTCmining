@@ -535,6 +535,7 @@ export default function PremiumBitcoinMiningApp() {
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showSuggestForm, setShowSuggestForm] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
