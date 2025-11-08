@@ -503,7 +503,11 @@ export default function PremiumBitcoinMiningApp() {
   });
 
   // User and app state
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState({
+    freeMiners: [],
+    premiumMiners: [],
+    referralMiners: []
+  });
   const [walletData, setWalletData] = useState(null);
   const [miners, setMiners] = useState([]);
   const [expiredMiners, setExpiredMiners] = useState([]);
