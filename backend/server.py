@@ -1906,19 +1906,19 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
         logger.info(f"     - Network Fee: {network_fee} BTC")
         
         # Apply app-specific minimum amounts
-        # Lightning: 0.00001 - 0.00019999 BTC
-        # Bitcoin: 0.0002 BTC minimum
+        # Lightning: 0.00001 - 0.001 BTC
+        # Bitcoin: 0.001 BTC minimum
         if network.lower() == 'lightning':
             app_min = 0.00001
-            app_max = 0.00019999
+            app_max = 0.001
             if amount < app_min:
                 raise Exception(f"Amount {amount} BTC is below Lightning minimum of {app_min} BTC")
-            if amount >= 0.0002:
-                raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.0002 BTC")
+            if amount >= 0.001:
+                raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.001 BTC")
         else:
-            app_min = 0.0002
+            app_min = 0.001
             if amount < app_min:
-                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC. For amounts below 0.0002 BTC, please use Lightning Network")
+                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC. For amounts below 0.001 BTC, please use Lightning Network")
         
         # Kraken uses "XBT" for Bitcoin
         # Use method_id for direct address withdrawal
