@@ -2581,9 +2581,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     </View>
                   )}
                 </>
-                )}
-              </LinearGradient>
-            )}
+              )}
+            </LinearGradient>
 
             {/* Premium Miners - Collapsible */}
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
