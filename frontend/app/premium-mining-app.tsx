@@ -17,7 +17,6 @@ import {
   Linking,
   RefreshControl,
   Modal,
-  Linking,
   Dimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
