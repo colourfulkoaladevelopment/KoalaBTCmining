@@ -2543,7 +2543,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 
                 {showFreeMiners && (
                   <>
-                    {user.freeMiners.map((miner) => (
+                    {user.freeMiners?.map((miner) => (
                       <LinearGradient key={miner.id} colors={['#333', '#2a2a2a']} style={styles.minerItem}>
                         <View style={styles.minerHeader}>
                           <Text style={styles.minerName}>{miner.name}</Text>
