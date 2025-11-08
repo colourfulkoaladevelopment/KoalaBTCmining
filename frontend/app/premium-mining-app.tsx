@@ -1872,6 +1872,121 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
       showCustomAlert('Error', 'Failed to open email app. Please email us at colourfulkoaladevelopment@gmail.com');
     }
   };
+  
+  // Activity Feed Functions
+  const generateFakeActivity = () => {
+    const firstNames = ['John', 'Sarah', 'Michael', 'Emma', 'David', 'Lisa', 'James', 'Maria', 'Robert', 'Jennifer', 'William', 'Linda', 'Richard', 'Patricia', 'Thomas', 'Barbara', 'Charles', 'Elizabeth', 'Daniel', 'Nancy'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+    
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const obfuscatedName = `${firstName[0]}*** ${lastName[0]}***`;
+    
+    // Determine type: purchase or cashout (60% purchase, 40% cashout)
+    const isPurchase = Math.random() < 0.6;
+    
+    if (isPurchase) {
+      // Miner tiers with probability weights
+      // Standard: 1.5x Advanced: 1.5x Pro: 1.5x Elite... up to Mythical
+      const miners = [
+        { name: 'Standard', hash: '100GH/s', weight: 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 }, // 1.5^8
+        { name: 'Advanced', hash: '200GH/s', weight: 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 }, // 1.5^7
+        { name: 'Pro', hash: '400GH/s', weight: 1.5 * 1.5 * 1.5 * 1.5 * 1.5 * 1.5 }, // 1.5^6
+        { name: 'Elite', hash: '1TH/s', weight: 1.5 * 1.5 * 1.5 * 1.5 * 1.5 }, // 1.5^5
+        { name: 'Master', hash: '2TH/s', weight: 1.5 * 1.5 * 1.5 * 1.5 }, // 1.5^4
+        { name: 'Supreme', hash: '4TH/s', weight: 1.5 * 1.5 * 1.5 }, // 1.5^3
+        { name: 'Ultimate', hash: '10TH/s', weight: 1.5 * 1.5 }, // 1.5^2
+        { name: 'Legendary', hash: '15TH/s', weight: 1.5 }, // 1.5^1
+        { name: 'Mythical', hash: '20TH/s', weight: 1 } // 1.5^0
+      ];
+      
+      // Calculate weighted random selection
+      const totalWeight = miners.reduce((sum, m) => sum + m.weight, 0);
+      let random = Math.random() * totalWeight;
+      let selectedMiner = miners[miners.length - 1]; // Default to Mythical
+      
+      for (const miner of miners) {
+        random -= miner.weight;
+        if (random <= 0) {
+          selectedMiner = miner;
+          break;
+        }
+      }
+      
+      return {
+        type: 'purchase',
+        message: `User ${obfuscatedName} has successfully rented a ${selectedMiner.hash} miner!`
+      };
+    } else {
+      // Generate realistic cashout amount (0.00001 to 0.01 BTC, weighted towards smaller amounts)
+      const randomValue = Math.random();
+      let amount;
+      if (randomValue < 0.6) {
+        // 60% chance: small amounts (0.00001 to 0.0001)
+        amount = 0.00001 + Math.random() * 0.00009;
+      } else if (randomValue < 0.9) {
+        // 30% chance: medium amounts (0.0001 to 0.001)
+        amount = 0.0001 + Math.random() * 0.0009;
+      } else {
+        // 10% chance: larger amounts (0.001 to 0.01)
+        amount = 0.001 + Math.random() * 0.009;
+      }
+      
+      // Format amount with appropriate precision
+      const formattedAmount = amount >= 0.001 ? amount.toFixed(5) : amount.toFixed(8);
+      
+      return {
+        type: 'cashout',
+        message: `User ${obfuscatedName} has successfully cashed out B ${formattedAmount}!`
+      };
+    }
+  };
+  
+  const loadActivityFeed = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/activity/recent`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.activities && data.activities.length > 0) {
+          // Format real activity
+          const activity = data.activities[0]; // Get most recent
+          if (activity.type === 'purchase') {
+            setCurrentActivity({
+              type: 'real',
+              message: `User ${activity.user_name} has successfully rented a ${activity.hash_rate} miner!`
+            });
+          } else if (activity.type === 'cashout') {
+            const formattedAmount = activity.amount >= 0.001 ? activity.amount.toFixed(5) : activity.amount.toFixed(8);
+            setCurrentActivity({
+              type: 'real',
+              message: `User ${activity.user_name} has successfully cashed out B ${formattedAmount}!`
+            });
+          }
+        } else {
+          // No real activity, show fake
+          setCurrentActivity(generateFakeActivity());
+        }
+      } else {
+        // API error, show fake activity
+        setCurrentActivity(generateFakeActivity());
+      }
+    } catch (error) {
+      // Network error, show fake activity
+      setCurrentActivity(generateFakeActivity());
+    }
+  };
+  
+  const startActivityFeedTimer = () => {
+    // Random interval between 5-30 seconds
+    const randomInterval = (5 + Math.random() * 25) * 1000;
+    
+    const timer = setTimeout(() => {
+      loadActivityFeed();
+      startActivityFeedTimer(); // Schedule next update
+    }, randomInterval);
+    
+    setActivityTimer(timer);
+  };
 
   const signOut = async () => {
     showCustomAlert(
