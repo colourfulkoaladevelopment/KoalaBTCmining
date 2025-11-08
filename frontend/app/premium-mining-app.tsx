@@ -14,6 +14,7 @@ import {
   Share,
   Clipboard,
   Image,
+  Linking,
   RefreshControl,
   Modal,
   Linking,
