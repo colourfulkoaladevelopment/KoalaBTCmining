@@ -4263,6 +4263,79 @@ async def configure_payments(config_data: Dict[str, Any], current_user: Dict = D
         logger.error(f"Error configuring payments: {e}")
         raise HTTPException(status_code=500, detail="Failed to configure payments")
 
+@app.get("/api/activity/recent")
+async def get_recent_activities():
+    """Get recent activities (purchases and cashouts) for activity feed"""
+    try:
+        # Get recent purchases from last 30 seconds
+        recent_time = datetime.utcnow() - timedelta(seconds=30)
+        
+        recent_purchases = list(purchases_collection.find(
+            {"created_at": {"$gte": recent_time}},
+            {"user_id": 1, "miner_name": 1, "hash_rate": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(5))
+        
+        recent_withdrawals = list(db.withdrawals.find(
+            {"created_at": {"$gte": recent_time}},
+            {"user_id": 1, "amount_btc": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(5))
+        
+        # Format activities
+        activities = []
+        
+        for purchase in recent_purchases:
+            # Get user name
+            user = users_collection.find_one({"_id": purchase["user_id"]})
+            if user:
+                name = user.get("name", "Anonymous User")
+                # Obfuscate name: keep first letter of each word, rest as asterisks
+                name_parts = name.split()
+                obfuscated_name = " ".join([part[0] + "*" * (len(part) - 1) if len(part) > 1 else part for part in name_parts])
+                
+                # Format hash rate
+                hash_rate = purchase.get("hash_rate", 0)
+                if hash_rate >= 1000:
+                    hash_str = f"{int(hash_rate / 1000)}TH/s"
+                else:
+                    hash_str = f"{int(hash_rate)}GH/s"
+                
+                activities.append({
+                    "type": "purchase",
+                    "user_name": obfuscated_name,
+                    "miner_name": purchase.get("miner_name", "Unknown Miner"),
+                    "hash_rate": hash_str,
+                    "timestamp": purchase.get("created_at")
+                })
+        
+        for withdrawal in recent_withdrawals:
+            # Get user name
+            user = users_collection.find_one({"_id": withdrawal["user_id"]})
+            if user:
+                name = user.get("name", "Anonymous User")
+                # Obfuscate name
+                name_parts = name.split()
+                obfuscated_name = " ".join([part[0] + "*" * (len(part) - 1) if len(part) > 1 else part for part in name_parts])
+                
+                activities.append({
+                    "type": "cashout",
+                    "user_name": obfuscated_name,
+                    "amount": withdrawal.get("amount_btc", 0),
+                    "timestamp": withdrawal.get("created_at")
+                })
+        
+        # Sort all activities by timestamp
+        activities.sort(key=lambda x: x.get("timestamp", datetime.min), reverse=True)
+        
+        return {
+            "activities": activities[:5],  # Return top 5 most recent
+            "count": len(activities)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent activities: {e}")
+        # Return empty activities on error - don't crash the feed
+        return {"activities": [], "count": 0}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
