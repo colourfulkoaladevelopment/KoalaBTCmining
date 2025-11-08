@@ -4754,4 +4754,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  activityTicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2d5a2d',
+  },
+  activityText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
 });
