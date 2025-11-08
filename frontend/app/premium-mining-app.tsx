@@ -3964,6 +3964,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFD700',
   },
+  referralDescription: {
+    fontSize: 14,
+    color: '#CCC',
+    lineHeight: 20,
+    marginTop: 12,
+  },
   referralCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
