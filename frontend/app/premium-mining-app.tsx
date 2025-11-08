@@ -2754,24 +2754,23 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             )}
 
             {/* Referral Rewards Miners - Collapsible */}
-            {(user?.referralMiners && user.referralMiners.length > 0) && (
-              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
-                <TouchableOpacity 
-                  style={styles.cardHeader} 
-                  onPress={() => setShowReferralMiners(!showReferralMiners)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="people" size={24} color="#9C27B0" />
-                  <Text style={styles.cardTitle}>Referral Rewards ({user.referralMiners.length})</Text>
-                  <Ionicons 
-                    name={showReferralMiners ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color="#9C27B0" 
-                    style={{ marginLeft: 'auto' }}
-                  />
-                </TouchableOpacity>
-                
-                {showReferralMiners && (
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.minersCard}>
+              <TouchableOpacity 
+                style={styles.cardHeader} 
+                onPress={() => setShowReferralMiners(!showReferralMiners)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="people" size={24} color="#9C27B0" />
+                <Text style={styles.cardTitle}>Referral Rewards ({user?.referralMiners?.length || 0})</Text>
+                <Ionicons 
+                  name={showReferralMiners ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color="#9C27B0" 
+                  style={{ marginLeft: 'auto' }}
+                />
+              </TouchableOpacity>
+              
+              {showReferralMiners && (
                   <>
                     {(user.referralMiners && user.referralMiners.length > 0) ? (
                       user.referralMiners?.map((miner) => (
