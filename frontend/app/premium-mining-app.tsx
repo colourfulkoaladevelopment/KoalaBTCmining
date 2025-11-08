@@ -2711,6 +2711,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               />
             }
           >
+            {/* Referral Rewards Description */}
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.referralCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="information-circle" size={24} color="#4CAF50" />
+                <Text style={styles.cardTitle}>Referral Rewards</Text>
+              </View>
+              <Text style={styles.referralDescription}>
+                Invite friends and earn rewards! When someone signs up with your referral code, you both receive bonus mining power. Plus, you'll earn commission from their mining activity!
+              </Text>
+            </LinearGradient>
+
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.referralCard}>
               <View style={styles.cardHeader}>
                 <Ionicons name="gift" size={24} color="#FFD700" />
@@ -2729,6 +2740,17 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 </TouchableOpacity>
               </LinearGradient>
             </LinearGradient>
+
+            {/* Share Button - Moved here */}
+            <TouchableOpacity style={styles.shareButton} onPress={() => {
+              const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\nDownload: https://koalamining.app`;
+              Share.share({ message });
+            }}>
+              <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                <Ionicons name="share" size={20} color="#000" />
+                <Text style={styles.shareButtonText}>Share Referral Code</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
             {referralStats && (
               <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statsCard}>
