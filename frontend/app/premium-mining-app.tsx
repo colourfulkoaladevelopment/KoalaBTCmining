@@ -1538,9 +1538,10 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
       setCurrentAdType(null);
     } catch (error) {
       console.error('Error handling ad watch:', error);
-      showCustomAlert('Error', 'Failed to process ad. Please try again.');
       setShowAdModal(false);
       setCurrentAdType(null);
+      // Show error alert
+      showCustomAlert('Ad Unavailable', 'Could not load advertisement. Please try again later.');
     }
   };
 
