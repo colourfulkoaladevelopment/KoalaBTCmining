@@ -2370,9 +2370,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     ]}
                     onPress={() => {
                       hideCustomAlert();
-                      if (button.onPress) {
-                        setTimeout(() => button.onPress(), 100);
-                      }
+                      if (button.onPress) button.onPress();
                     }}
                   >
                     {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
@@ -2429,9 +2427,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     ]}
                     onPress={() => {
                       hideCustomAlert();
-                      if (button.onPress) {
-                        setTimeout(() => button.onPress(), 100);
-                      }
+                      if (button.onPress) button.onPress();
                     }}
                   >
                     {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
@@ -3408,9 +3404,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                     ]}
                     onPress={() => {
                       hideCustomAlert();
-                      if (button.onPress) {
-                        setTimeout(() => button.onPress(), 100);
-                      }
+                      if (button.onPress) button.onPress();
                     }}
                   >
                     {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
