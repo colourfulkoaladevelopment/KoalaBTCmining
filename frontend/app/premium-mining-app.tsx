@@ -583,6 +583,7 @@ export default function PremiumBitcoinMiningApp() {
     can_watch_ad: true
   });
   const [canActivateFreeMiner, setCanActivateFreeMiner] = useState(true);
+  const [freeMinerResetTime, setFreeMinerResetTime] = useState('');
   const [showAdModal, setShowAdModal] = useState(false);
   const [currentAdType, setCurrentAdType] = useState(null);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
