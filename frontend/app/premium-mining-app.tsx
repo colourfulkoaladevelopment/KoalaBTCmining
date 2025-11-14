@@ -778,6 +778,21 @@ export default function PremiumBitcoinMiningApp() {
     };
   }, [currentScreen]);
   */
+  
+  // Update free miner reset timer every minute
+  useEffect(() => {
+    const updateTimer = () => {
+      setFreeMinerResetTime(getTimeUntilReset());
+    };
+    
+    // Update immediately
+    updateTimer();
+    
+    // Update every minute
+    const timerInterval = setInterval(updateTimer, 60000);
+    
+    return () => clearInterval(timerInterval);
+  }, []);
 
   const checkAuthStatus = async () => {
     try {
