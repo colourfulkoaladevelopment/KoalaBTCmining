@@ -1533,9 +1533,14 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
   };
 
   // Show forced non-rewarded ad
-  const showForcedAd = (adType) => {
+  const showForcedAd = async (adType) => {
     setCurrentAdType(adType);
     setShowAdModal(true);
+    
+    // Auto-play the ad immediately for forced ads (app_launch, withdrawal)
+    setTimeout(async () => {
+      await handleAdWatch();
+    }, 500); // Small delay to let modal render
   };
 
   // Trigger forced non-rewarded ad on app launch (once per session)
