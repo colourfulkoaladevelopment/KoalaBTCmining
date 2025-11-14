@@ -2691,7 +2691,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                         Activate Daily Free Miner
                       </Text>
                       <Text style={[styles.actionButtonSubtitle, !canActivateFreeMiner && { color: '#666' }]}>
-                        {canActivateFreeMiner ? '1 GH/s for 24 hours' : 'Available in ' + getTimeUntilReset()}
+                        {canActivateFreeMiner ? '1 GH/s for 24 hours' : 'Available in ' + freeMinerResetTime}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={canActivateFreeMiner ? "#4CAF50" : "#666"} />
