@@ -761,6 +761,8 @@ export default function PremiumBitcoinMiningApp() {
   }, [currentScreen]);
   
   // Activity feed - separate useEffect to avoid re-initialization
+  // TEMPORARILY DISABLED TO DIAGNOSE CRASH
+  /*
   useEffect(() => {
     if (currentScreen === 'app' && user) {
       loadActivityFeed(); // Load initial activity
@@ -774,6 +776,7 @@ export default function PremiumBitcoinMiningApp() {
       }
     };
   }, [currentScreen]);
+  */
 
   const checkAuthStatus = async () => {
     try {
