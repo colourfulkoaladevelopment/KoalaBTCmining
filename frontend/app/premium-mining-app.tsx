@@ -1474,7 +1474,6 @@ Your miner is now active and earning Bitcoin!`,
       setShowAdModal(false);
       
       if (!adWatched) {
-        showCustomAlert('Ad Canceled', 'You must watch the ad to continue.');
         setCurrentAdType(null);
         return;
       }
