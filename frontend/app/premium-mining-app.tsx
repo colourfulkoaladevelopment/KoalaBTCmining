@@ -1432,21 +1432,25 @@ Your miner is now active and earning Bitcoin!`,
         }
         
         setIsWatchingAd(false);
-        return adResult;
+        
+        if (!adResult) {
+          // Ad failed to load or was cancelled
+          throw new Error('Ad failed to load or display');
+        }
+        
+        return true;
       } else {
-        // Web/Expo Go - silent fallback
-        console.log('Web/Expo Go detected, using silent fallback');
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Web/Expo Go - simulate 3 second ad
+        console.log('Web/Expo Go detected, simulating ad playback');
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         setIsWatchingAd(false);
         return true;
       }
     } catch (error) {
       console.error('Error showing AdMob ad:', error);
       setIsWatchingAd(false);
-      // Show user-friendly error message
-      const errorMessage = error.message || 'Unable to load advertisement';
-      showCustomAlert('Ad Unavailable', `${errorMessage}. Please try again later.`);
-      return false;
+      // Throw error to be handled by caller
+      throw error;
     }
   };
 
