@@ -1423,47 +1423,32 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    // Use real Google AdMob ads on device, fallback to simulation
+    // Use real Google AdMob ads on device
     const isRealDevice = Platform.OS === 'ios' || Platform.OS === 'android';
     
     setIsWatchingAd(true);
     
     try {
       if (isRealDevice) {
-        try {
-          // Try to load AdMob utility dynamically
-          const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/adMobAds');
-          
-          let adResult = false;
-          
-          if (adType === 'miner_activation') {
-            // Rewarded video ad for miner activation
-            console.log('Attempting to show rewarded video ad...');
-            const result = await showRewardedVideoAd();
-            console.log('Rewarded video ad result:', result);
-            adResult = result.watched && result.rewarded;
-          } else {
-            // Interstitial ad for app_launch and withdrawal
-            console.log('Attempting to show interstitial ad for:', adType);
-            adResult = await showInterstitialAd(adType);
-          }
-          
-          setIsWatchingAd(false);
-          
-          if (!adResult) {
-            // Ad failed, use simulation fallback
-            console.log('AdMob ad failed, using simulation fallback');
-            throw new Error('AdMob unavailable, using simulation');
-          }
-          
-          return true;
-        } catch (adError) {
-          // AdMob failed, use simulation fallback
-          console.log('AdMob error, using simulation fallback:', adError);
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          setIsWatchingAd(false);
-          return true;
+        // Load AdMob utility dynamically
+        const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/adMobAds');
+        
+        let adResult = false;
+        
+        if (adType === 'miner_activation') {
+          // Rewarded video ad for miner activation
+          console.log('Attempting to show rewarded video ad...');
+          const result = await showRewardedVideoAd();
+          console.log('Rewarded video ad result:', result);
+          adResult = result.watched && result.rewarded;
+        } else {
+          // Interstitial ad for app_launch and withdrawal
+          console.log('Attempting to show interstitial ad for:', adType);
+          adResult = await showInterstitialAd(adType);
         }
+        
+        setIsWatchingAd(false);
+        return adResult;
       } else {
         // Web/Expo Go - simulate 3 second ad
         console.log('Web/Expo Go detected, simulating ad playback');
@@ -1472,11 +1457,9 @@ Your miner is now active and earning Bitcoin!`,
         return true;
       }
     } catch (error) {
-      console.error('Error showing ad:', error);
+      console.error('Error showing AdMob ad:', error);
       setIsWatchingAd(false);
-      // Fallback to simulation
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      return true;
+      return false;
     }
   };
 
