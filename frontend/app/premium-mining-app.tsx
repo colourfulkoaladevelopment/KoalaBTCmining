@@ -271,229 +271,241 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
     user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
-      <ScrollView
-        style={[styles.scrollView, { flex: 1 }]}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFD700" />}
-      >
-        {/* Header */}
-        <View style={styles.adminHeader}>
-          <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
-          <View style={{ flexDirection: 'row', gap: 15 }}>
-            <TouchableOpacity onPress={() => {
-              console.log('Debug button pressed');
-              setShowDebugModal(true);
-            }}>
-              <Ionicons name="bug" size={24} color="#FFD700" />
+  try {
+    return (
+      <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
+        <ScrollView
+          style={[styles.scrollView, { flex: 1 }]}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFD700" />}
+        >
+          {/* Header */}
+          <View style={styles.adminHeader}>
+            <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
+            <View style={{ flexDirection: 'row', gap: 15 }}>
+              <TouchableOpacity onPress={() => {
+                console.log('Debug button pressed');
+                setShowDebugModal(true);
+              }}>
+                <Ionicons name="bug" size={24} color="#FFD700" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('Sign out button pressed');
+                  handleSignOut();
+                }}
+                style={{ padding: 5 }}
+              >
+                <Ionicons name="log-out" size={24} color="#FF6B6B" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Debug Modal */}
+          <Modal visible={showDebugModal} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <LinearGradient colors={['#000000', '#1a1a1a']} style={[styles.modalContent, { maxHeight: '80%' }]}>
+                <Text style={styles.modalTitle}>🐛 Debug Information</Text>
+                <ScrollView style={{ maxHeight: 400 }}>
+                  <Text style={[styles.modalSubtitle, { textAlign: 'left', fontFamily: 'monospace', fontSize: 12 }]}>
+                    {debugInfo || 'No debug info yet. Pull to refresh admin panel.'}
+                  </Text>
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowDebugModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Close</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
+          </Modal>
+
+          {/* Time Range Toggle */}
+          <View style={styles.timeRangeToggle}>
+            <TouchableOpacity 
+              style={[styles.toggleButton, timeRange === '30_days' && styles.toggleButtonActive]}
+              onPress={() => setTimeRange('30_days')}
+            >
+              <Text style={[styles.toggleButtonText, timeRange === '30_days' && styles.toggleButtonTextActive]}>
+                Last 30 Days
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => {
-                console.log('Sign out button pressed');
-                handleSignOut();
-              }}
-              style={{ padding: 5 }}
+              style={[styles.toggleButton, timeRange === 'all_time' && styles.toggleButtonActive]}
+              onPress={() => setTimeRange('all_time')}
             >
-              <Ionicons name="log-out" size={24} color="#FF6B6B" />
+              <Text style={[styles.toggleButtonText, timeRange === 'all_time' && styles.toggleButtonTextActive]}>
+                All Time
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Debug Modal */}
-        <Modal visible={showDebugModal} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <LinearGradient colors={['#000000', '#1a1a1a']} style={[styles.modalContent, { maxHeight: '80%' }]}>
-              <Text style={styles.modalTitle}>🐛 Debug Information</Text>
-              <ScrollView style={{ maxHeight: 400 }}>
-                <Text style={[styles.modalSubtitle, { textAlign: 'left', fontFamily: 'monospace', fontSize: 12 }]}>
-                  {debugInfo || 'No debug info yet. Pull to refresh admin panel.'}
-                </Text>
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setShowDebugModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Close</Text>
-              </TouchableOpacity>
+          {/* Statistics Cards */}
+          <View style={styles.statsContainer}>
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+              <Ionicons name="people" size={32} color="#FFD700" />
+              <Text style={styles.statValue}>{stats?.total_users || 0}</Text>
+              <Text style={styles.statLabel}>Total Users</Text>
+            </LinearGradient>
+
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+              <Ionicons name="flash" size={32} color="#FFD700" />
+              <Text style={styles.statValue}>{stats?.active_miners || 0}</Text>
+              <Text style={styles.statLabel}>Active Miners</Text>
+            </LinearGradient>
+
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+              <Ionicons name="cash" size={32} color="#4CAF50" />
+              <Text style={styles.statValue}>${(stats?.total_miner_revenue || 0).toFixed(2)}</Text>
+              <Text style={styles.statLabel}>Miner Revenue</Text>
+              <Text style={styles.statSubLabel}>({timeRange === '30_days' ? 'Last 30 Days' : 'All Time'})</Text>
+            </LinearGradient>
+
+            <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
+              <Ionicons name="warning" size={32} color="#FF6B6B" />
+              <Text style={styles.statValue}>₿ {(stats?.total_btc_owed || 0).toFixed(8)}</Text>
+              <Text style={styles.statLabel}>Total BTC Owed</Text>
+              <Text style={styles.statSubLabel}>(Future Earnings)</Text>
             </LinearGradient>
           </View>
-        </Modal>
 
-        {/* Time Range Toggle */}
-        <View style={styles.timeRangeToggle}>
-          <TouchableOpacity 
-            style={[styles.toggleButton, timeRange === '30_days' && styles.toggleButtonActive]}
-            onPress={() => setTimeRange('30_days')}
-          >
-            <Text style={[styles.toggleButtonText, timeRange === '30_days' && styles.toggleButtonTextActive]}>
-              Last 30 Days
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.toggleButton, timeRange === 'all_time' && styles.toggleButtonActive]}
-            onPress={() => setTimeRange('all_time')}
-          >
-            <Text style={[styles.toggleButtonText, timeRange === 'all_time' && styles.toggleButtonTextActive]}>
-              All Time
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Statistics Cards */}
-        <View style={styles.statsContainer}>
-          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
-            <Ionicons name="people" size={32} color="#FFD700" />
-            <Text style={styles.statValue}>{stats?.total_users || 0}</Text>
-            <Text style={styles.statLabel}>Total Users</Text>
+          {/* Factory Reset */}
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+            <Text style={styles.sectionTitle}>🚨 Danger Zone</Text>
+            <TouchableOpacity onPress={handleFactoryReset}>
+              <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.factoryResetButton}>
+                <Ionicons name="nuclear" size={20} color="#FFF" />
+                <Text style={styles.factoryResetButtonText}>Factory Reset All Accounts</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </LinearGradient>
 
-          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
-            <Ionicons name="flash" size={32} color="#FFD700" />
-            <Text style={styles.statValue}>{stats?.active_miners || 0}</Text>
-            <Text style={styles.statLabel}>Active Miners</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
-            <Ionicons name="cash" size={32} color="#4CAF50" />
-            <Text style={styles.statValue}>${(stats?.total_miner_revenue || 0).toFixed(2)}</Text>
-            <Text style={styles.statLabel}>Miner Revenue</Text>
-            <Text style={styles.statSubLabel}>({timeRange === '30_days' ? 'Last 30 Days' : 'All Time'})</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.statCard}>
-            <Ionicons name="warning" size={32} color="#FF6B6B" />
-            <Text style={styles.statValue}>₿ {(stats?.total_btc_owed || 0).toFixed(8)}</Text>
-            <Text style={styles.statLabel}>Total BTC Owed</Text>
-            <Text style={styles.statSubLabel}>(Future Earnings)</Text>
-          </LinearGradient>
-        </View>
-
-        {/* Factory Reset */}
-        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <Text style={styles.sectionTitle}>🚨 Danger Zone</Text>
-          <TouchableOpacity onPress={handleFactoryReset}>
-            <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.factoryResetButton}>
-              <Ionicons name="nuclear" size={20} color="#FFF" />
-              <Text style={styles.factoryResetButtonText}>Factory Reset All Accounts</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-
-        {/* User Management */}
-        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <TouchableOpacity 
-            onPress={() => setShowUserManagement(!showUserManagement)}
-            style={styles.collapsibleHeader}
-          >
-            <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
-            <Ionicons 
-              name={showUserManagement ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#FFD700" 
-            />
-          </TouchableOpacity>
-          
-          {showUserManagement && (
-            <>
-              {/* Search */}
-              <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color="#666" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search users..."
-                  placeholderTextColor="#666"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
-
-              {filteredUsers.map((usr) => (
-                <View key={usr.id} style={styles.userItem}>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
-                    <Text style={styles.userEmail}>{usr.email}</Text>
-                    <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
-                    <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
-                  </View>
-                  <View style={styles.userActions}>
-                    <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
-                      <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.actionButton}>
-                        <Ionicons name="refresh" size={16} color="#FFF" />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteUser(usr.id, usr.email)}>
-                      <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.actionButton}>
-                        <Ionicons name="trash" size={16} color="#FFF" />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleGiveBtc(usr.id, usr.email)}>
-                      <LinearGradient colors={['#4CAF50', '#45A049']} style={styles.actionButton}>
-                        <Ionicons name="add-circle" size={16} color="#FFF" />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
+          {/* User Management */}
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+            <TouchableOpacity 
+              onPress={() => setShowUserManagement(!showUserManagement)}
+              style={styles.collapsibleHeader}
+            >
+              <Text style={styles.sectionTitle}>👥 User Management ({users.length})</Text>
+              <Ionicons 
+                name={showUserManagement ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#FFD700" 
+              />
+            </TouchableOpacity>
+            
+            {showUserManagement && (
+              <>
+                {/* Search */}
+                <View style={styles.searchContainer}>
+                  <Ionicons name="search" size={20} color="#666" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search users..."
+                    placeholderTextColor="#666"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
                 </View>
-              ))}
-            </>
-          )}
-        </LinearGradient>
 
-        {/* Pending Wallets */}
-        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <TouchableOpacity 
-            onPress={() => setShowPendingWallets(!showPendingWallets)}
-            style={styles.collapsibleHeader}
-          >
-            <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
-            <Ionicons 
-              name={showPendingWallets ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#FFD700" 
-            />
-          </TouchableOpacity>
-          
-          {showPendingWallets && (
-            <>
-              {pendingWallets.length === 0 ? (
-                <Text style={styles.noDataText}>No pending wallet approvals</Text>
-              ) : (
-                pendingWallets.map((wallet) => (
-                  <View key={wallet.user_id} style={styles.userItem}>
+                {filteredUsers.map((usr) => (
+                  <View key={usr.id} style={styles.userItem}>
                     <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
-                      <Text style={styles.userEmail}>{wallet.email}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                        <TouchableOpacity 
-                          onPress={async () => {
-                            await Clipboard.setString(wallet.btc_wallet_address);
-                            showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
-                          }}
-                          style={[styles.copyButton, { marginRight: 6 }]}
-                        >
-                          <Ionicons name="copy" size={16} color="#FFD700" />
-                        </TouchableOpacity>
-                        <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
-                          {wallet.btc_wallet_address}
-                        </Text>
-                      </View>
-                      <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
+                      <Text style={styles.userName}>{usr.name || 'Unknown'}</Text>
+                      <Text style={styles.userEmail}>{usr.email}</Text>
+                      <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
+                      <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
-                      <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
-                        <Ionicons name="checkmark-circle" size={16} color="#FFF" />
-                        <Text style={styles.resetButtonText}>Approve</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                    <View style={styles.userActions}>
+                      <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
+                        <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.actionButton}>
+                          <Ionicons name="refresh" size={16} color="#FFF" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteUser(usr.id, usr.email)}>
+                        <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.actionButton}>
+                          <Ionicons name="trash" size={16} color="#FFF" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleGiveBtc(usr.id, usr.email)}>
+                        <LinearGradient colors={['#4CAF50', '#45A049']} style={styles.actionButton}>
+                          <Ionicons name="add-circle" size={16} color="#FFF" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                ))
-              )}
-            </>
-          )}
-        </LinearGradient>
-      </ScrollView>
-    </LinearGradient>
-  );
+                ))}
+              </>
+            )}
+          </LinearGradient>
+
+          {/* Pending Wallets */}
+          <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+            <TouchableOpacity 
+              onPress={() => setShowPendingWallets(!showPendingWallets)}
+              style={styles.collapsibleHeader}
+            >
+              <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+              <Ionicons 
+                name={showPendingWallets ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#FFD700" 
+              />
+            </TouchableOpacity>
+            
+            {showPendingWallets && (
+              <>
+                {pendingWallets.length === 0 ? (
+                  <Text style={styles.noDataText}>No pending wallet approvals</Text>
+                ) : (
+                  pendingWallets.map((wallet) => (
+                    <View key={wallet.user_id} style={styles.userItem}>
+                      <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
+                        <Text style={styles.userEmail}>{wallet.email}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <TouchableOpacity 
+                            onPress={async () => {
+                              await Clipboard.setString(wallet.btc_wallet_address);
+                              showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
+                            }}
+                            style={[styles.copyButton, { marginRight: 6 }]}
+                          >
+                            <Ionicons name="copy" size={16} color="#FFD700" />
+                          </TouchableOpacity>
+                          <Text style={[styles.userBalance, { fontSize: 11, flex: 1 }]} numberOfLines={1}>
+                            {wallet.btc_wallet_address}
+                          </Text>
+                        </View>
+                        <Text style={styles.userMiners}>Balance: ₿ {(wallet.balance || 0).toFixed(8)}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => approveWallet(wallet.user_id, wallet.email)}>
+                        <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.resetButton}>
+                          <Ionicons name="checkmark-circle" size={16} color="#FFF" />
+                          <Text style={styles.resetButtonText}>Approve</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </>
+            )}
+          </LinearGradient>
+        </ScrollView>
+      </LinearGradient>
+    );
+  } catch (error) {
+    console.error('Admin panel error:', error);
+    // Fallback to normal user view if admin panel crashes
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: '#FFD700', textAlign: 'center', marginTop: 100 }}>
+          Admin panel error. Logging out...
+        </Text>
+      </View>
+    );
+  }
 }
 
 export default function PremiumBitcoinMiningApp() {
