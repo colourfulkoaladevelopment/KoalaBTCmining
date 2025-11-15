@@ -2401,14 +2401,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                       index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1
                         ? styles.confirmButton
                         : styles.cancelButton,
-                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 }
+                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 },
+                      button.style === 'destructive' && { backgroundColor: '#FF5722' }
                     ]}
                     onPress={() => {
                       hideCustomAlert();
                       if (button.onPress) button.onPress();
                     }}
                   >
-                    {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
+                    {button.style === 'destructive' ? (
+                      <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
+                        <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
+                      </LinearGradient>
+                    ) : index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
                       <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                         <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
                       </LinearGradient>
@@ -2458,14 +2463,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                       index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1
                         ? styles.confirmButton
                         : styles.cancelButton,
-                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 }
+                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 },
+                      button.style === 'destructive' && { backgroundColor: '#FF5722' }
                     ]}
                     onPress={() => {
                       hideCustomAlert();
                       if (button.onPress) button.onPress();
                     }}
                   >
-                    {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
+                    {button.style === 'destructive' ? (
+                      <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
+                        <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
+                      </LinearGradient>
+                    ) : index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
                       <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                         <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
                       </LinearGradient>
@@ -3435,14 +3445,19 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                       index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1
                         ? styles.confirmButton
                         : styles.cancelButton,
-                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 }
+                      customAlert.buttons.length === 1 && { marginRight: 0, marginLeft: 0 },
+                      button.style === 'destructive' && { backgroundColor: '#FF5722' }
                     ]}
                     onPress={() => {
                       hideCustomAlert();
                       if (button.onPress) button.onPress();
                     }}
                   >
-                    {index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
+                    {button.style === 'destructive' ? (
+                      <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
+                        <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
+                      </LinearGradient>
+                    ) : index === customAlert.buttons.length - 1 && customAlert.buttons.length > 1 ? (
                       <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                         <Text style={styles.confirmButtonText}>{button.text || 'OK'}</Text>
                       </LinearGradient>
