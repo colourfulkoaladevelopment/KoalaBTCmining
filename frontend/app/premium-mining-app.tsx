@@ -2525,18 +2525,42 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
     );
     } catch (error) {
       console.error('Admin panel render error:', error);
-      // If admin panel fails, show error and logout
+      // If admin panel fails, show error and logout with error details
       return (
         <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'center', alignItems: 'center', padding: 20, paddingTop: 100 }}>
             <Ionicons name="warning" size={64} color="#FF6B6B" />
             <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 20, textAlign: 'center' }}>
               Admin Panel Error
             </Text>
             <Text style={{ color: '#999', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
-              Error loading admin panel. Signing out...
+              Error loading admin panel
             </Text>
-          </View>
+            
+            {/* Debug Info */}
+            <View style={{ backgroundColor: '#2a2a2a', padding: 15, borderRadius: 8, marginTop: 20, width: '100%', borderWidth: 1, borderColor: '#FF6B6B' }}>
+              <Text style={{ color: '#FFD700', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>
+                Error Details:
+              </Text>
+              <Text style={{ color: '#FFF', fontSize: 11, fontFamily: 'monospace' }}>
+                {error?.message || error?.toString() || 'Unknown error'}
+              </Text>
+              <Text style={{ color: '#999', fontSize: 10, marginTop: 8 }}>
+                Stack: {error?.stack?.substring(0, 200) || 'No stack trace'}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={{ marginTop: 30, backgroundColor: '#FF5722', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }}
+              onPress={async () => {
+                await AsyncStorage.clear();
+                setCurrentScreen('auth');
+                setIsAdmin(false);
+              }}
+            >
+              <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>Sign Out & Clear Data</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </LinearGradient>
       );
     }
