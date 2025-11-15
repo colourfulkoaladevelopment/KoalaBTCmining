@@ -41,8 +41,11 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
   const [showPendingWallets, setShowPendingWallets] = useState(true);
 
   useEffect(() => {
-    loadAdminData();
-  }, [timeRange]); // Reload when time range changes
+    // Only load admin data if user object is fully initialized
+    if (user && user.email) {
+      loadAdminData();
+    }
+  }, [timeRange, user]); // Reload when time range changes or user updates
 
   const loadAdminData = async () => {
     let debugLog = '=== ADMIN DATA LOADING DEBUG ===\n';
