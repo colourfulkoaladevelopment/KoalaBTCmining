@@ -522,8 +522,9 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
         </LinearGradient>
       );
     }
+  }
 
-export default function PremiumBitcoinMiningApp() {
+  export default function PremiumBitcoinMiningApp() {
   const [currentScreen, setCurrentScreen] = useState('loading');
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
