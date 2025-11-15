@@ -1144,12 +1144,13 @@ export default function PremiumBitcoinMiningApp() {
         await AsyncStorage.setItem('user_data', JSON.stringify(result.user));
         setUser(result.user);
         
-        // Check if user is admin
+        await loadAppData();
+        
+        // Check if user is admin - AFTER loadAppData to avoid race condition
         if (result.user.email === 'colourfulkoaladevelopment@gmail.com') {
           setIsAdmin(true);
         }
         
-        await loadAppData();
         setCurrentScreen('app');
         setActiveTab('dashboard');
         showCustomAlert('Success! 🎉', isLogin ? 'Welcome back to Koala Mining!' : 'Account created successfully!');
