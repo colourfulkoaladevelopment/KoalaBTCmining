@@ -446,7 +446,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
               onPress={() => setShowPendingWallets(!showPendingWallets)}
               style={styles.collapsibleHeader}
             >
-              <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+              <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({(pendingWallets || []).length})</Text>
               <Ionicons 
                 name={showPendingWallets ? "chevron-up" : "chevron-down"} 
                 size={24} 
@@ -456,10 +456,10 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
             
             {showPendingWallets && (
               <>
-                {pendingWallets.length === 0 ? (
+                {(pendingWallets || []).length === 0 ? (
                   <Text style={styles.noDataText}>No pending wallet approvals</Text>
                 ) : (
-                  pendingWallets.map((wallet) => (
+                  (pendingWallets || []).map((wallet) => (
                     <View key={wallet.user_id} style={styles.userItem}>
                       <View style={styles.userInfo}>
                         <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
