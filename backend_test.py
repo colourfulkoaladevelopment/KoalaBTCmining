@@ -6,11 +6,9 @@ Tests API endpoints with admin user colourfulkoaladevelopment@gmail.com
 
 import requests
 import json
-import time
-from datetime import datetime
-from typing import Dict, Any, List
 from pymongo import MongoClient
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -24,660 +22,316 @@ DB_NAME = os.getenv("DB_NAME", "bitcoin_mining_db")
 # Admin user credentials
 ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
 
-# ANSI color codes for better output
-GREEN = "\033[92m"
-RED = "\033[91m"
-YELLOW = "\033[93m"
-BLUE = "\033[94m"
-RESET = "\033[0m"
-BOLD = "\033[1m"
+# Test results
+test_results = {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": []
+}
 
-class TestResults:
-    def __init__(self):
-        self.passed = 0
-        self.failed = 0
-        self.tests = []
-    
-    def add_pass(self, test_name: str, message: str = ""):
-        self.passed += 1
-        self.tests.append({"name": test_name, "status": "PASS", "message": message})
-        print(f"{GREEN}✓{RESET} {test_name}")
-        if message:
-            print(f"  {message}")
-    
-    def add_fail(self, test_name: str, message: str = ""):
-        self.failed += 1
-        self.tests.append({"name": test_name, "status": "FAIL", "message": message})
-        print(f"{RED}✗{RESET} {test_name}")
-        if message:
-            print(f"  {RED}{message}{RESET}")
-    
-    def summary(self):
-        total = self.passed + self.failed
-        print(f"\n{BOLD}{'='*80}{RESET}")
-        print(f"{BOLD}TEST SUMMARY{RESET}")
-        print(f"{'='*80}")
-        print(f"Total Tests: {total}")
-        print(f"{GREEN}Passed: {self.passed}{RESET}")
-        print(f"{RED}Failed: {self.failed}{RESET}")
-        print(f"Success Rate: {(self.passed/total*100) if total > 0 else 0:.1f}%")
-        print(f"{'='*80}\n")
-        
-        if self.failed > 0:
-            print(f"{RED}{BOLD}FAILED TESTS:{RESET}")
-            for test in self.tests:
-                if test["status"] == "FAIL":
-                    print(f"  {RED}✗{RESET} {test['name']}")
-                    if test["message"]:
-                        print(f"    {test['message']}")
-            print()
+def log_test(test_name, passed, message=""):
+    """Log test result"""
+    test_results["total_tests"] += 1
+    if passed:
+        test_results["passed"] += 1
+        print(f"✅ {test_name}: PASSED")
+    else:
+        test_results["failed"] += 1
+        test_results["errors"].append(f"{test_name}: {message}")
+        print(f"❌ {test_name}: FAILED - {message}")
+    if message and passed:
+        print(f"   ℹ️  {message}")
 
-results = TestResults()
+def print_section(title):
+    """Print section header"""
+    print("\n" + "="*80)
+    print(f"  {title}")
+    print("="*80)
 
-def create_test_user(name: str, email: str, password: str = "TestPass123!") -> Dict[str, Any]:
-    """Create a test user and return auth token"""
+def print_json(data, indent=2):
+    """Pretty print JSON data"""
+    print(json.dumps(data, indent=indent, default=str))
+
+def connect_to_mongodb():
+    """Connect to MongoDB and return database"""
     try:
-        response = requests.post(
-            f"{BACKEND_URL}/auth/register",
-            json={
-                "name": name,
-                "email": email,
-                "password": password
-            },
-            timeout=10
+        client = MongoClient(MONGO_URL)
+        db = client[DB_NAME]
+        # Test connection
+        client.server_info()
+        log_test("MongoDB Connection", True, f"Connected to {MONGO_URL}")
+        return db
+    except Exception as e:
+        log_test("MongoDB Connection", False, str(e))
+        return None
+
+def investigate_admin_user_in_db(db):
+    """Query and analyze admin user record from MongoDB"""
+    print_section("MONGODB INVESTIGATION: Admin User Record")
+    
+    try:
+        users_collection = db.users
+        admin_user = users_collection.find_one({"email": ADMIN_EMAIL})
+        
+        if not admin_user:
+            log_test("Find Admin User in DB", False, f"User {ADMIN_EMAIL} not found in database")
+            return None
+        
+        log_test("Find Admin User in DB", True, f"Found user with ID: {admin_user.get('_id')}")
+        
+        print("\n📋 ADMIN USER RECORD:")
+        print_json(admin_user)
+        
+        # Check for required fields
+        print("\n🔍 FIELD VALIDATION:")
+        required_fields = [
+            "email", "name", "referral_code", "bitcoin_balance", 
+            "total_earnings", "total_referral_rewards", "total_cashed_out", "created_at"
+        ]
+        
+        missing_fields = []
+        null_fields = []
+        
+        for field in required_fields:
+            if field not in admin_user:
+                missing_fields.append(field)
+                print(f"  ❌ Missing field: {field}")
+            elif admin_user[field] is None:
+                null_fields.append(field)
+                print(f"  ⚠️  Null field: {field}")
+            else:
+                print(f"  ✅ {field}: {admin_user[field]} (type: {type(admin_user[field]).__name__})")
+        
+        if missing_fields:
+            log_test("Required Fields Check", False, f"Missing fields: {', '.join(missing_fields)}")
+        elif null_fields:
+            log_test("Required Fields Check", False, f"Null fields: {', '.join(null_fields)}")
+        else:
+            log_test("Required Fields Check", True, "All required fields present and non-null")
+        
+        # Check miners for this user
+        print("\n🔍 MINERS INVESTIGATION:")
+        miners_collection = db.miners
+        admin_miners = list(miners_collection.find({"user_id": admin_user.get("_id")}))
+        
+        print(f"  Total miners: {len(admin_miners)}")
+        
+        if admin_miners:
+            print("\n  📋 MINERS LIST:")
+            for i, miner in enumerate(admin_miners, 1):
+                print(f"\n  Miner #{i}:")
+                print_json(miner, indent=4)
+                
+                # Check for corrupted data in miners
+                miner_issues = []
+                if "hash_rate" in miner and not isinstance(miner["hash_rate"], (int, float)):
+                    miner_issues.append(f"hash_rate has wrong type: {type(miner['hash_rate'])}")
+                if "status" in miner and miner["status"] not in ["active", "inactive", "expired"]:
+                    miner_issues.append(f"invalid status: {miner['status']}")
+                if "time_remaining" in miner and not isinstance(miner["time_remaining"], (int, float)):
+                    miner_issues.append(f"time_remaining has wrong type: {type(miner['time_remaining'])}")
+                
+                if miner_issues:
+                    print(f"    ⚠️  Issues found: {', '.join(miner_issues)}")
+        
+        if admin_miners:
+            log_test("Admin Miners Data", True, f"Found {len(admin_miners)} miners")
+        else:
+            log_test("Admin Miners Data", True, "No miners found (empty array)")
+        
+        return admin_user
+        
+    except Exception as e:
+        log_test("MongoDB Investigation", False, str(e))
+        return None
+
+def compare_with_normal_user(db):
+    """Compare admin user with a normal user"""
+    print_section("COMPARISON: Admin vs Normal User")
+    
+    try:
+        users_collection = db.users
+        
+        # Find a normal user (not admin)
+        normal_user = users_collection.find_one({
+            "email": {"$ne": ADMIN_EMAIL}
+        })
+        
+        if not normal_user:
+            log_test("Find Normal User", False, "No other users found for comparison")
+            return
+        
+        log_test("Find Normal User", True, f"Found user: {normal_user.get('email')}")
+        
+        admin_user = users_collection.find_one({"email": ADMIN_EMAIL})
+        
+        print("\n📊 FIELD COMPARISON:")
+        print(f"{'Field':<30} {'Admin':<30} {'Normal':<30}")
+        print("-" * 90)
+        
+        all_fields = set(list(admin_user.keys()) + list(normal_user.keys()))
+        
+        differences = []
+        for field in sorted(all_fields):
+            admin_val = admin_user.get(field, "MISSING")
+            normal_val = normal_user.get(field, "MISSING")
+            
+            admin_str = str(admin_val)[:28] if admin_val != "MISSING" else "MISSING"
+            normal_str = str(normal_val)[:28] if normal_val != "MISSING" else "MISSING"
+            
+            marker = "⚠️ " if admin_val == "MISSING" or type(admin_val) != type(normal_val) else "  "
+            print(f"{marker}{field:<28} {admin_str:<30} {normal_str:<30}")
+            
+            if admin_val == "MISSING":
+                differences.append(f"{field} missing in admin")
+            elif normal_val != "MISSING" and type(admin_val) != type(normal_val):
+                differences.append(f"{field} type mismatch: admin={type(admin_val).__name__}, normal={type(normal_val).__name__}")
+        
+        if differences:
+            log_test("User Structure Comparison", False, f"Differences found: {'; '.join(differences)}")
+        else:
+            log_test("User Structure Comparison", True, "Admin and normal user have same structure")
+        
+    except Exception as e:
+        log_test("User Comparison", False, str(e))
+
+def test_admin_login():
+    """Test admin user login - but we don't have password, so we'll create a test token"""
+    print_section("API TESTING: Admin User Endpoints")
+    
+    # We need to get the admin user's actual session token from database
+    try:
+        client = MongoClient(MONGO_URL)
+        db = client[DB_NAME]
+        
+        # Find admin user
+        admin_user = db.users.find_one({"email": ADMIN_EMAIL})
+        if not admin_user:
+            log_test("Get Admin User ID", False, "Admin user not found")
+            return None
+        
+        user_id = admin_user["_id"]
+        
+        # Find an active session for this user
+        session = db.user_sessions.find_one(
+            {"user_id": user_id},
+            sort=[("created_at", -1)]  # Get most recent session
         )
+        
+        if session:
+            token = session["session_token"]
+            log_test("Get Admin Session Token", True, f"Found existing session token")
+            return token
+        else:
+            log_test("Get Admin Session Token", False, "No active session found. Admin needs to login first.")
+            return None
+            
+    except Exception as e:
+        log_test("Get Admin Session Token", False, str(e))
+        return None
+
+def test_api_endpoint(endpoint, token, test_name):
+    """Test an API endpoint with admin token"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        url = f"{BACKEND_URL}{endpoint}"
+        
+        print(f"\n🔍 Testing: {endpoint}")
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        print(f"   Status Code: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
-            return {
-                "token": data.get("access_token"),
-                "user_id": data.get("user", {}).get("id"),
-                "email": email
-            }
-        else:
-            # Try login if user already exists
-            response = requests.post(
-                f"{BACKEND_URL}/auth/login",
-                json={"email": email, "password": password},
-                timeout=10
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    "token": data.get("access_token"),
-                    "user_id": data.get("user", {}).get("id"),
-                    "email": email
-                }
-    except Exception as e:
-        print(f"{RED}Error creating test user: {e}{RESET}")
-    
-    return None
-
-def make_purchase(token: str, miner_data: Dict[str, Any]) -> bool:
-    """Make a test purchase"""
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/store/purchase",
-            json=miner_data,
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10
-        )
-        return response.status_code == 200
-    except Exception as e:
-        print(f"{RED}Error making purchase: {e}{RESET}")
-        return False
-
-def test_activity_feed_basic_structure():
-    """Test 1: Verify endpoint returns activities array and count"""
-    print(f"\n{BOLD}{BLUE}Test 1: Basic Structure - Activities Array and Count{RESET}")
-    
-    try:
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code != 200:
-            results.add_fail(
-                "Activity feed endpoint returns 200 OK",
-                f"Expected 200, got {response.status_code}"
-            )
-            return
-        
-        results.add_pass("Activity feed endpoint returns 200 OK")
-        
-        data = response.json()
-        
-        # Check for required fields
-        if "activities" not in data:
-            results.add_fail(
-                "Response contains 'activities' field",
-                "Missing 'activities' field in response"
-            )
-        else:
-            results.add_pass("Response contains 'activities' field")
-        
-        if "count" not in data:
-            results.add_fail(
-                "Response contains 'count' field",
-                "Missing 'count' field in response"
-            )
-        else:
-            results.add_pass("Response contains 'count' field")
-        
-        # Verify activities is an array
-        if not isinstance(data.get("activities"), list):
-            results.add_fail(
-                "Activities field is an array",
-                f"Expected list, got {type(data.get('activities'))}"
-            )
-        else:
-            results.add_pass("Activities field is an array")
-        
-        # Verify count is a number
-        if not isinstance(data.get("count"), int):
-            results.add_fail(
-                "Count field is an integer",
-                f"Expected int, got {type(data.get('count'))}"
-            )
-        else:
-            results.add_pass("Count field is an integer")
-        
-    except Exception as e:
-        results.add_fail("Activity feed basic structure test", str(e))
-
-def test_activity_feed_empty_data():
-    """Test 2: Verify endpoint handles empty data gracefully"""
-    print(f"\n{BOLD}{BLUE}Test 2: Empty Data Handling{RESET}")
-    
-    try:
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code != 200:
-            results.add_fail(
-                "Endpoint returns 200 even with no recent data",
-                f"Expected 200, got {response.status_code}"
-            )
-            return
-        
-        results.add_pass("Endpoint returns 200 even with no recent data")
-        
-        data = response.json()
-        
-        # Should return empty array, not error
-        if "activities" in data and isinstance(data["activities"], list):
-            results.add_pass(
-                "Returns empty array when no data (not error)",
-                f"Activities: {len(data['activities'])} items"
-            )
-        else:
-            results.add_fail(
-                "Returns empty array when no data",
-                "Should return empty array, not error"
-            )
-        
-        # Count should be 0 or match array length
-        if data.get("count") == len(data.get("activities", [])):
-            results.add_pass(
-                "Count matches activities array length",
-                f"Count: {data.get('count')}"
-            )
-        else:
-            results.add_fail(
-                "Count matches activities array length",
-                f"Count: {data.get('count')}, Array length: {len(data.get('activities', []))}"
-            )
-        
-    except Exception as e:
-        results.add_fail("Empty data handling test", str(e))
-
-def test_activity_feed_public_access():
-    """Test 3: Verify endpoint is publicly accessible (no auth required)"""
-    print(f"\n{BOLD}{BLUE}Test 3: Public Access (No Authentication Required){RESET}")
-    
-    try:
-        # Test without any authentication
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code == 401 or response.status_code == 403:
-            results.add_fail(
-                "Endpoint is publicly accessible",
-                f"Endpoint requires authentication (status {response.status_code})"
-            )
-        elif response.status_code == 200:
-            results.add_pass(
-                "Endpoint is publicly accessible (no auth required)",
-                "Successfully accessed without authentication"
-            )
-        else:
-            results.add_fail(
-                "Endpoint returns valid response without auth",
-                f"Unexpected status code: {response.status_code}"
-            )
-        
-        # Test with invalid token (should still work)
-        response_invalid = requests.get(
-            f"{BACKEND_URL}/activity/recent",
-            headers={"Authorization": "Bearer invalid_token_12345"},
-            timeout=10
-        )
-        
-        if response_invalid.status_code == 200:
-            results.add_pass(
-                "Endpoint works even with invalid token",
-                "Public endpoint doesn't validate tokens"
-            )
-        else:
-            results.add_fail(
-                "Endpoint works with invalid token",
-                f"Status: {response_invalid.status_code}"
-            )
-        
-    except Exception as e:
-        results.add_fail("Public access test", str(e))
-
-def test_activity_feed_response_format():
-    """Test 4: Verify response format with type, user_name, and message/amount fields"""
-    print(f"\n{BOLD}{BLUE}Test 4: Response Format Validation{RESET}")
-    
-    try:
-        # First, create test data by making a purchase
-        print(f"{YELLOW}Creating test data...{RESET}")
-        
-        # Create test user
-        test_user = create_test_user(
-            name="Activity Test User",
-            email=f"activity_test_{int(time.time())}@test.com"
-        )
-        
-        if not test_user:
-            results.add_fail(
-                "Create test user for activity testing",
-                "Failed to create test user"
-            )
-            return
-        
-        results.add_pass("Create test user for activity testing")
-        
-        # Make a purchase to generate activity
-        purchase_success = make_purchase(
-            test_user["token"],
-            {
-                "name": "Test Miner",
-                "hash_rate": 100.0,
-                "price": 7.99,
-                "duration_days": 30,
-                "auto_activate": True
-            }
-        )
-        
-        if not purchase_success:
-            results.add_fail(
-                "Create test purchase activity",
-                "Failed to make test purchase"
-            )
-            return
-        
-        results.add_pass("Create test purchase activity")
-        
-        # Wait a moment for data to be available
-        time.sleep(1)
-        
-        # Now fetch activities
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code != 200:
-            results.add_fail(
-                "Fetch activities after creating test data",
-                f"Status: {response.status_code}"
-            )
-            return
-        
-        data = response.json()
-        activities = data.get("activities", [])
-        
-        if len(activities) == 0:
-            results.add_fail(
-                "Activities array contains test data",
-                "No activities found after creating purchase"
-            )
-            return
-        
-        results.add_pass(
-            "Activities array contains data",
-            f"Found {len(activities)} activities"
-        )
-        
-        # Check format of first activity
-        activity = activities[0]
-        
-        # Check for 'type' field
-        if "type" not in activity:
-            results.add_fail(
-                "Activity contains 'type' field",
-                "Missing 'type' field"
-            )
-        else:
-            results.add_pass(
-                "Activity contains 'type' field",
-                f"Type: {activity['type']}"
-            )
-        
-        # Check for 'user_name' field
-        if "user_name" not in activity:
-            results.add_fail(
-                "Activity contains 'user_name' field",
-                "Missing 'user_name' field"
-            )
-        else:
-            results.add_pass(
-                "Activity contains 'user_name' field",
-                f"User: {activity['user_name']}"
-            )
-        
-        # Check type-specific fields
-        activity_type = activity.get("type")
-        
-        if activity_type == "purchase":
-            # Purchase should have miner_name and hash_rate
-            if "miner_name" in activity:
-                results.add_pass(
-                    "Purchase activity contains 'miner_name'",
-                    f"Miner: {activity['miner_name']}"
-                )
-            else:
-                results.add_fail(
-                    "Purchase activity contains 'miner_name'",
-                    "Missing 'miner_name' field"
-                )
+            print(f"   Response:")
+            print_json(data, indent=6)
             
-            if "hash_rate" in activity:
-                results.add_pass(
-                    "Purchase activity contains 'hash_rate'",
-                    f"Hash rate: {activity['hash_rate']}"
-                )
-            else:
-                results.add_fail(
-                    "Purchase activity contains 'hash_rate'",
-                    "Missing 'hash_rate' field"
-                )
-        
-        elif activity_type == "cashout":
-            # Cashout should have amount
-            if "amount" in activity:
-                results.add_pass(
-                    "Cashout activity contains 'amount'",
-                    f"Amount: {activity['amount']}"
-                )
-            else:
-                results.add_fail(
-                    "Cashout activity contains 'amount'",
-                    "Missing 'amount' field"
-                )
-        
-        # Check for timestamp
-        if "timestamp" in activity:
-            results.add_pass(
-                "Activity contains 'timestamp' field",
-                f"Timestamp: {activity['timestamp']}"
-            )
-        else:
-            results.add_fail(
-                "Activity contains 'timestamp' field",
-                "Missing 'timestamp' field"
-            )
-        
-    except Exception as e:
-        results.add_fail("Response format validation test", str(e))
-
-def test_name_obfuscation():
-    """Test 5: Verify name obfuscation (first letter + asterisks format)"""
-    print(f"\n{BOLD}{BLUE}Test 5: Name Obfuscation Verification{RESET}")
-    
-    try:
-        # Create test user with known name
-        test_name = "John Smith"
-        test_user = create_test_user(
-            name=test_name,
-            email=f"obfuscation_test_{int(time.time())}@test.com"
-        )
-        
-        if not test_user:
-            results.add_fail(
-                "Create test user for obfuscation testing",
-                "Failed to create test user"
-            )
-            return
-        
-        results.add_pass(
-            "Create test user for obfuscation testing",
-            f"User: {test_name}"
-        )
-        
-        # Make a purchase
-        purchase_success = make_purchase(
-            test_user["token"],
-            {
-                "name": "Obfuscation Test Miner",
-                "hash_rate": 200.0,
-                "price": 14.99,
-                "duration_days": 30,
-                "auto_activate": True
-            }
-        )
-        
-        if not purchase_success:
-            results.add_fail(
-                "Create purchase for obfuscation test",
-                "Failed to make purchase"
-            )
-            return
-        
-        results.add_pass("Create purchase for obfuscation test")
-        
-        # Wait for data
-        time.sleep(1)
-        
-        # Fetch activities
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code != 200:
-            results.add_fail(
-                "Fetch activities for obfuscation check",
-                f"Status: {response.status_code}"
-            )
-            return
-        
-        data = response.json()
-        activities = data.get("activities", [])
-        
-        # Find our test user's activity
-        test_activity = None
-        for activity in activities:
-            if activity.get("type") == "purchase" and "Obfuscation Test Miner" in activity.get("miner_name", ""):
-                test_activity = activity
-                break
-        
-        if not test_activity:
-            results.add_fail(
-                "Find test user's activity in feed",
-                "Could not find test activity"
-            )
-            return
-        
-        results.add_pass("Find test user's activity in feed")
-        
-        obfuscated_name = test_activity.get("user_name", "")
-        
-        # Expected format: "J*** S****" for "John Smith"
-        expected_pattern = "J*** S****"
-        
-        # Check if name is obfuscated
-        if obfuscated_name == test_name:
-            results.add_fail(
-                "Name is obfuscated (not plain text)",
-                f"Name is not obfuscated: {obfuscated_name}"
-            )
-        else:
-            results.add_pass(
-                "Name is obfuscated (not plain text)",
-                f"Original: {test_name}, Obfuscated: {obfuscated_name}"
-            )
-        
-        # Check format: first letter + asterisks
-        name_parts = obfuscated_name.split()
-        
-        if len(name_parts) == 2:
-            results.add_pass(
-                "Obfuscated name preserves word count",
-                f"2 words preserved"
-            )
-        else:
-            results.add_fail(
-                "Obfuscated name preserves word count",
-                f"Expected 2 words, got {len(name_parts)}"
-            )
-        
-        # Check first word: J***
-        if name_parts[0].startswith("J") and "*" in name_parts[0]:
-            results.add_pass(
-                "First word obfuscation correct (J***)",
-                f"First word: {name_parts[0]}"
-            )
-        else:
-            results.add_fail(
-                "First word obfuscation correct",
-                f"Expected J***, got {name_parts[0]}"
-            )
-        
-        # Check second word: S****
-        if len(name_parts) > 1:
-            if name_parts[1].startswith("S") and "*" in name_parts[1]:
-                results.add_pass(
-                    "Second word obfuscation correct (S****)",
-                    f"Second word: {name_parts[1]}"
-                )
-            else:
-                results.add_fail(
-                    "Second word obfuscation correct",
-                    f"Expected S****, got {name_parts[1]}"
-                )
-        
-        # Verify asterisk count matches original length
-        if len(name_parts[0]) == len("John"):
-            results.add_pass(
-                "First word length preserved",
-                f"Length: {len(name_parts[0])}"
-            )
-        else:
-            results.add_fail(
-                "First word length preserved",
-                f"Expected {len('John')}, got {len(name_parts[0])}"
-            )
-        
-    except Exception as e:
-        results.add_fail("Name obfuscation test", str(e))
-
-def test_activity_feed_consistency():
-    """Test 6: Verify multiple calls return consistent data"""
-    print(f"\n{BOLD}{BLUE}Test 6: Response Consistency{RESET}")
-    
-    try:
-        # Make multiple requests
-        response1 = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        time.sleep(0.5)
-        response2 = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response1.status_code == 200 and response2.status_code == 200:
-            results.add_pass("Multiple requests succeed")
+            # Check for null/undefined values in response
+            null_fields = []
+            def check_nulls(obj, path=""):
+                if isinstance(obj, dict):
+                    for key, value in obj.items():
+                        current_path = f"{path}.{key}" if path else key
+                        if value is None:
+                            null_fields.append(current_path)
+                        elif isinstance(value, (dict, list)):
+                            check_nulls(value, current_path)
+                elif isinstance(obj, list):
+                    for i, item in enumerate(obj):
+                        check_nulls(item, f"{path}[{i}]")
             
-            data1 = response1.json()
-            data2 = response2.json()
+            check_nulls(data)
             
-            # Within 30 seconds window, data should be similar
-            count1 = data1.get("count", 0)
-            count2 = data2.get("count", 0)
-            
-            if abs(count1 - count2) <= 5:  # Allow some variance
-                results.add_pass(
-                    "Activity counts are consistent",
-                    f"Request 1: {count1}, Request 2: {count2}"
-                )
+            if null_fields:
+                log_test(test_name, False, f"Response contains null fields: {', '.join(null_fields)}")
             else:
-                results.add_fail(
-                    "Activity counts are consistent",
-                    f"Large variance: {count1} vs {count2}"
-                )
-        else:
-            results.add_fail(
-                "Multiple requests succeed",
-                f"Status codes: {response1.status_code}, {response2.status_code}"
-            )
-        
-    except Exception as e:
-        results.add_fail("Response consistency test", str(e))
-
-def test_activity_feed_time_window():
-    """Test 7: Verify 30-second time window"""
-    print(f"\n{BOLD}{BLUE}Test 7: 30-Second Time Window{RESET}")
-    
-    try:
-        # The endpoint should only return activities from last 30 seconds
-        response = requests.get(f"{BACKEND_URL}/activity/recent", timeout=10)
-        
-        if response.status_code != 200:
-            results.add_fail(
-                "Fetch activities for time window check",
-                f"Status: {response.status_code}"
-            )
-            return
-        
-        data = response.json()
-        activities = data.get("activities", [])
-        
-        if len(activities) > 0:
-            # Check if activities have timestamps
-            has_timestamps = all("timestamp" in activity for activity in activities)
+                log_test(test_name, True, "Response valid with no null fields")
             
-            if has_timestamps:
-                results.add_pass(
-                    "All activities have timestamps",
-                    f"Checked {len(activities)} activities"
-                )
-            else:
-                results.add_fail(
-                    "All activities have timestamps",
-                    "Some activities missing timestamps"
-                )
+            return data
         else:
-            results.add_pass(
-                "Time window check (no recent activities)",
-                "No activities in last 30 seconds (expected)"
-            )
-        
+            error_msg = response.text
+            log_test(test_name, False, f"HTTP {response.status_code}: {error_msg}")
+            return None
+            
     except Exception as e:
-        results.add_fail("Time window test", str(e))
+        log_test(test_name, False, str(e))
+        return None
 
 def main():
-    """Run all activity feed tests"""
-    print(f"\n{BOLD}{'='*80}{RESET}")
-    print(f"{BOLD}KOALA MINING APP - ACTIVITY FEED ENDPOINT TESTING{RESET}")
-    print(f"{'='*80}")
-    print(f"Backend URL: {BACKEND_URL}")
-    print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*80}\n")
+    """Main test execution"""
+    print("\n" + "="*80)
+    print("  ADMIN ACCOUNT CRASH INVESTIGATION")
+    print("  User: colourfulkoaladevelopment@gmail.com")
+    print("="*80)
     
-    # Run all tests
-    test_activity_feed_basic_structure()
-    test_activity_feed_empty_data()
-    test_activity_feed_public_access()
-    test_activity_feed_response_format()
-    test_name_obfuscation()
-    test_activity_feed_consistency()
-    test_activity_feed_time_window()
+    # Step 1: Connect to MongoDB
+    db = connect_to_mongodb()
+    if not db:
+        print("\n❌ Cannot proceed without database connection")
+        return
+    
+    # Step 2: Investigate admin user in database
+    admin_user = investigate_admin_user_in_db(db)
+    
+    # Step 3: Compare with normal user
+    compare_with_normal_user(db)
+    
+    # Step 4: Test API endpoints with admin token
+    token = test_admin_login()
+    
+    if token:
+        print_section("API ENDPOINT TESTING")
+        
+        # Test all endpoints mentioned in review request
+        test_api_endpoint("/auth/me", token, "GET /api/auth/me")
+        test_api_endpoint("/miners/list", token, "GET /api/miners/list")
+        test_api_endpoint("/wallet/balance", token, "GET /api/wallet/balance")
+        test_api_endpoint("/wallet/status", token, "GET /api/wallet/status")
+        test_api_endpoint("/referrals/stats", token, "GET /api/referrals/stats")
+    else:
+        print("\n⚠️  Cannot test API endpoints without valid session token")
+        print("   Admin user needs to login first to create a session")
     
     # Print summary
-    results.summary()
+    print_section("TEST SUMMARY")
+    print(f"Total Tests: {test_results['total_tests']}")
+    print(f"Passed: {test_results['passed']} ✅")
+    print(f"Failed: {test_results['failed']} ❌")
     
-    return results.failed == 0
+    if test_results['errors']:
+        print("\n❌ FAILED TESTS:")
+        for error in test_results['errors']:
+            print(f"  - {error}")
+    
+    print("\n" + "="*80)
+    
+    if test_results['failed'] == 0:
+        print("✅ ALL TESTS PASSED - No issues found with admin account")
+    else:
+        print("⚠️  ISSUES DETECTED - See details above")
+    
+    print("="*80 + "\n")
 
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    main()
