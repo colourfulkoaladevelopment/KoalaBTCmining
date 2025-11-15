@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Suite for Koala Mining App
-Tests the Activity Feed endpoint comprehensively
+Backend Testing Script for Admin Account Crash Investigation
+Tests API endpoints with admin user colourfulkoaladevelopment@gmail.com
 """
 
 import requests
@@ -9,9 +9,20 @@ import json
 import time
 from datetime import datetime
 from typing import Dict, Any, List
+from pymongo import MongoClient
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv('/app/backend/.env')
 
 # Configuration
 BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+DB_NAME = os.getenv("DB_NAME", "bitcoin_mining_db")
+
+# Admin user credentials
+ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
 
 # ANSI color codes for better output
 GREEN = "\033[92m"
