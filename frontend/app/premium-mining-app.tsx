@@ -495,16 +495,33 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
         </ScrollView>
       </LinearGradient>
     );
-  } catch (error) {
-    console.error('Admin panel error:', error);
-    // Fallback to normal user view if admin panel crashes
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: '#FFD700', textAlign: 'center', marginTop: 100 }}>
-          Admin panel error. Logging out...
-        </Text>
-      </View>
-    );
+    } catch (error) {
+      console.error('Admin panel render error:', error);
+      // Fallback: show error and allow logout
+      return (
+        <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <Ionicons name="warning" size={64} color="#FF6B6B" />
+            <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 20, textAlign: 'center' }}>
+              Admin Panel Error
+            </Text>
+            <Text style={{ color: '#999', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+              There was an error loading the admin panel. Please sign out and try again.
+            </Text>
+            <TouchableOpacity 
+              style={{ marginTop: 30, backgroundColor: '#FF5722', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }}
+              onPress={async () => {
+                await AsyncStorage.clear();
+                setCurrentScreen('auth');
+                setIsAdmin(false);
+              }}
+            >
+              <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      );
+    }
   }
 }
 
