@@ -902,22 +902,22 @@ export default function PremiumBitcoinMiningApp() {
       const [walletResponse, walletStatusResponse, minersResponse, storeResponse, referralResponse, userResponse] = await Promise.all([
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/balance`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
+        }).catch(err => ({ ok: false, error: err })),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/status`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
+        }).catch(err => ({ ok: false, error: err })),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/miners/list`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
+        }).catch(err => ({ ok: false, error: err })),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/store/miners`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
+        }).catch(err => ({ ok: false, error: err })),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/referrals/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }),
+        }).catch(err => ({ ok: false, error: err })),
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        })
+        }).catch(err => ({ ok: false, error: err }))
       ]);
 
       if (walletResponse.ok) {
@@ -932,7 +932,7 @@ export default function PremiumBitcoinMiningApp() {
 
       if (minersResponse.ok) {
         const minersResult = await minersResponse.json();
-        const allMiners = minersResult.miners;
+        const allMiners = minersResult.miners || [];
         
         // Check if free miner was activated today (using UTC to match backend)
         const now = new Date();
@@ -967,15 +967,15 @@ export default function PremiumBitcoinMiningApp() {
         // Store categorized miners for new UI
         setUser(prev => ({
           ...prev,
-          freeMiners,
-          premiumMiners,
-          referralMiners
+          freeMiners: freeMiners || [],
+          premiumMiners: premiumMiners || [],
+          referralMiners: referralMiners || []
         }));
       }
 
       if (storeResponse.ok) {
         const storeResult = await storeResponse.json();
-        setStoreMiners(storeResult.miners);
+        setStoreMiners(storeResult.miners || []);
       }
 
       if (referralResponse.ok) {
@@ -999,6 +999,19 @@ export default function PremiumBitcoinMiningApp() {
 
     } catch (error) {
       console.error('Error loading app data:', error);
+      // If critical error, clear storage and restart
+      try {
+        await AsyncStorage.removeItem('user_data');
+        await AsyncStorage.removeItem('session_token');
+        showCustomAlert('Error', 'Failed to load app data. Please login again.', [{
+          text: 'OK',
+          onPress: () => {
+            setCurrentScreen('auth');
+          }
+        }]);
+      } catch (clearError) {
+        console.error('Failed to clear storage:', clearError);
+      }
     }
   };
 
