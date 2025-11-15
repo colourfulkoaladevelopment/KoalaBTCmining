@@ -2523,6 +2523,23 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         </Modal>
       </>
     );
+    } catch (error) {
+      console.error('Admin panel render error:', error);
+      // If admin panel fails, show error and logout
+      return (
+        <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.container}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <Ionicons name="warning" size={64} color="#FF6B6B" />
+            <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 20, textAlign: 'center' }}>
+              Admin Panel Error
+            </Text>
+            <Text style={{ color: '#999', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+              Error loading admin panel. Signing out...
+            </Text>
+          </View>
+        </LinearGradient>
+      );
+    }
   }
 
   return (
