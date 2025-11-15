@@ -823,12 +823,13 @@ export default function PremiumBitcoinMiningApp() {
             const userInfo = await response.json();
             setUser(userInfo);
             
-            // Check if user is admin
+            await loadAppData();
+            
+            // Check if user is admin - AFTER loadAppData to avoid race condition
             if (userInfo.email === 'colourfulkoaladevelopment@gmail.com') {
               setIsAdmin(true);
             }
             
-            await loadAppData();
             setCurrentScreen('app');
           } else {
             await AsyncStorage.removeItem('session_token');
