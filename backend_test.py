@@ -287,7 +287,7 @@ def main():
     
     # Step 1: Connect to MongoDB
     db = connect_to_mongodb()
-    if not db:
+    if db is None:
         print("\n❌ Cannot proceed without database connection")
         return
     
