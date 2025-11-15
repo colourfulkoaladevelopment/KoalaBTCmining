@@ -2436,22 +2436,22 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
   // Main App with Tab Navigation
   // Show Admin Panel if user is admin
-  // TEMPORARILY DISABLED TO DIAGNOSE CRASH
-  if (isAdmin && false) {
-    return (
-      <>
-        <AdminPanelComponent 
-          user={user}
-          setUser={setUser}
-          setWalletData={setWalletData}
-          setMiners={setMiners}
-          setCurrentScreen={setCurrentScreen}
-          setIsAdmin={setIsAdmin}
-          showCustomAlert={showCustomAlert}
-          loadAppData={loadAppData}
-          giveBtcModal={giveBtcModal}
-          setGiveBtcModal={setGiveBtcModal}
-        />
+  if (isAdmin) {
+    try {
+      return (
+        <>
+          <AdminPanelComponent 
+            user={user}
+            setUser={setUser}
+            setWalletData={setWalletData}
+            setMiners={setMiners}
+            setCurrentScreen={setCurrentScreen}
+            setIsAdmin={setIsAdmin}
+            showCustomAlert={showCustomAlert}
+            loadAppData={loadAppData}
+            giveBtcModal={giveBtcModal}
+            setGiveBtcModal={setGiveBtcModal}
+          />
         
         {/* Custom Alert Modal - MUST be here for admin panel alerts */}
         <Modal visible={customAlert.visible} transparent animationType="fade">
