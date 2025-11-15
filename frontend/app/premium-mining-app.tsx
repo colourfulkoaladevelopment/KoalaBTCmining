@@ -1423,16 +1423,15 @@ Your miner is now active and earning Bitcoin!`,
   };
 
   const showFacebookAd = async (adType) => {
-    // Use real Google AdMob ads on device
+    // Use real Google AdMob ads on device, fallback to simulation
     const isRealDevice = Platform.OS === 'ios' || Platform.OS === 'android';
     
     setIsWatchingAd(true);
     
     try {
       if (isRealDevice) {
-        // Add 10 second timeout for ad loading
-        const adPromise = (async () => {
-          // Load AdMob utility dynamically
+        try {
+          // Try to load AdMob utility dynamically
           const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/adMobAds');
           
           let adResult = false;
@@ -1449,23 +1448,22 @@ Your miner is now active and earning Bitcoin!`,
             adResult = await showInterstitialAd(adType);
           }
           
-          return adResult;
-        })();
-        
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Ad loading timeout')), 10000)
-        );
-        
-        const adResult = await Promise.race([adPromise, timeoutPromise]);
-        
-        setIsWatchingAd(false);
-        
-        if (!adResult) {
-          // Ad failed to load or was cancelled
-          throw new Error('Ad failed to load or display');
+          setIsWatchingAd(false);
+          
+          if (!adResult) {
+            // Ad failed, use simulation fallback
+            console.log('AdMob ad failed, using simulation fallback');
+            throw new Error('AdMob unavailable, using simulation');
+          }
+          
+          return true;
+        } catch (adError) {
+          // AdMob failed, use simulation fallback
+          console.log('AdMob error, using simulation fallback:', adError);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          setIsWatchingAd(false);
+          return true;
         }
-        
-        return true;
       } else {
         // Web/Expo Go - simulate 3 second ad
         console.log('Web/Expo Go detected, simulating ad playback');
@@ -1474,10 +1472,11 @@ Your miner is now active and earning Bitcoin!`,
         return true;
       }
     } catch (error) {
-      console.error('Error showing AdMob ad:', error);
+      console.error('Error showing ad:', error);
       setIsWatchingAd(false);
-      // Throw error to be handled by caller
-      throw error;
+      // Fallback to simulation
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      return true;
     }
   };
 
