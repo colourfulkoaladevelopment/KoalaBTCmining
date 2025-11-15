@@ -1544,36 +1544,8 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
             }
           }]);
         } else if (currentAdType === 'app_launch') {
-          // App launch ad - play second ad immediately
-          setCurrentAdType('app_launch_2');
-          setShowAdModal(true);
-          
-          // Auto-play second ad after brief delay
-          setTimeout(async () => {
-            const secondAdWatched = await showFacebookAd('app_launch');
-            setShowAdModal(false);
-            
-            if (secondAdWatched) {
-              // Process second ad on backend
-              const secondResponse = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/ads/watch`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  ad_type: 'app_launch'
-                })
-              });
-              
-              if (secondResponse.ok) {
-                await loadAdStats();
-                showCustomAlert('Welcome!', 'Thank you for watching. Enjoy mining!');
-              }
-            }
-            
-            setCurrentAdType(null);
-          }, 500);
+          // App launch ad - just thank user
+          showCustomAlert('Welcome!', 'Thank you for watching. Enjoy mining!');
         }
       } else {
         // Handle backend errors (e.g., daily limit reached)
