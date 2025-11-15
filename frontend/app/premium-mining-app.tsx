@@ -2472,7 +2472,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             user={user}
             setUser={setUser}
             setWalletData={setWalletData}
-            setMiners={setMiners}
             setCurrentScreen={setCurrentScreen}
             setIsAdmin={setIsAdmin}
             showCustomAlert={showCustomAlert}
