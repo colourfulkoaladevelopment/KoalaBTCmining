@@ -1430,22 +1430,33 @@ Your miner is now active and earning Bitcoin!`,
     
     try {
       if (isRealDevice) {
-        // Load AdMob utility dynamically
-        const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/adMobAds');
+        // Add 10 second timeout for ad loading
+        const adPromise = (async () => {
+          // Load AdMob utility dynamically
+          const { showRewardedVideoAd, showInterstitialAd } = await import('../utils/adMobAds');
+          
+          let adResult = false;
+          
+          if (adType === 'miner_activation') {
+            // Rewarded video ad for miner activation
+            console.log('Attempting to show rewarded video ad...');
+            const result = await showRewardedVideoAd();
+            console.log('Rewarded video ad result:', result);
+            adResult = result.watched && result.rewarded;
+          } else {
+            // Interstitial ad for app_launch and withdrawal
+            console.log('Attempting to show interstitial ad for:', adType);
+            adResult = await showInterstitialAd(adType);
+          }
+          
+          return adResult;
+        })();
         
-        let adResult = false;
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Ad loading timeout')), 10000)
+        );
         
-        if (adType === 'miner_activation') {
-          // Rewarded video ad for miner activation
-          console.log('Attempting to show rewarded video ad...');
-          const result = await showRewardedVideoAd();
-          console.log('Rewarded video ad result:', result);
-          adResult = result.watched && result.rewarded;
-        } else {
-          // Interstitial ad for app_launch and withdrawal
-          console.log('Attempting to show interstitial ad for:', adType);
-          adResult = await showInterstitialAd(adType);
-        }
+        const adResult = await Promise.race([adPromise, timeoutPromise]);
         
         setIsWatchingAd(false);
         
