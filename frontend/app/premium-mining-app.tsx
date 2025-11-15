@@ -266,7 +266,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setMiners, setCurre
     );
   };
 
-  const filteredUsers = users.filter(user =>
+  const filteredUsers = (users || []).filter(user =>
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
