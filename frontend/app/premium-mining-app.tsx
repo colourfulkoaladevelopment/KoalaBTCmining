@@ -1312,9 +1312,8 @@ Daily Earning Estimate: est.
             '🌐 PayPal Checkout Opened',
             'Complete your payment in the browser.\n\nAfter payment, you\'ll be automatically redirected back to the app and your miner will be activated immediately.\n\n✅ No need to click anything manually!',
             [
-              { text: 'OK', onPress: () => {
-                // Refresh data when they come back
-                setTimeout(() => loadAppData(), 5000);
+              { text: 'Cancel Purchase', style: 'destructive', onPress: () => {
+                // User cancelled - just close the alert
               }}
             ]
           );
