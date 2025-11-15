@@ -2436,7 +2436,8 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
   // Main App with Tab Navigation
   // Show Admin Panel if user is admin
-  if (isAdmin) {
+  // TEMPORARILY DISABLED TO DIAGNOSE CRASH
+  if (isAdmin && false) {
     return (
       <>
         <AdminPanelComponent 
