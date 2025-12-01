@@ -2478,6 +2478,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
             loadAppData={loadAppData}
             giveBtcModal={giveBtcModal}
             setGiveBtcModal={setGiveBtcModal}
+            handleDeleteUser={handleDeleteUser}
+            handleResetUser={handleResetUser}
+            handleGiveBtc={handleGiveBtc}
           />
         
         {/* Custom Alert Modal - MUST be here for admin panel alerts */}
