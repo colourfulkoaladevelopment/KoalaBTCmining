@@ -200,6 +200,42 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
     );
   };
 
+  const handleDeleteUser = async (userId, userEmail) => {
+    showCustomAlert(
+      '🗑️ Delete User',
+      `Are you sure you want to PERMANENTLY DELETE ${userEmail}?\n\nThis will remove:\n• User account\n• All miners\n• All balance\n• All history\n\nThis action CANNOT be undone!`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/delete-user/${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User deleted successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to delete user');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleGiveBtc = (userId, userEmail) => {
+    setGiveBtcModal({ visible: true, userId, userEmail, amount: '' });
+  };
+
   const approveWallet = async (walletId, userEmail) => {
     showCustomAlert(
       '✅ Approve Wallet',
