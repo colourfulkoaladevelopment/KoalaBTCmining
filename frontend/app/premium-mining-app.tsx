@@ -416,6 +416,22 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
                       <Text style={styles.userEmail}>{usr.email}</Text>
                       <Text style={styles.userBalance}>Balance: ₿ {(usr.balance || 0).toFixed(8)}</Text>
                       <Text style={styles.userMiners}>Active Miners: {usr.active_miners || 0}</Text>
+                      {usr.wallet_address && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <Text style={{ color: '#4CAF50', fontSize: 10, flex: 1 }} numberOfLines={1}>
+                            Wallet: {usr.wallet_address}
+                          </Text>
+                          <TouchableOpacity 
+                            onPress={async () => {
+                              await Clipboard.setString(usr.wallet_address);
+                              showCustomAlert('Copied! 📋', 'Wallet address copied to clipboard');
+                            }}
+                            style={{ marginLeft: 6, backgroundColor: '#2a2a2a', padding: 4, borderRadius: 4 }}
+                          >
+                            <Ionicons name="copy" size={14} color="#FFD700" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.userActions}>
                       <TouchableOpacity onPress={() => handleResetUser(usr.id, usr.email)}>
