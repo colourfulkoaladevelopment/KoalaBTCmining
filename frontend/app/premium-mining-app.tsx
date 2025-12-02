@@ -2103,17 +2103,9 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
         <>
           <AdminPanelComponent 
             user={user}
-            setUser={setUser}
-            setWalletData={setWalletData}
             setCurrentScreen={setCurrentScreen}
             setIsAdmin={setIsAdmin}
             showCustomAlert={showCustomAlert}
-            loadAppData={loadAppData}
-            giveBtcModal={giveBtcModal}
-            setGiveBtcModal={setGiveBtcModal}
-            handleDeleteUser={handleDeleteUser}
-            handleResetUser={handleResetUser}
-            handleGiveBtc={handleGiveBtc}
           />
         
         {/* Custom Alert Modal - MUST be here for admin panel alerts */}
