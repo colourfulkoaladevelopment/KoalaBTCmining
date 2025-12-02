@@ -61,6 +61,9 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
   );
 }
 
+export default function PremiumBitcoinMiningApp() {
+  const [currentScreen, setCurrentScreen] = useState('loading');
+  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
