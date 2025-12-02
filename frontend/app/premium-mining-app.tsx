@@ -402,44 +402,6 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
                         </View>
                       )}
                     </View>
-                    <View style={styles.userActions}>
-                      {/* Temporarily disabled buttons for debugging 
-                      <TouchableOpacity onPress={() => {
-                        try {
-                          handleResetUser(usr.id, usr.email);
-                        } catch (err) {
-                          console.error('Reset user error:', err);
-                        }
-                      }}>
-                        <LinearGradient colors={['#FF6B6B', '#FF4444']} style={styles.actionButton}>
-                          <Ionicons name="refresh" size={16} color="#FFF" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => {
-                        try {
-                          handleDeleteUser(usr.id, usr.email);
-                        } catch (err) {
-                          console.error('Delete user error:', err);
-                        }
-                      }}>
-                        <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.actionButton}>
-                          <Ionicons name="trash" size={16} color="#FFF" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => {
-                        try {
-                          handleGiveBtc(usr.id, usr.email);
-                        } catch (err) {
-                          console.error('Give BTC error:', err);
-                        }
-                      }}>
-                        <LinearGradient colors={['#4CAF50', '#45A049']} style={styles.actionButton}>
-                          <Ionicons name="add-circle" size={16} color="#FFF" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      */}
-                      <Text style={{ color: '#666', fontSize: 10 }}>Actions disabled</Text>
-                    </View>
                   </View>
                 ))}
               </>
