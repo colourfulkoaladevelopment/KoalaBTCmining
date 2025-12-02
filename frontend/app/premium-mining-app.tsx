@@ -26,14 +26,78 @@ import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
 
-// Admin Panel Component
-function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, setIsAdmin, showCustomAlert, loadAppData, giveBtcModal, setGiveBtcModal }) {
+// Admin Panel Component - Simplified for Wallet Approval Only
+function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAlert }) {
+  const [pendingWallets, setPendingWallets] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPendingWallets = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/pending-wallets`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPendingWallets(data.pending_wallets || []);
+      }
+    } catch (error) {
+      console.error('Error loading pending wallets:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingWallets();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadPendingWallets();
+    setRefreshing(false);
+  };
+
+  const approveWallet = async (userId, userEmail, walletAddress) => {
+    showCustomAlert(
+      '✅ Approve Wallet',
+      `Approve Bitcoin wallet for ${userEmail}?\n\n${walletAddress}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/approve-wallet/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'Wallet approved successfully');
+                loadPendingWallets();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to approve wallet');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
-      <ScrollView style={[styles.scrollView, { flex: 1 }]} contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
+      <ScrollView 
+        style={[styles.scrollView, { flex: 1 }]} 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFD700" />}
+      >
         {/* Header */}
         <View style={styles.adminHeader}>
-          <Text style={styles.adminHeaderTitle}>⚙️ Admin Panel</Text>
+          <Text style={styles.adminHeaderTitle}>⚙️ Admin - Wallet Approvals</Text>
           <TouchableOpacity 
             onPress={async () => {
               await AsyncStorage.clear();
@@ -46,15 +110,47 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
           </TouchableOpacity>
         </View>
 
-        {/* Simple Stats */}
+        {/* Pending Wallets */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
-          <Text style={styles.sectionTitle}>📊 Dashboard</Text>
-          <Text style={{ color: '#FFD700', fontSize: 16, marginTop: 10 }}>
-            Admin panel is functional!
-          </Text>
-          <Text style={{ color: '#999', fontSize: 14, marginTop: 10 }}>
-            Advanced features coming soon.
-          </Text>
+          <Text style={styles.sectionTitle}>🔐 Pending Wallet Approvals ({pendingWallets.length})</Text>
+          
+          {pendingWallets.length === 0 ? (
+            <Text style={styles.noDataText}>No pending wallet approvals</Text>
+          ) : (
+            pendingWallets.map((wallet) => (
+              <View key={wallet.user_id} style={styles.userItem}>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{wallet.name || 'Unknown'}</Text>
+                  <Text style={styles.userEmail}>{wallet.email}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <TouchableOpacity 
+                      onPress={async () => {
+                        await Clipboard.setString(wallet.btc_wallet_address);
+                        showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
+                      }}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                    >
+                      <Ionicons name="copy" size={14} color="#FFD700" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#4CAF50', fontSize: 11 }} numberOfLines={1}>
+                        {wallet.btc_wallet_address}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ color: '#666', fontSize: 10, marginTop: 4 }}>
+                    Balance: ₿ {(wallet.balance || 0).toFixed(8)}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => approveWallet(wallet.user_id, wallet.email, wallet.btc_wallet_address)}
+                  style={{ marginLeft: 10 }}
+                >
+                  <LinearGradient colors={['#4CAF50', '#45A049']} style={{ padding: 12, borderRadius: 8 }}>
+                    <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Approve</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </LinearGradient>
       </ScrollView>
     </LinearGradient>
