@@ -471,6 +471,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
                       )}
                     </View>
                     <View style={styles.userActions}>
+                      {/* Temporarily disabled buttons for debugging 
                       <TouchableOpacity onPress={() => {
                         try {
                           handleResetUser(usr.id, usr.email);
@@ -504,6 +505,8 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
                           <Ionicons name="add-circle" size={16} color="#FFF" />
                         </LinearGradient>
                       </TouchableOpacity>
+                      */}
+                      <Text style={{ color: '#666', fontSize: 10 }}>Actions disabled</Text>
                     </View>
                   </View>
                 ))}
