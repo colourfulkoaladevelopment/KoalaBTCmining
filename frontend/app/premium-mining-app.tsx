@@ -235,12 +235,12 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
     );
   };
 
-  const filteredUsers = (users || []).filter(user =>
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   try {
+    const filteredUsers = (users || []).filter(user =>
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
       <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.container}>
         <ScrollView
