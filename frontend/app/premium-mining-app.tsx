@@ -62,26 +62,7 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
 }
 
 export default function PremiumBitcoinMiningApp() {
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [timeRange, setTimeRange] = useState('30_days'); // '30_days' or 'all_time'
-  const [debugInfo, setDebugInfo] = useState(''); // For showing debug info on screen
-  const [showDebugModal, setShowDebugModal] = useState(false);
-  const [pendingWallets, setPendingWallets] = useState([]);
-  const [showUserManagement, setShowUserManagement] = useState(false);
-  const [showPendingWallets, setShowPendingWallets] = useState(true);
-
-  useEffect(() => {
-    // Only load admin data if user object is fully initialized
-    if (user && user.email) {
-      loadAdminData();
-    }
-  }, [timeRange, user]); // Reload when time range changes or user updates
-
-  const loadAdminData = async () => {
+  const [currentScreen, setCurrentScreen] = useState('loading');
     let debugLog = '=== ADMIN DATA LOADING DEBUG ===\n';
     
     try {
