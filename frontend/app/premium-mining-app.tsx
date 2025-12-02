@@ -60,6 +60,8 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
     </LinearGradient>
   );
 }
+
+export default function PremiumBitcoinMiningApp() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
