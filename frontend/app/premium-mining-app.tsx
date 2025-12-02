@@ -40,6 +40,74 @@ function AdminPanelComponent({ user, setUser, setWalletData, setCurrentScreen, s
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showPendingWallets, setShowPendingWallets] = useState(true);
 
+  // Handler functions - defined early to ensure they're in scope
+  const handleResetUser = async (userId, userEmail) => {
+    showCustomAlert(
+      '⚠️ Reset User Account',
+      `Are you sure you want to reset ${userEmail}?\n\nThis will:\n• Delete all miners\n• Reset BTC balance to 0\n• Keep login credentials`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/reset-user/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User account reset successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to reset user account');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteUser = async (userId, userEmail) => {
+    showCustomAlert(
+      '🗑️ Delete User',
+      `Are you sure you want to PERMANENTLY DELETE ${userEmail}?\n\nThis will remove:\n• User account\n• All miners\n• All balance\n• All history\n\nThis action CANNOT be undone!`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/delete-user/${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User deleted successfully');
+                loadAdminData();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to delete user');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleGiveBtc = (userId, userEmail) => {
+    setGiveBtcModal({ visible: true, userId, userEmail, amount: '' });
+  };
+
   useEffect(() => {
     // Only load admin data if user object is fully initialized
     if (user && user.email) {
