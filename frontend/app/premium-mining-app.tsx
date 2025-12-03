@@ -2666,7 +2666,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
             {/* Share Button - Moved here */}
             <TouchableOpacity style={styles.shareButton} onPress={() => {
-              const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\nDownload: https://koalamining.app`;
+              const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\n📥 Download Now:\nhttps://drive.google.com/file/d/1qYRdkl0x2oVeK-2LYIXPvCYXc1OhOCwQ/view?usp=drive_link`;
               Share.share({ message });
             }}>
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
