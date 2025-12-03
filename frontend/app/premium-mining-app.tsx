@@ -797,7 +797,7 @@ export default function PremiumBitcoinMiningApp() {
       } catch (parseError) {
         console.error('Failed to parse response:', parseError);
         console.log('SHOWING ALERT: Parse error');
-        showCustomAlert('Error', 'Incorrect Email/Password Combination');
+        showCustomAlert('Server Error', 'Unable to communicate with server. Please try again later.');
         return;
       }
 
