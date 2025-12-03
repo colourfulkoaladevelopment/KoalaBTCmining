@@ -1125,9 +1125,9 @@ async def submit_contact_form(
             # Gmail SMTP configuration
             smtp_server = "smtp.gmail.com"
             smtp_port = 587
-            sender_email = "colourfulkoaladevelopment@gmail.com"
-            sender_password = "kwkg czgx shbd btrp"
-            recipient_email = "colourfulkoaladevelopment@gmail.com"
+            sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
+            sender_password = os.getenv("SMTP_PASSWORD", "")
+            recipient_email = os.getenv("SUPPORT_EMAIL", "colourfulkoaladevelopment@gmail.com")
             
             # Create email message
             email_subject = f"Bitcoin Mining App Support Request - {subject}"
