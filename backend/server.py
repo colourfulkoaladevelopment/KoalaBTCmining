@@ -2402,8 +2402,8 @@ async def forgot_password(email_data: Dict[str, str]):
                 # Gmail SMTP configuration (same as contact form)
                 smtp_server = "smtp.gmail.com"
                 smtp_port = 587
-                sender_email = "colourfulkoaladevelopment@gmail.com"
-                sender_password = "kwkg czgx shbd btrp"
+                sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
+                sender_password = os.getenv("SMTP_PASSWORD", "")
                 
                 # Create email message
                 msg = MIMEMultipart()
