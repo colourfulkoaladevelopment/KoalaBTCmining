@@ -83,3 +83,7 @@ android-sdk/ -e
 *.env.*
 koala-mining-frontend.zip
 koala-mining-app.tar.gz
+-e 
+# Environment files
+*.env
+*.env.*
