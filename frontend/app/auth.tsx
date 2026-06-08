@@ -27,7 +27,7 @@ export default function AuthScreen() {
   });
 
   const handleGoogleLogin = () => {
-    const redirectUrl = encodeURIComponent(`${process.env.EXPO_PUBLIC_BACKEND_URL}/(tabs)/dashboard`);
+    const redirectUrl = encodeURIComponent(`${window.location.origin}/(tabs)/dashboard`);
     const authUrl = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
     
     // In a real app, this would open the Google OAuth flow
