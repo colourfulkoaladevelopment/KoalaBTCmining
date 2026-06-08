@@ -87,3 +87,9 @@ koala-mining-app.tar.gz
 # Environment files
 *.env
 *.env.*
+
+
+# Sensitive test credentials (do not commit)
+memory/test_credentials.md
+/app/memory/test_credentials.md
+test_credentials.md
