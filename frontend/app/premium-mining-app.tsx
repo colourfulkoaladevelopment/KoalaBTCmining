@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
+import { initializeAdMob } from '../utils/adMobAds';
 
 const { width, height } = Dimensions.get('window');
 
@@ -647,6 +648,12 @@ export default function PremiumBitcoinMiningApp() {
     }
   }, [currentScreen]);
   
+  // Initialize AdMob + mediation adapters (Meta Audience Network) once on mount.
+  // No-op on web; safe if it fails (ads just won't show).
+  useEffect(() => {
+    initializeAdMob();
+  }, []);
+
   // Activity feed - ref-based recursive timer with proper cleanup (prevents leaks/crash)
   const activityTimerRef = useRef(null);
   const activityMountedRef = useRef(false);

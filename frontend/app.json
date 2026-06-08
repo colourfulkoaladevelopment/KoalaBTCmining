@@ -17,6 +17,9 @@
         "GADApplicationIdentifier": "ca-app-pub-5648720019902247~5985575029",
         "SKAdNetworkItems": [
           {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
             "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
           },
           {
@@ -27,7 +30,7 @@
     },
     "android": {
       "package": "com.koalamining.app",
-      "versionCode": 52,
+      "versionCode": 53,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
@@ -48,6 +51,7 @@
     "plugins": [
       "expo-router",
       "./plugins/withAdMobFix",
+      "./plugins/withMetaAudienceNetwork",
       [
         "expo-splash-screen",
         {
@@ -66,6 +70,13 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 34,
             "buildToolsVersion": "35.0.0"
+          },
+          "ios": {
+            "extraPods": [
+              {
+                "name": "GoogleMobileAdsMediationFacebook"
+              }
+            ]
           }
         }
       ],

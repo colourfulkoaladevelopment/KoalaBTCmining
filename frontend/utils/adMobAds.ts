@@ -28,6 +28,32 @@ const getAdUnitId = (adType: 'app_launch' | 'miner_activation' | 'withdrawal') =
 };
 
 /**
+ * Initialize the Google Mobile Ads SDK and wait for all mediation adapters
+ * (including the Meta Audience Network adapter) to finish initializing.
+ *
+ * For AdMob Mediation, the "Meta primary / AdMob fallback" waterfall is
+ * configured in the AdMob dashboard. The app only needs to initialize the SDK
+ * so that mediated networks can participate on the first ad request.
+ *
+ * Safe to call multiple times; it only initializes once. No-op on web.
+ */
+let adsInitialized = false;
+export const initializeAdMob = async (): Promise<void> => {
+  if (Platform.OS === 'web' || adsInitialized) {
+    return;
+  }
+  try {
+    const { default: mobileAds } = await import('react-native-google-mobile-ads');
+    const adapterStatuses = await mobileAds().initialize();
+    adsInitialized = true;
+    console.log('AdMob + mediation adapters initialized:', adapterStatuses);
+  } catch (error) {
+    // Don't crash the app if ad init fails — ads simply won't show.
+    console.warn('AdMob initialization failed:', error);
+  }
+};
+
+/**
  * Show Rewarded Video Ad (for miner activation)
  * Returns object with watched and rewarded status
  */
