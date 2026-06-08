@@ -3993,6 +3993,8 @@ async def get_all_users(current_user: Dict = Depends(get_current_user)):
         
         return {"users": users}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting users: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
