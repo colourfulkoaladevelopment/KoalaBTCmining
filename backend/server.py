@@ -3984,8 +3984,10 @@ async def get_all_users(current_user: Dict = Depends(get_current_user)):
                 "id": str(user["_id"]),
                 "name": user.get("name", ""),
                 "email": user.get("email", ""),
-                "balance": user.get("balance", 0.0),
+                "balance": user.get("bitcoin_balance", 0.0),
                 "active_miners": active_miners_count,
+                "btc_wallet_address": user.get("btc_wallet_address", ""),
+                "wallet_status": user.get("wallet_status", ""),
                 "created_at": user.get("created_at", "").isoformat() if user.get("created_at") else ""
             })
         
@@ -4004,19 +4006,34 @@ async def reset_user_account(user_id: str, current_user: Dict = Depends(get_curr
         
         from bson import ObjectId
         
-        # Delete all miners for this user
-        await miners_collection.delete_many({"user_id": user_id})
+        # Resolve user by string id first, then ObjectId
+        user = users_collection.find_one({"_id": user_id})
+        query_id = user_id
+        if not user:
+            try:
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    query_id = ObjectId(user_id)
+            except Exception:
+                pass
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
         
-        # Reset user balance to 0
-        await users_collection.update_one(
-            {"_id": ObjectId(user_id)},
-            {"$set": {"balance": 0.0}}
+        # Delete all miners for this user (miners use string user_id)
+        miners_collection.delete_many({"user_id": str(user["_id"])})
+        
+        # Reset user balance and earnings to 0
+        users_collection.update_one(
+            {"_id": query_id},
+            {"$set": {"bitcoin_balance": 0.0, "total_earnings": 0.0}}
         )
         
-        logger.info(f"Admin reset user account: {user_id}")
+        logger.info(f"Admin reset user account: {user.get('email')}")
         
         return {"message": "User account reset successfully"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error resetting user: {e}")
         raise HTTPException(status_code=500, detail="Failed to reset user account")
@@ -4061,12 +4078,12 @@ async def factory_reset_all_accounts(current_user: Dict = Depends(get_current_us
             raise HTTPException(status_code=403, detail="Admin access required")
         
         # Delete ALL miners
-        miners_deleted = await miners_collection.delete_many({})
+        miners_deleted = miners_collection.delete_many({})
         
         # Reset ALL user balances to 0
-        users_updated = await users_collection.update_many(
+        users_updated = users_collection.update_many(
             {},
-            {"$set": {"balance": 0.0}}
+            {"$set": {"bitcoin_balance": 0.0, "total_earnings": 0.0}}
         )
         
         logger.warning(f"FACTORY RESET: Deleted {miners_deleted.deleted_count} miners, reset {users_updated.modified_count} user balances")

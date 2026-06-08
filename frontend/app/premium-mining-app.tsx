@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,117 @@ const { width, height } = Dimensions.get('window');
 function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAlert }) {
   const [pendingWallets, setPendingWallets] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '' });
+
+  const loadAllUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleGiveBtc = (userId, userEmail) => {
+    setGiveBtcModal({ visible: true, userId, userEmail, amount: '' });
+  };
+
+  const confirmGiveBtc = async () => {
+    const amount = parseFloat(giveBtcModal.amount);
+    if (isNaN(amount) || amount <= 0) {
+      showCustomAlert('❌ Error', 'Please enter a valid BTC amount');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/give-btc/${giveBtcModal.userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      if (response.ok) {
+        showCustomAlert('✅ Success', `Added ₿ ${amount.toFixed(8)} to ${giveBtcModal.userEmail}`);
+        setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' });
+        loadAllUsers();
+      } else {
+        showCustomAlert('❌ Error', 'Failed to add BTC');
+      }
+    } catch (error) {
+      showCustomAlert('❌ Error', 'Network error occurred');
+    }
+  };
+
+  const handleResetUser = (userId, userEmail) => {
+    showCustomAlert(
+      '♻️ Reset User',
+      `Reset ${userEmail}?\n\nThis clears all their miners and sets balance to 0. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/reset-user/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User account reset');
+                loadAllUsers();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to reset user');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteUser = (userId, userEmail) => {
+    showCustomAlert(
+      '🗑️ Delete User',
+      `PERMANENTLY DELETE ${userEmail}?\n\nThis removes their account, miners, balance and history. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/delete-user/${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'User deleted');
+                loadAllUsers();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to delete user');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const loadPendingWallets = async () => {
     try {
@@ -49,11 +160,12 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
 
   useEffect(() => {
     loadPendingWallets();
+    loadAllUsers();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadPendingWallets();
+    await Promise.all([loadPendingWallets(), loadAllUsers()]);
     setRefreshing(false);
   };
 
@@ -152,7 +264,117 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
             ))
           )}
         </LinearGradient>
+
+        {/* User Management */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>👥 User Management ({allUsers.length})</Text>
+
+          <TextInput
+            style={styles.adminSearchInput}
+            placeholder="Search by name or email..."
+            placeholderTextColor="#666"
+            value={userSearch}
+            onChangeText={setUserSearch}
+            autoCapitalize="none"
+          />
+
+          {loadingUsers ? (
+            <ActivityIndicator color="#FFD700" style={{ marginVertical: 16 }} />
+          ) : allUsers.length === 0 ? (
+            <Text style={styles.noDataText}>No users found</Text>
+          ) : (
+            allUsers
+              .filter((u) => {
+                const q = userSearch.trim().toLowerCase();
+                if (!q) return true;
+                return (u.email || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+              })
+              .map((u) => (
+                <View key={u.id} style={styles.userItem}>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{u.name || 'Unknown'}</Text>
+                    <Text style={styles.userEmail}>{u.email}</Text>
+                    <Text style={{ color: '#FFD700', fontSize: 11, marginTop: 2 }}>
+                      ₿ {(u.balance || 0).toFixed(8)} · {u.active_miners || 0} miners
+                    </Text>
+                    {!!u.btc_wallet_address && (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          await Clipboard.setString(u.btc_wallet_address);
+                          showCustomAlert('Copied! 📋', 'Bitcoin address copied to clipboard');
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}
+                      >
+                        <Ionicons name="copy" size={12} color="#4CAF50" style={{ marginRight: 5 }} />
+                        <Text style={{ color: '#4CAF50', fontSize: 10 }} numberOfLines={1}>
+                          {u.btc_wallet_address}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <View style={styles.adminActionsRow}>
+                    <TouchableOpacity
+                      onPress={() => handleGiveBtc(u.id, u.email)}
+                      style={[styles.adminActionBtn, { backgroundColor: '#1E88E5' }]}
+                    >
+                      <Text style={styles.adminActionBtnText}>+ BTC</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleResetUser(u.id, u.email)}
+                      style={[styles.adminActionBtn, { backgroundColor: '#FB8C00' }]}
+                    >
+                      <Text style={styles.adminActionBtnText}>Reset</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteUser(u.id, u.email)}
+                      style={[styles.adminActionBtn, { backgroundColor: '#E53935' }]}
+                    >
+                      <Text style={styles.adminActionBtnText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+          )}
+        </LinearGradient>
       </ScrollView>
+
+      {/* Give BTC Modal */}
+      <Modal
+        visible={giveBtcModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' })}
+      >
+        <View style={styles.adminModalOverlay}>
+          <View style={styles.adminModalCard}>
+            <Text style={styles.adminModalTitle}>Add BTC</Text>
+            <Text style={styles.adminModalSubtitle}>{giveBtcModal.userEmail}</Text>
+            <TextInput
+              style={styles.adminModalInput}
+              placeholder="Amount (e.g. 0.001)"
+              placeholderTextColor="#666"
+              keyboardType="decimal-pad"
+              value={giveBtcModal.amount}
+              onChangeText={(t) => setGiveBtcModal({ ...giveBtcModal, amount: t })}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', marginTop: 16 }}>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#444', marginRight: 8 }]}
+                onPress={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' })}
+              >
+                <Text style={styles.adminModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#1E88E5' }]}
+                onPress={confirmGiveBtc}
+              >
+                <Text style={styles.adminModalBtnText}>Add BTC</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -425,23 +647,40 @@ export default function PremiumBitcoinMiningApp() {
     }
   }, [currentScreen]);
   
-  // Activity feed - separate useEffect to avoid re-initialization
-  // TEMPORARILY DISABLED TO DIAGNOSE CRASH
-  /*
+  // Activity feed - ref-based recursive timer with proper cleanup (prevents leaks/crash)
+  const activityTimerRef = useRef(null);
+  const activityMountedRef = useRef(false);
+
   useEffect(() => {
+    activityMountedRef.current = true;
+
+    const scheduleNext = () => {
+      // Random interval between 6-20 seconds
+      const randomInterval = (6 + Math.random() * 14) * 1000;
+      activityTimerRef.current = setTimeout(async () => {
+        if (!activityMountedRef.current) return;
+        try {
+          await loadActivityFeed();
+        } catch (e) {
+          // ignore, keep ticker resilient
+        }
+        if (activityMountedRef.current) scheduleNext();
+      }, randomInterval);
+    };
+
     if (currentScreen === 'app' && user) {
-      loadActivityFeed(); // Load initial activity
-      startActivityFeedTimer(); // Start activity feed timer
+      loadActivityFeed();
+      scheduleNext();
     }
-    
-    // Cleanup timer on unmount
+
     return () => {
-      if (activityTimer) {
-        clearTimeout(activityTimer);
+      activityMountedRef.current = false;
+      if (activityTimerRef.current) {
+        clearTimeout(activityTimerRef.current);
+        activityTimerRef.current = null;
       }
     };
-  }, [currentScreen]);
-  */
+  }, [currentScreen, user]);
   
   // Update free miner reset timer every minute
   useEffect(() => {
@@ -4480,6 +4719,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginVertical: 20,
+  },
+  adminSearchInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    color: '#FFF',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginBottom: 12,
+  },
+  adminActionsRow: {
+    flexDirection: 'column',
+    marginLeft: 10,
+  },
+  adminActionBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 6,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  adminActionBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  adminModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  adminModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#1f1f1f',
+    borderRadius: 16,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  adminModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 4,
+  },
+  adminModalSubtitle: {
+    fontSize: 13,
+    color: '#AAA',
+    marginBottom: 16,
+  },
+  adminModalInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    color: '#FFF',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  adminModalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  adminModalBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
   resetButton: {
     flexDirection: 'row',
