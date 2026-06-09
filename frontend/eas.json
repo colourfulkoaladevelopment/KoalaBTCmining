@@ -16,7 +16,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "REPLACE_WITH_YOUR_DEPLOYED_BACKEND_URL",
+        "EXPO_PUBLIC_BACKEND_URL": "https://paypal-ads-rebuild.emergent.host",
         "EXPO_PUBLIC_ADMOB_APP_ID": "ca-app-pub-5648720019902247~5985575029",
         "EXPO_PUBLIC_ADMOB_ANDROID_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
         "EXPO_PUBLIC_ADMOB_ANDROID_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
@@ -34,7 +34,7 @@
         "buildConfiguration": "Release"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "REPLACE_WITH_YOUR_DEPLOYED_BACKEND_URL",
+        "EXPO_PUBLIC_BACKEND_URL": "https://paypal-ads-rebuild.emergent.host",
         "EXPO_PUBLIC_ADMOB_APP_ID": "ca-app-pub-5648720019902247~5985575029",
         "EXPO_PUBLIC_ADMOB_ANDROID_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
         "EXPO_PUBLIC_ADMOB_ANDROID_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
