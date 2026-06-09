@@ -54,6 +54,27 @@ export const initializeAdMob = async (): Promise<void> => {
 };
 
 /**
+ * Open the Google Ad Inspector overlay (native builds only).
+ * Lets you see the live mediation waterfall and confirm whether Meta or AdMob
+ * filled each request. Returns a human-readable status string for the caller.
+ */
+export const openAdInspector = async (): Promise<{ ok: boolean; message: string }> => {
+  if (Platform.OS === 'web') {
+    return { ok: false, message: 'Ad Inspector only works on a real device build, not web preview.' };
+  }
+  try {
+    const { default: mobileAds } = await import('react-native-google-mobile-ads');
+    // Make sure the SDK is initialized before opening the inspector
+    await initializeAdMob();
+    await mobileAds().openAdInspector();
+    return { ok: true, message: 'Ad Inspector closed.' };
+  } catch (error: any) {
+    console.warn('Ad Inspector error:', error);
+    return { ok: false, message: error?.message || 'Could not open Ad Inspector on this device.' };
+  }
+};
+
+/**
  * Show Rewarded Video Ad (for miner activation)
  * Returns object with watched and rewarded status
  */

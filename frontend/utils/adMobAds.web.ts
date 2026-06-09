@@ -4,6 +4,21 @@
  */
 
 /**
+ * Initialize AdMob + mediation adapters - Web Stub (no-op)
+ */
+export const initializeAdMob = async (): Promise<void> => {
+  // Ads are not supported on web; nothing to initialize.
+  return;
+};
+
+/**
+ * Open Ad Inspector - Web Stub
+ */
+export const openAdInspector = async (): Promise<{ ok: boolean; message: string }> => {
+  return { ok: false, message: 'Ad Inspector only works on a real device build, not web preview.' };
+};
+
+/**
  * Show Rewarded Video Ad (for miner activation) - Web Stub
  * Returns object with watched and rewarded status
  */

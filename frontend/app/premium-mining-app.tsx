@@ -23,7 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
-import { initializeAdMob } from '../utils/adMobAds';
+import { initializeAdMob, openAdInspector } from '../utils/adMobAds';
 
 const { width, height } = Dimensions.get('window');
 
@@ -336,6 +336,23 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
                 </View>
               ))
           )}
+        </LinearGradient>
+
+        {/* Developer Tools */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>🛠️ Developer Tools</Text>
+          <Text style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
+            Ad Inspector shows the live mediation waterfall (Meta vs AdMob). Works only on an installed Android build — not in the web preview.
+          </Text>
+          <TouchableOpacity
+            onPress={async () => {
+              const result = await openAdInspector();
+              showCustomAlert(result.ok ? '🔍 Ad Inspector' : '⚠️ Ad Inspector', result.message);
+            }}
+            style={[styles.adminActionBtn, { backgroundColor: '#6A1B9A', alignSelf: 'flex-start', paddingHorizontal: 18 }]}
+          >
+            <Text style={styles.adminActionBtnText}>Open Ad Inspector</Text>
+          </TouchableOpacity>
         </LinearGradient>
       </ScrollView>
 
