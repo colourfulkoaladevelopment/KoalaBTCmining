@@ -93,3 +93,8 @@ koala-mining-app.tar.gz
 memory/test_credentials.md
 /app/memory/test_credentials.md
 test_credentials.md
+.env
+.env.*
+credentials.json
+*.key
+.credentials
