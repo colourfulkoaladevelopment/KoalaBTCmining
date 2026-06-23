@@ -956,22 +956,26 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
     return {"message": "Ad miner boost activated successfully"}
 
 # Store endpoints
+
+# Single source of truth for the purchasable miner catalog.
+# Used by BOTH /api/store/miners (display) and /api/payments/create-paypal-order (pricing),
+# so the price/hash-rate shown to the user always matches what PayPal charges.
+STORE_MINERS = [
+    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
+    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
+    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 10000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 15000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
+    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 20000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
+]
+
 @app.get("/api/store/miners")
 async def get_store_miners():
     """Get available miners for purchase"""
-    store_miners = [
-        {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
-        {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
-        {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
-        {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
-        {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
-        {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
-        {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 10000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
-        {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 15000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
-        {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 20000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
-    ]
-    
-    return {"miners": store_miners}
+    return {"miners": STORE_MINERS}
 
 @app.post("/api/store/purchase")
 async def purchase_miner(
@@ -2703,20 +2707,8 @@ async def create_paypal_order(order_data: Dict[str, Any], request: Request, curr
         promo_code = order_data.get("promo_code", "")
         subscription_type = order_data.get("subscription_type", "one_time")  # one_time or recurring
         
-        # Get miner details
-        store_miners = [
-            {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30},
-            {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30},
-            {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30},
-            {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30},
-            {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30},
-            {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30},
-            {"id": "miner_6th", "name": "Ultimate Miner", "hash_rate": 6000.0, "price": 449.99, "duration_days": 30},
-            {"id": "miner_8th", "name": "Legendary Miner", "hash_rate": 8000.0, "price": 599.99, "duration_days": 30},
-            {"id": "miner_10th", "name": "Mythical Miner", "hash_rate": 10000.0, "price": 999.99, "duration_days": 30}
-        ]
-        
-        miner = next((m for m in store_miners if m["id"] == miner_id), None)
+        # Get miner details (single source of truth shared with /api/store/miners)
+        miner = next((m for m in STORE_MINERS if m["id"] == miner_id), None)
         if not miner:
             raise HTTPException(status_code=404, detail="Miner not found")
         
@@ -2803,6 +2795,8 @@ async def create_paypal_order(order_data: Dict[str, Any], request: Request, curr
             "promo_code": promo_code if promo_validation["valid"] else None
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating PayPal order: {e}")
         raise HTTPException(status_code=500, detail="Failed to create payment order")

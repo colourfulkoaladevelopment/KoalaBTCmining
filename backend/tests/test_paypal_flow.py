@@ -12,9 +12,10 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get(
-    "EXPO_PUBLIC_BACKEND_URL",
-    "https://paypal-ads-rebuild.preview.emergentagent.com",
+BASE_URL = (
+    os.environ.get("EXPO_PUBLIC_BACKEND_URL")
+    or os.environ.get("EXPO_BACKEND_URL")
+    or "https://paypal-ads-rebuild.preview.emergentagent.com"
 ).rstrip("/")
 
 ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
@@ -93,13 +94,78 @@ class TestPayPalFlow:
     def test_create_paypal_order_unknown_miner_404(self, session, user_token):
         r = session.post(
             f"{BASE_URL}/api/payments/create-paypal-order",
-            json={"miner_id": "does_not_exist"},
+            json={"miner_id": "miner_doesnotexist"},
             headers=_auth(user_token),
             timeout=30,
         )
-        # endpoint wraps HTTPException(404) in broad except -> may return 500.
-        # Accept 404 (correct) and report 500 as known issue.
-        assert r.status_code in (404, 500), f"expected 404 got {r.status_code}"
+        # iteration_3 fix: `except HTTPException: raise` added before broad
+        # except, so 404 must propagate (no longer 500).
+        assert r.status_code == 404, f"expected 404 got {r.status_code} body={r.text}"
+
+    def test_store_catalog_and_paypal_catalog_match(self, session, user_token):
+        """HIGH real-money regression: every miner returned by /api/store/miners
+        must be purchasable via create-paypal-order AND the price PayPal is
+        invoiced must EXACTLY match the catalog price displayed to the user.
+        Specifically also asserts miner_10th -> 449.99, miner_15th -> 749.99,
+        miner_20th -> 999.99 (the three that diverged in iteration_2).
+        """
+        r = session.get(
+            f"{BASE_URL}/api/store/miners",
+            headers=_auth(user_token),
+            timeout=30,
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        miners = body if isinstance(body, list) else body.get("miners")
+        assert miners and len(miners) >= 9, f"store catalog too small: {miners}"
+        catalog = {m["id"]: m for m in miners}
+
+        # Spot-check the three previously-divergent tiers exist with right prices.
+        expected = {
+            "miner_10th": ("Ultimate Miner", 449.99),
+            "miner_15th": ("Legendary Miner", 749.99),
+            "miner_20th": ("Mythical Miner", 999.99),
+        }
+        for mid, (name, price) in expected.items():
+            assert mid in catalog, f"{mid} missing from /api/store/miners"
+            assert catalog[mid]["name"] == name, (
+                f"{mid} name mismatch: {catalog[mid]['name']} != {name}"
+            )
+            assert abs(catalog[mid]["price"] - price) < 0.001, (
+                f"{mid} price mismatch: {catalog[mid]['price']} != {price}"
+            )
+
+        # Now every miner in the store must succeed at create-paypal-order with
+        # the SAME price that the store advertised.
+        for miner in miners:
+            mid = miner["id"]
+            store_price = float(miner["price"])
+            resp = session.post(
+                f"{BASE_URL}/api/payments/create-paypal-order",
+                json={"miner_id": mid, "promo_code": "", "subscription_type": "one_time"},
+                headers=_auth(user_token),
+                timeout=60,
+            )
+            assert resp.status_code == 200, (
+                f"create-paypal-order FAILED for {mid} ({miner.get('name')}): "
+                f"{resp.status_code} {resp.text}"
+            )
+            data = resp.json()
+            assert abs(float(data["original_price"]) - store_price) < 0.001, (
+                f"PRICE DIVERGENCE for {mid}: store=${store_price} "
+                f"vs paypal.original_price=${data['original_price']}"
+            )
+            # With empty promo, final_price must equal original_price.
+            assert abs(float(data["final_price"]) - store_price) < 0.001, (
+                f"PRICE DIVERGENCE for {mid}: store=${store_price} "
+                f"vs paypal.final_price=${data['final_price']}"
+            )
+            approve = next(
+                (l for l in data.get("links", []) if l.get("rel") == "approve"), None
+            )
+            assert approve and approve.get("href", "").startswith("https://"), (
+                f"no approve link for {mid}: {data.get('links')}"
+            )
 
     def test_paypal_return_reachable_with_deep_link(self, session):
         # No real order token - endpoint should still render an HTML page

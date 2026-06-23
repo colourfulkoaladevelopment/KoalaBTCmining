@@ -2847,7 +2847,6 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   </>
                 )}
               </LinearGradient>
-            )}
 
           </ScrollView>
         );
