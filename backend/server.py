@@ -2680,8 +2680,21 @@ async def validate_promo_code(promo_data: Dict[str, Any]):
         logger.error(f"Error validating promo code: {e}")
         raise HTTPException(status_code=400, detail="Invalid promo code request")
 
+def _public_base_url(request: Request) -> str:
+    """Public https base URL used for PayPal return/cancel redirects.
+    Prefers PUBLIC_BASE_URL env var; falls back to the incoming request's
+    base URL (forced to https, since PayPal LIVE requires https)."""
+    env_url = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if env_url:
+        return env_url
+    base = str(request.base_url).rstrip("/")
+    if base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base
+
+
 @app.post("/api/payments/create-paypal-order")
-async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
+async def create_paypal_order(order_data: Dict[str, Any], request: Request, current_user: Dict = Depends(get_current_user)):
     """Create PayPal order for miner purchase"""
     try:
         from paypalcheckoutsdk.orders import OrdersCreateRequest
@@ -2732,8 +2745,8 @@ async def create_paypal_order(order_data: Dict[str, Any], current_user: Dict = D
                 "brand_name": "Koala Mining",
                 "landing_page": "BILLING",
                 "user_action": "PAY_NOW",
-                "return_url": "koalamining://paypal/success",
-                "cancel_url": "koalamining://paypal/cancel"
+                "return_url": f"{_public_base_url(request)}/api/payments/paypal-return",
+                "cancel_url": f"{_public_base_url(request)}/api/payments/paypal-cancel"
             },
             "purchase_units": [{
                 "reference_id": f"{miner_id}_{current_user['id']}_{uuid.uuid4()}",
@@ -2975,7 +2988,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                     <h1>Payment Error</h1>
                     <p>There was an error processing your payment.</p>
                     <p>Please return to the app and try again.</p>
-                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                    <a href="koalamining://paypal/success" class="button">Return to App</a>
                 </div>
             </body>
             </html>
@@ -3049,7 +3062,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                     <h1>Order Not Found</h1>
                     <p>We couldn't find your payment order.</p>
                     <p>Please contact support if you were charged.</p>
-                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                    <a href="koalamining://paypal/success" class="button">Return to App</a>
                 </div>
             </body>
             </html>
@@ -3064,7 +3077,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+                <meta http-equiv="refresh" content="3;url=koalamining://paypal/success">
                 <title>Payment Already Processed</title>
                 <style>
                     body {{
@@ -3128,11 +3141,11 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                     <h1>Payment Already Processed</h1>
                     <p>Your {stored_order['miner_data']['name']} has already been activated!</p>
                     <p>Redirecting you back to the app...</p>
-                    <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+                    <a href="koalamining://paypal/success" class="button">Return to App Now</a>
                 </div>
                 <script>
                     setTimeout(function() {{
-                        window.location.href = 'exp://bitcoin-miner-sim';
+                        window.location.href = 'koalamining://paypal/success';
                     }}, 3000);
                 </script>
             </body>
@@ -3211,7 +3224,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+                    <meta http-equiv="refresh" content="3;url=koalamining://paypal/success">
                     <title>Payment Successful!</title>
                     <style>
                         body {{
@@ -3313,12 +3326,12 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                         </div>
                         
                         <p><strong>Redirecting you back to the app...</strong></p>
-                        <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+                        <a href="koalamining://paypal/success" class="button">Return to App Now</a>
                     </div>
                     <script>
                         // Attempt deep link redirect
                         setTimeout(function() {{
-                            window.location.href = 'exp://bitcoin-miner-sim';
+                            window.location.href = 'koalamining://paypal/success';
                         }}, 3000);
                     </script>
                 </body>
@@ -3393,7 +3406,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                     <h1>Processing Error</h1>
                     <p>There was an error processing your payment.</p>
                     <p>If you were charged, your miner will be activated shortly. Please check your account or contact support.</p>
-                    <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                    <a href="koalamining://paypal/success" class="button">Return to App</a>
                 </div>
             </body>
             </html>
@@ -3465,7 +3478,7 @@ async def paypal_return_handler(token: str = None, PayerID: str = None):
                 <h1>Unexpected Error</h1>
                 <p>An unexpected error occurred.</p>
                 <p>Please contact support if you were charged.</p>
-                <a href="exp://bitcoin-miner-sim" class="button">Return to App</a>
+                <a href="koalamining://paypal/success" class="button">Return to App</a>
             </div>
         </body>
         </html>
@@ -3480,7 +3493,7 @@ async def paypal_cancel_handler():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="refresh" content="3;url=exp://bitcoin-miner-sim">
+        <meta http-equiv="refresh" content="3;url=koalamining://paypal/cancel">
         <title>Payment Cancelled</title>
         <style>
             body {
@@ -3540,11 +3553,11 @@ async def paypal_cancel_handler():
             <p>Your payment was cancelled.</p>
             <p>No charges have been made to your account.</p>
             <p>Redirecting you back to the app...</p>
-            <a href="exp://bitcoin-miner-sim" class="button">Return to App Now</a>
+            <a href="koalamining://paypal/cancel" class="button">Return to App Now</a>
         </div>
         <script>
             setTimeout(function() {
-                window.location.href = 'exp://bitcoin-miner-sim';
+                window.location.href = 'koalamining://paypal/cancel';
             }, 3000);
         </script>
     </body>
