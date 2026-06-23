@@ -624,6 +624,18 @@ export default function PremiumBitcoinMiningApp() {
       }
     });
 
+    // Check for a PayPal result flag set by the paypal/success|cancel routes
+    // (expo-router catches the koala-mining://paypal/* deep link and bounces here).
+    AsyncStorage.getItem('paypal_payment_result').then((result) => {
+      if (result === 'success') {
+        AsyncStorage.removeItem('paypal_payment_result');
+        handleDeepLink({ url: 'koala-mining://paypal/success' });
+      } else if (result === 'cancel') {
+        AsyncStorage.removeItem('paypal_payment_result');
+        handleDeepLink({ url: 'koala-mining://paypal/cancel' });
+      }
+    });
+
     // Fallback: if the deep link doesn't fire (e.g. user manually returns to the
     // app from the PayPal browser), still refresh miner state on foreground.
     const appStateSub = AppState.addEventListener('change', (nextState) => {
@@ -2690,7 +2702,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                         Activate Daily Free Miner
                       </Text>
                       <Text style={[styles.actionButtonSubtitle, !canActivateFreeMiner && { color: '#666' }]}>
-                        {canActivateFreeMiner ? '1 GH/s for 24 hours' : 'Available in ' + freeMinerResetTime}
+                        {canActivateFreeMiner ? '10 GH/s for 24 hours' : 'Available in ' + freeMinerResetTime}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={canActivateFreeMiner ? "#4CAF50" : "#666"} />
@@ -2730,7 +2742,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   >
                     <LinearGradient colors={['#FF5722', '#E53935']} style={styles.buttonGradient}>
                       <Ionicons name="play-circle" size={16} color="#FFF" />
-                      <Text style={styles.watchAdButtonText}>Watch Ad (+2 GH/s)</Text>
+                      <Text style={styles.watchAdButtonText}>Watch Ad (+20 GH/s)</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -2922,7 +2934,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <Text style={styles.cardTitle}>Referral Rewards</Text>
               </View>
               <Text style={styles.referralDescription}>
-                Invite friends and earn rewards! When someone signs up with your referral code, you both receive bonus mining power. Plus, you'll earn commission from their mining activity!
+                Invite friends and earn rewards! When someone signs up with your referral code, you both receive a 50 GH/s miner for 30 days. Plus, you'll earn 10% commission from their mining activity!
               </Text>
             </LinearGradient>
 
@@ -2947,7 +2959,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
 
             {/* Share Button - Moved here */}
             <TouchableOpacity style={styles.shareButton} onPress={() => {
-              const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get 100 GH/s bonus!\n\n📥 Download Now:\nhttps://drive.google.com/file/d/1qYRdkl0x2oVeK-2LYIXPvCYXc1OhOCwQ/view?usp=drive_link`;
+              const message = `🐨 Join me on Koala Mining!\n\n💰 Use my code: ${referralStats?.referral_code}\n🎁 We both get a 50 GH/s miner for 30 days!\n\n📥 Download Now:\nhttps://drive.google.com/file/d/1qYRdkl0x2oVeK-2LYIXPvCYXc1OhOCwQ/view?usp=drive_link`;
               Share.share({ message });
             }}>
               <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
@@ -3375,24 +3387,26 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                   <Ionicons name="tv" size={48} color="#FFD700" />
                   <Text style={styles.adPreviewText}>Ready to watch ad</Text>
                   {currentAdType === 'miner_activation' && (
-                    <Text style={styles.adRewardText}>Reward: +2 GH/s for 24 hours</Text>
+                    <Text style={styles.adRewardText}>Reward: +20 GH/s for 24 hours</Text>
                   )}
                 </View>
               )}
               
               <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={styles.cancelButton} 
-                  onPress={() => {
-                    setShowAdModal(false);
-                    setCurrentAdType(null);
-                  }}
-                  disabled={isWatchingAd}
-                >
-                  <Text style={styles.cancelButtonText}>
-                    {currentAdType === 'miner_activation' ? 'Skip' : 'Back'}
-                  </Text>
-                </TouchableOpacity>
+                {currentAdType !== 'app_launch' && (
+                  <TouchableOpacity 
+                    style={styles.cancelButton} 
+                    onPress={() => {
+                      setShowAdModal(false);
+                      setCurrentAdType(null);
+                    }}
+                    disabled={isWatchingAd}
+                  >
+                    <Text style={styles.cancelButtonText}>
+                      {currentAdType === 'miner_activation' ? 'Skip' : 'Back'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity 
                   style={styles.confirmButton} 
                   onPress={handleAdWatch}

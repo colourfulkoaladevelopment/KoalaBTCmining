@@ -50,7 +50,7 @@ PROMO_CODES = {
 
 # Ad system constants
 MAX_DAILY_ADS = 999999  # Unlimited ads as requested
-AD_MINER_HASHRATE = 2.0  # 2 GH/s
+AD_MINER_HASHRATE = 20.0  # 20 GH/s
 AD_MINER_DURATION_HOURS = 24  # 24 hours instead of 30 minutes
 
 # Bitcoin wallet configuration (add these to your .env file in production)
@@ -471,12 +471,12 @@ async def register(request: RegisterRequest):
             }
             referrals_collection.insert_one(referral_data)
             
-            # Give referral rewards (100 GH/s miner for 30 days)
+            # Give referral rewards (50 GH/s miner for 30 days)
             reward_miner_data = {
                 "_id": str(uuid.uuid4()),
                 "user_id": str(referrer["_id"]),
                 "name": "Referral Reward Miner",
-                "hash_rate": 100.0,
+                "hash_rate": 50.0,
                 "miner_type": "referral_reward",
                 "status": "inactive",
                 "duration_hours": 720.0,  # 30 days
@@ -492,7 +492,7 @@ async def register(request: RegisterRequest):
                 "_id": str(uuid.uuid4()),
                 "user_id": user_id,
                 "name": "Welcome Referral Miner",
-                "hash_rate": 100.0,
+                "hash_rate": 50.0,
                 "miner_type": "referral_reward",
                 "status": "inactive",
                 "duration_hours": 720.0,
@@ -853,7 +853,7 @@ async def activate_miner(miner_id: str, current_user: Dict = Depends(get_current
 
 @app.post("/api/miners/activate-free")
 async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
-    """Activate or create free daily miner (1 GH/s for 24h)"""
+    """Activate or create free daily miner (10 GH/s for 24h)"""
     # Check if user already has an active free miner today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     existing_free = miners_collection.find_one({
@@ -888,7 +888,7 @@ async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
             "_id": miner_id,
             "user_id": current_user["id"],
             "name": "Daily Free Miner",
-            "hash_rate": 1.0,
+            "hash_rate": 10.0,
             "miner_type": "free",
             "status": "active",
             "duration_hours": 24.0,
@@ -961,15 +961,15 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
 # Used by BOTH /api/store/miners (display) and /api/payments/create-paypal-order (pricing),
 # so the price/hash-rate shown to the user always matches what PayPal charges.
 STORE_MINERS = [
-    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 100.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
-    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 200.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
-    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 400.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
-    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 1000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
-    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 2000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
-    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 4000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
-    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 10000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
-    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 15000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
-    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 20000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
+    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000108700000},
+    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000217400000},
+    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000434800000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00001087000000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00002174000000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00004348000000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00010870000000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00016305000000},
+    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 40000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00021740000000}
 ]
 
 @app.get("/api/store/miners")
@@ -3689,7 +3689,7 @@ async def watch_ad(
             "miner_id": ad_miner_id if ad_miner else None,
             "hash_rate_awarded": AD_MINER_HASHRATE if ad_miner else 0,
             "duration_hours": AD_MINER_DURATION_HOURS if ad_miner else 0,
-            "description": f"Watched {ad_type.replace('_', ' ')} ad" + (f" - earned 2 GH/s for 24h" if ad_miner else ""),
+            "description": f"Watched {ad_type.replace('_', ' ')} ad" + (f" - earned {int(AD_MINER_HASHRATE)} GH/s for 24h" if ad_miner else ""),
             "created_at": now
         }
         transactions_collection.insert_one(ad_transaction)
@@ -3709,8 +3709,8 @@ async def watch_ad(
         
         # Only include miner data for rewarded ads
         if ad_type == 'miner_activation' and ad_miner:
-            logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded 2 GH/s ad miner for 24h")
-            response_data["message"] = "Ad watched successfully! Earned 2 GH/s mining power for 24 hours."
+            logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded {int(AD_MINER_HASHRATE)} GH/s ad miner for 24h")
+            response_data["message"] = f"Ad watched successfully! Earned {int(AD_MINER_HASHRATE)} GH/s mining power for 24 hours."
             response_data["ad_miner"] = {
                 "id": ad_miner_id,
                 "name": ad_miner["name"],
