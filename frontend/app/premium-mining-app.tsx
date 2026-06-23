@@ -17,7 +17,8 @@ import {
   Linking,
   RefreshControl,
   Modal,
-  Dimensions
+  Dimensions,
+  AppState
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -449,6 +450,9 @@ export default function PremiumBitcoinMiningApp() {
   const [showPremiumMiners, setShowPremiumMiners] = useState(false);
   const [showReferralMiners, setShowReferralMiners] = useState(false);
   
+  // Tracks an in-flight PayPal checkout so we can refresh miner state when the app returns to foreground
+  const paypalPendingRef = useRef(false);
+
   // Form states
   const [contactForm, setContactForm] = useState({
     name: '',
@@ -591,7 +595,9 @@ export default function PremiumBitcoinMiningApp() {
       console.log('Deep link received:', url);
       
       if (url.includes('paypal/success')) {
-        // PayPal payment successful - refresh data
+        // PayPal payment successful - refresh data then confirm
+        paypalPendingRef.current = false;
+        loadAppData();
         showCustomAlert(
           '✅ Payment Successful!',
           'Your miner has been activated and is now generating Bitcoin!',
@@ -599,6 +605,7 @@ export default function PremiumBitcoinMiningApp() {
         );
       } else if (url.includes('paypal/cancel')) {
         // PayPal payment canceled
+        paypalPendingRef.current = false;
         showCustomAlert(
           'Payment Canceled',
           'Your payment was canceled. No charges were made.',
@@ -617,8 +624,18 @@ export default function PremiumBitcoinMiningApp() {
       }
     });
 
+    // Fallback: if the deep link doesn't fire (e.g. user manually returns to the
+    // app from the PayPal browser), still refresh miner state on foreground.
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && paypalPendingRef.current) {
+        paypalPendingRef.current = false;
+        loadAppData();
+      }
+    });
+
     return () => {
       subscription?.remove();
+      appStateSub?.remove();
     };
   }, []);
 
@@ -1233,6 +1250,8 @@ Daily Earning Estimate: est.
         const approvalUrl = orderData.links.find(link => link.rel === 'approve')?.href;
         
         if (approvalUrl) {
+          // Mark a PayPal flow as in-flight so we can refresh state on return
+          paypalPendingRef.current = true;
           // Open PayPal checkout in browser
           await Linking.openURL(approvalUrl);
           

@@ -1,0 +1,87 @@
+{
+  "summary": "PayPal checkout flow (backend + frontend) verified end-to-end on the preview URL. Backend: 13/13 pytest passed (test_paypal_flow.py) including POST /api/payments/create-paypal-order (200 with real approve link), GET /api/payments/paypal-return (200 HTML containing koala-mining://paypal/success deep link), GET /api/payments/paypal-cancel (200 HTML containing koala-mining://paypal/cancel deep link), and all 6 loadAppData() regression endpoints (/api/auth/me, /api/wallet/balance, /api/wallet/status, /api/miners/list, /api/store/miners, /api/referrals/stats). Admin gating: /api/admin/users is 200 for admin and 403 (correctly fixed from iteration_1) for non-admin. Frontend: logged in as koalatest@example.com, dashboard loaded with all loadAppData calls firing (confirmed in network log), navigated to Store (9 miners listed), tapped 'Purchase & Activate' on Standard Miner ($7.99), confirmed via 'Pay with PayPal' → POST /api/payments/create-paypal-order returned 200 with approve link 'https://www.paypal.com/checkoutnow?token=2C265409TK593900L', Linking.openURL fired (window.open intercepted) and the '🌐 PayPal Checkout Opened' custom alert displayed exactly as designed. Did NOT complete real payment. No red screens / no page crashes. Recurring non-fatal RN-Web console error 'Unexpected text node: )}. A text node cannot be a child of a <View>' is STILL PRESENT (carried over from iteration_1) and a stray ')}' is even rendered visually under the Premium Miners section on the dashboard.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/payments/create-paypal-order",
+        "issue": "Broad `except Exception` at server.py:2806 swallows HTTPException(404 'Miner not found') and re-raises as 500. Add `except HTTPException: raise` before the broad except (same pattern as iteration_1 fix on /api/admin/users at ~3996). Currently returns 500 for unknown miner_id instead of 404."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Dashboard (premium-mining-app.tsx) - stray ')}' literal",
+        "issue": "Recurring console error 'Unexpected text node: )}. A text node cannot be a child of a <View>' fires ~20 times per render AND a literal ')}' is rendered on the dashboard between 'Premium Miners (0)' and the bottom tab bar. Persists from iteration_1 and was NOT fixed. A misplaced fragment closer or stray expression inside a <View>. Reference: /app/frontend/app/premium-mining-app.tsx (file is 4884 lines; grep for ')}' followed by JSX siblings inside a <View>; most likely near the Premium Miners section in the Dashboard render block).",
+        "testID": "n/a",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Store miner cards",
+        "issue": "Hash rates displayed on the Store page do NOT match the hardcoded miners list used by /api/payments/create-paypal-order (server.py:2707-2717). E.g., Ultimate Miner UI shows 10.0 TH/s for $449.99 but backend create-paypal-order list has miner_6th = 6000 GH/s for $449.99. Legendary shows 15.0 TH/s for $749.99 but backend has 8000 GH/s for $599.99 (miner_8th). Prices and IDs likely diverge between /api/store/miners (frontend source) and the hardcoded list in create-paypal-order. User will be charged the create-paypal-order price, which may not match the Store-displayed price. Verify both lists are sourced from one constant.",
+        "testID": "n/a",
+        "priority": "HIGH"
+      },
+      {
+        "component": "All interactive elements",
+        "issue": "Still no testID props anywhere in premium-mining-app.tsx (Purchase & Activate buttons, Pay with PayPal button, modal Cancel buttons, tab bar). Reproduces iteration_1 finding.",
+        "testID": "MISSING",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Login / Dashboard",
+        "issues": [
+          "After login a 'Success! 🎉 Welcome back to Koala Mining!' alert AND a separate 'Advertisement Required' modal both stack on top of the Dashboard, requiring two dismissals to interact with the app. Consider chaining or auto-dismissing the welcome alert."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "RN-Web deprecation warnings",
+        "issue": "'shadow*' style props deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow), 'props.pointerEvents' deprecated (use style.pointerEvents). Multiple occurrences. Non-blocking but should be migrated. Reference: /app/frontend/app/premium-mining-app.tsx (multiple lines)."
+        },
+      {
+        "component": "expo-notifications on web",
+        "issue": "'[expo-notifications] Listening to push token changes is not yet fully supported on web' - expected on web preview, no action needed."
+      },
+      {
+        "component": "Linking deep link handler",
+        "issue": "handleDeepLink is also invoked with the regular web URL on page load (console log 'Deep link received: https://paypal-ads-rebuild.preview.emergentagent.com/'). It correctly no-ops because the URL doesn't contain 'paypal/success' or 'paypal/cancel', but the substring match `url.includes('paypal/success')` could false-positive if the app's own URL ever contains 'paypal/success' as a path segment. Consider exact-prefix match on 'koala-mining://paypal/' instead of substring. Ref: premium-mining-app.tsx:597-614."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_paypal_flow.py",
+    "/app/backend/tests/test_admin_actions.py",
+    "/app/test_reports/pytest/paypal_results.xml"
+  ],
+  "action_items": [
+    "Fix POST /api/payments/create-paypal-order to re-raise HTTPException before broad except (server.py:2806) so unknown miner returns 404 instead of 500.",
+    "RESOLVE the stray ')}' / 'Unexpected text node' bug in premium-mining-app.tsx near the Premium Miners section of the Dashboard render. Visible to end users on the dashboard.",
+    "Reconcile the Store miner list (frontend / /api/store/miners) with the hardcoded miners list in create-paypal-order (server.py:2707-2717) - hash rates and at least one price disagree (Legendary $749.99 in UI vs $599.99 in backend). Source both from one shared constant to prevent user-facing price/spec mismatches.",
+    "Tighten the deep-link substring match in premium-mining-app.tsx (use scheme prefix koala-mining://paypal/ instead of url.includes('paypal/success')).",
+    "Add testID props to Store cards, Purchase & Activate, Pay with PayPal, Cancel Purchase, and tab bar items to enable automated testing.",
+    "Auto-dismiss or suppress the 'Welcome back' success alert when the next-screen modal (Ad Required) is also queued."
+  ],
+  "critical_code_review_comments": [
+    "server.py:2806 broad `except Exception` swallows HTTPException(404) - identical anti-pattern as iteration_1 found in /api/admin/users. Hunt down all `except Exception` blocks that follow `raise HTTPException(...)` and add `except HTTPException: raise` first.",
+    "premium-mining-app.tsx is now 4884 lines (was 4841). The recurring 'Unexpected text node ')}' indicates fragile rendering near a Dashboard <View> - smaller modules would help isolate.",
+    "Two sources of truth for the miners catalog: /api/store/miners and the inline list inside create_paypal_order. Should be a single STORE_MINERS constant imported by both.",
+    "Frontend uses substring url.includes('paypal/success') to detect deep links - safer to check `url.startsWith('koala-mining://paypal/success')` to avoid false positives if the web URL ever contains that substring."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_paypal_flow.py (new)",
+    "/app/test_reports/pytest/paypal_results.xml (new)",
+    "/app/test_reports/iteration_2.json (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100% for tested flow (login -> store -> PayPal init)"},
+  "seed_data_creation": "None for this iteration. Test reuses koalatest@example.com / colourfulkoaladevelopment@gmail.com from /app/memory/test_credentials.md.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "PayPal end-to-end on web preview: backend create-paypal-order accepts {miner_id: 'miner_100gh', promo_code: '', subscription_type: 'one_time'} for koalatest and returns 200 with order_id + 4 links incl. rel=approve to live PayPal (LIVE mode in .env). To intercept the Linking.openURL call in headless Playwright, monkey-patch window.open BEFORE clicking 'Pay with PayPal' - Expo Linking on web routes through window.open. /api/payments/paypal-return is reachable with ANY token (returns HTML deep-link page even for FAKE token), so tests don't need a real PayPal capture. /api/admin/users non-admin gating is now 403 (was 500 in iteration_1, FIXED).",
+  "rca_of_issue": "PayPal end-to-end charged but no auto-redirect / no instant miner activation: This session focused only on the FRONTEND hardening (AppState foreground listener + paypalPendingRef.current to retrigger loadAppData on return). Verified that (a) paypalPendingRef.current = true is set immediately before Linking.openURL(approvalUrl) at premium-mining-app.tsx:1254, (b) AppState 'change' listener calls loadAppData() when state becomes 'active' && paypalPendingRef.current (lines 629-634), (c) the deep-link 'paypal/success' handler also calls loadAppData() + clears the ref (lines 597-605). All wired correctly. The actual deep-link bounce-back and AppState foreground transition CANNOT be exercised in a web preview (no koala-mining:// scheme handler on the browser) - must be validated on a physical device or APK build. Backend captures + activates the miner inside the paypal-return handler so server-side activation is independent of the deep link firing."
+}
