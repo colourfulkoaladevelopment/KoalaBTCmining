@@ -3,10 +3,9 @@
     "name": "Koala Mining",
     "slug": "koala-mining",
     "version": "1.0.0",
-    "scheme": "koalamining",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "koala-mining",
+    "scheme": ["koala-mining", "koalamining"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
