@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration_7 verifies the new Reject Pending Address Change feature. BACKEND: 8/8 pytest passed in /app/backend/tests/test_iteration_7_reject_address.py covering happy path with reason, 404 (no pending), 403 (non-admin), empty-reason fallback to 'No reason provided', missing-reason-body fallback, plus regression that approve-address-change + pending-list + request-address-change validation are unaffected. MongoDB verified directly: rejection clears pending_address_change, leaves btc_wallet_address untouched, and stores last_address_change_rejection {new_address, reason, rejected_at}. FRONTEND (mobile 390x844 live preview): admin login -> 'Pending Address Changes (1)' rendered with Test User row showing BOTH green Approve and red Reject buttons. Tapping Reject opened modal titled 'Reject Address Change' with: email subtitle, 'Requested: <new_address>' line, multiline textarea placeholder 'Reason for rejection (optional)', and Cancel/Reject buttons. Submitting with reason 'UI test: suspicious address' produced the '✅ Rejected - Address change for koalatest@example.com was rejected' alert; dismissing OK -> list refreshed to 'Pending Address Changes (0)' with 'No pending address changes' and the row disappeared. DB inspection confirmed the reason text was persisted exactly as typed in the UI.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin - Pending Address Changes row", "issues": ["Layout note (carryover-style): on a 390px viewport the row is tight - the Approve + Reject buttons sit next to a left info block and on narrow screens may push the long bc1q... address into truncation. Currently fine because info block has flex grow and addresses use ellipsizeMode='middle'. No action required, just flagging."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN-Web deprecated style props", "issue": "Carryover from iter_6 - console emits 'shadow*' deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow). Non-blocking. Reference: /app/frontend/app/premium-mining-app.tsx (multiple lines)."},
+      {"component": "testID coverage", "issue": "Carryover - NEW Reject Address Change modal (reason textarea, Cancel/Reject buttons in modal) and the per-row Reject button have NO testID. All UI testing relied on text selectors. Recommend adding testID like 'admin-reject-addr-btn-<userId>', 'admin-reject-addr-modal-reason', 'admin-reject-addr-modal-submit', 'admin-reject-addr-modal-cancel'. Reference: /app/frontend/app/premium-mining-app.tsx:405-433, 628-667."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_7_reject_address.py",
+    "/app/test_reports/pytest/iteration_7_results.xml"
+  ],
+  "action_items": [
+    "Optional: add testID to the new Reject button (per row) and Reject-modal elements (reason textarea, Cancel, Reject) for future automated testing.",
+    "Carryover: split premium-mining-app.tsx (now ~5362 lines) into per-screen modules.",
+    "Carryover: address RN-Web shadow*/textShadow* deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py reject_address_change (~line 4321): correctly enforces admin via is_admin(); correctly $unsets pending_address_change; correctly stores last_address_change_rejection with rejected_at timestamp; reason defaults to 'No reason provided' when empty/missing; uses except HTTPException: raise before generic Exception handler so 403/404 are not swallowed (carryover fix from iter_6 pattern). LGTM.",
+    "premium-mining-app.tsx confirmRejectAddressChange (line 183-204): correctly attaches Authorization header, sends JSON body { reason }, refreshes pendingAddressChanges + allUsers on success, surfaces backend detail on failure, and resets modal state. LGTM.",
+    "premium-mining-app.tsx Reject button onPress (line 426-433): opens modal with correct payload {userId, userEmail, newAddress, reason:''}. Uses gradient red #E53935 -> #C62828, consistent with the modal Reject CTA color. LGTM.",
+    "Note: the data Dict parameter on POST /api/admin/reject-address-change uses `data: Dict = None` then `(data or {}).get('reason', '')` - this handles both missing body and empty body correctly (verified by test_reject_with_empty_reason and test_reject_with_missing_reason_body). FastAPI happily accepts an empty {} body for Dict=None signature.",
+    "Carryover: premium-mining-app.tsx ZERO testID props; >5300 lines; should be code-split."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_7_reject_address.py (NEW, 8 tests covering reject + regression)",
+    "/app/test_reports/pytest/iteration_7_results.xml (NEW, 8/8 passed)",
+    "/app/test_reports/iteration_7.json (NEW)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% on the new Reject flow: row shows Approve + Reject; modal opens with title/subtitle/requested-address/multiline reason/Cancel+Reject; submission shows ✅ Rejected; row disappears; pending count drops to 0; DB stores last_address_change_rejection.reason exactly as typed."},
+  "seed_data_creation": "Seeded one pending_address_change as koalatest@example.com via POST /api/wallet/request-address-change with new_address bc1quitestrejectaddress11111111111111 so the admin UI had a row to Reject. After UI rejected it, DB shows last_address_change_rejection {new_address: 'bc1quitestrejectaddress11111111111111', reason: 'UI test: suspicious address', rejected_at: 2026-06-25T12:52:45Z} and btc_wallet_address remained bc1qexampleaddressxxxxxxxxxxxxxxxxxxxxxx (unchanged). Pending list is empty after the run, so repeatable.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration_7 reject-address-change feature is fully verified end-to-end (backend 8/8 + UI flow + DB inspection). The test user starts and ends the iteration with btc_wallet_address bc1qexampleaddressxxxxxxxxxxxxxxxxxxxxxx, balance 0.005 BTC, wallet_status='connected', no pending change. /app/memory/test_credentials.md still holds the canonical admin and user creds. No new server bugs found. NO testID was added by the developer for the new Reject UI; future testing should use text-based selectors ('Reject', 'Reject Address Change', 'Reason for rejection') or ask main agent to add testIDs. The 'Success! Welcome back' login alert still needs to be OK-dismissed before admin UI is interactive (carryover)."
+}

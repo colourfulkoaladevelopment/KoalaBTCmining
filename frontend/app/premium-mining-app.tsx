@@ -38,6 +38,7 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
   const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '', operation: 'add' });
   const [pendingAddressChanges, setPendingAddressChanges] = useState([]);
   const [setAddrModal, setSetAddrModal] = useState({ visible: false, userId: '', userEmail: '', newAddress: '' });
+  const [rejectAddrModal, setRejectAddrModal] = useState({ visible: false, userId: '', userEmail: '', newAddress: '', reason: '' });
 
   const loadAllUsers = async () => {
     try {
@@ -173,6 +174,29 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
         let detail = '';
         try { detail = (await response.json())?.detail || ''; } catch (e) {}
         showCustomAlert('❌ Error', `Failed to set address${detail ? ': ' + detail : ''}`);
+      }
+    } catch (error) {
+      showCustomAlert('❌ Error', 'Network error occurred');
+    }
+  };
+
+  const confirmRejectAddressChange = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/reject-address-change/${rejectAddrModal.userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectAddrModal.reason.trim() })
+      });
+      if (response.ok) {
+        showCustomAlert('✅ Rejected', `Address change for ${rejectAddrModal.userEmail} was rejected`);
+        setRejectAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '', reason: '' });
+        loadPendingAddressChanges();
+        loadAllUsers();
+      } else {
+        let detail = '';
+        try { detail = (await response.json())?.detail || ''; } catch (e) {}
+        showCustomAlert('❌ Error', `Failed to reject${detail ? ': ' + detail : ''}`);
       }
     } catch (error) {
       showCustomAlert('❌ Error', 'Network error occurred');
@@ -399,6 +423,14 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
                     <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Approve</Text>
                   </LinearGradient>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setRejectAddrModal({ visible: true, userId: req.user_id, userEmail: req.email, newAddress: req.new_address, reason: '' })}
+                  style={{ marginLeft: 8 }}
+                >
+                  <LinearGradient colors={['#E53935', '#C62828']} style={{ padding: 12, borderRadius: 8 }}>
+                    <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Reject</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
             ))
           )}
@@ -587,6 +619,47 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
                 onPress={confirmSetAddress}
               >
                 <Text style={styles.adminModalBtnText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reject Address Change Modal (with reason) */}
+      <Modal
+        visible={rejectAddrModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRejectAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '', reason: '' })}
+      >
+        <View style={styles.adminModalOverlay}>
+          <View style={styles.adminModalCard}>
+            <Text style={styles.adminModalTitle}>Reject Address Change</Text>
+            <Text style={styles.adminModalSubtitle}>{rejectAddrModal.userEmail}</Text>
+            <Text style={{ color: '#888', fontSize: 11, marginBottom: 8 }} numberOfLines={1} ellipsizeMode="middle">
+              Requested: {rejectAddrModal.newAddress}
+            </Text>
+            <TextInput
+              style={[styles.adminModalInput, { height: 90, textAlignVertical: 'top' }]}
+              placeholder="Reason for rejection (optional)"
+              placeholderTextColor="#666"
+              value={rejectAddrModal.reason}
+              onChangeText={(t) => setRejectAddrModal({ ...rejectAddrModal, reason: t })}
+              multiline
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', marginTop: 16 }}>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#444', marginRight: 8 }]}
+                onPress={() => setRejectAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '', reason: '' })}
+              >
+                <Text style={styles.adminModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#E53935' }]}
+                onPress={confirmRejectAddressChange}
+              >
+                <Text style={styles.adminModalBtnText}>Reject</Text>
               </TouchableOpacity>
             </View>
           </View>

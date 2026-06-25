@@ -4318,6 +4318,37 @@ async def approve_address_change(user_id: str, current_user: Dict = Depends(get_
         logger.error(f"Error approving address change: {e}")
         raise HTTPException(status_code=500, detail="Failed to approve address change")
 
+@app.post("/api/admin/reject-address-change/{user_id}")
+async def reject_address_change(user_id: str, data: Dict = None, current_user: Dict = Depends(get_current_user)):
+    """Reject a user's pending withdrawal-address change with an optional reason"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user or not user.get("pending_address_change"):
+            raise HTTPException(status_code=404, detail="No pending address change for this user")
+        reason = (data or {}).get("reason", "").strip() if data else ""
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "last_address_change_rejection": {
+                        "new_address": user["pending_address_change"].get("new_address"),
+                        "reason": reason or "No reason provided",
+                        "rejected_at": datetime.utcnow()
+                    }
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin rejected address change for {user.get('email')}. Reason: {reason or 'none'}")
+        return {"success": True, "message": "Address change rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rejecting address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reject address change")
+
 @app.post("/api/admin/set-address/{user_id}")
 async def admin_set_address(user_id: str, data: Dict[str, str], current_user: Dict = Depends(get_current_user)):
     """Admin manually sets a user's withdrawal address"""
