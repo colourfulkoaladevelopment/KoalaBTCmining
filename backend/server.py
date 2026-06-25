@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, validator
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from bson import ObjectId
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
@@ -359,13 +359,16 @@ async def check_expired_miners():
             {"status": "active"},
             {"_id": 1, "expires_at": 1}
         ).limit(1000))
+        time_ops = []
         for miner in active_miners:
             if miner.get("expires_at"):
                 time_remaining = (miner["expires_at"] - current_time).total_seconds() / 3600
-                miners_collection.update_one(
+                time_ops.append(UpdateOne(
                     {"_id": miner["_id"]},
                     {"$set": {"time_remaining": max(0, time_remaining)}}
-                )
+                ))
+        if time_ops:
+            miners_collection.bulk_write(time_ops, ordered=False)
         
     except Exception as e:
         logger.error(f"Error in check_expired_miners: {e}")
@@ -378,36 +381,42 @@ async def process_mining_earnings():
             {"_id": 1, "user_id": 1, "hash_rate": 1, "name": 1}
         ).limit(1000))
         
+        miner_ops = []
+        user_earnings = {}
+        transactions = []
+        now = datetime.utcnow()
+        base_rate_per_gh_per_5sec = 0.000000005435 / 17280
+
         for miner in active_miners:
             # Calculate earnings based on advertised daily_reward
-            # Store miners show: 100 GH = 0.00000054350000 BTC/day
-            # That's 0.000000005435 BTC per GH per day
-            # Per 5 seconds: 0.000000005435 / (86400/5) = 0.000000005435 / 17280
-            base_rate_per_gh_per_5sec = 0.000000005435 / 17280  # = 0.0000000000003146...
             earnings = miner["hash_rate"] * base_rate_per_gh_per_5sec
-            
-            # Update miner earnings
-            miners_collection.update_one(
+
+            miner_ops.append(UpdateOne(
                 {"_id": miner["_id"]},
                 {"$inc": {"total_earned": earnings}}
-            )
-            
-            # Update user balance
-            users_collection.update_one(
-                {"_id": miner["user_id"]},
-                {"$inc": {"bitcoin_balance": earnings, "total_earnings": earnings}}
-            )
-            
-            # Record transaction
-            transaction = {
-                "user_id": miner["user_id"],
+            ))
+
+            uid = miner["user_id"]
+            user_earnings[uid] = user_earnings.get(uid, 0) + earnings
+
+            transactions.append({
+                "user_id": uid,
                 "transaction_type": "earning",
                 "amount": earnings,
                 "description": f"Mining earnings from {miner['name']}",
                 "miner_id": str(miner["_id"]),
-                "created_at": datetime.utcnow()
-            }
-            transactions_collection.insert_one(transaction)
+                "created_at": now
+            })
+
+        if miner_ops:
+            miners_collection.bulk_write(miner_ops, ordered=False)
+        if user_earnings:
+            users_collection.bulk_write([
+                UpdateOne({"_id": uid}, {"$inc": {"bitcoin_balance": amt, "total_earnings": amt}})
+                for uid, amt in user_earnings.items()
+            ], ordered=False)
+        if transactions:
+            transactions_collection.insert_many(transactions, ordered=False)
         
     except Exception as e:
         logger.error(f"Error in process_mining_earnings: {e}")
@@ -4545,12 +4554,16 @@ async def get_recent_activities():
             {"user_id": 1, "amount_btc": 1, "created_at": 1}
         ).sort("created_at", -1).limit(5))
         
+        # Batch-fetch all referenced users in one query (avoids N+1)
+        user_ids = list({p["user_id"] for p in recent_purchases} | {w["user_id"] for w in recent_withdrawals})
+        user_map = {u["_id"]: u for u in users_collection.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})} if user_ids else {}
+
         # Format activities
         activities = []
         
         for purchase in recent_purchases:
             # Get user name
-            user = users_collection.find_one({"_id": purchase["user_id"]})
+            user = user_map.get(purchase["user_id"])
             if user:
                 name = user.get("name", "Anonymous User")
                 # Obfuscate name: keep first letter of each word, rest as asterisks
@@ -4574,7 +4587,7 @@ async def get_recent_activities():
         
         for withdrawal in recent_withdrawals:
             # Get user name
-            user = users_collection.find_one({"_id": withdrawal["user_id"]})
+            user = user_map.get(withdrawal["user_id"])
             if user:
                 name = user.get("name", "Anonymous User")
                 # Obfuscate name
