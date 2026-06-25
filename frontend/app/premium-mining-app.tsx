@@ -65,22 +65,39 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
       showCustomAlert('❌ Error', 'Please enter a valid BTC amount');
       return;
     }
+    const targetId = giveBtcModal.userId;
+    if (!targetId) {
+      showCustomAlert('❌ Error', 'No user selected. Please reopen and try again.');
+      return;
+    }
+    const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/give-btc/${targetId}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
       const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/give-btc/${giveBtcModal.userId}`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount })
+        body: JSON.stringify({ amount }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (response.ok) {
         showCustomAlert('✅ Success', `Added ₿ ${amount.toFixed(8)} to ${giveBtcModal.userEmail}`);
         setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' });
         loadAllUsers();
       } else {
-        showCustomAlert('❌ Error', 'Failed to add BTC');
+        let detail = '';
+        try { detail = (await response.json())?.detail || ''; } catch (e) {}
+        showCustomAlert('❌ Error', `Failed to add BTC (HTTP ${response.status})${detail ? ': ' + detail : ''}`);
       }
-    } catch (error) {
-      showCustomAlert('❌ Error', 'Network error occurred');
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error?.name === 'AbortError') {
+        showCustomAlert('❌ Timed Out', 'The server did not respond. Check your connection and that the backend is reachable, then try again.');
+      } else {
+        showCustomAlert('❌ Error', `Network error: ${error?.message || 'request failed'}`);
+      }
     }
   };
 
@@ -1026,26 +1043,41 @@ export default function PremiumBitcoinMiningApp() {
       showCustomAlert('❌ Error', 'Please enter a valid BTC amount');
       return;
     }
-
+    if (!giveBtcModal.userId) {
+      showCustomAlert('❌ Error', 'No user selected. Please reopen and try again.');
+      return;
+    }
+    const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/give-btc/${giveBtcModal.userId}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
       const token = await AsyncStorage.getItem('session_token');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/give-btc/${giveBtcModal.userId}`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ amount })
+        body: JSON.stringify({ amount }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         showCustomAlert('✅ Success', `Successfully added ₿ ${amount.toFixed(8)} to ${giveBtcModal.userEmail}`);
         setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' });
       } else {
-        showCustomAlert('❌ Error', 'Failed to add BTC');
+        let detail = '';
+        try { detail = (await response.json())?.detail || ''; } catch (e) {}
+        showCustomAlert('❌ Error', `Failed to add BTC (HTTP ${response.status})${detail ? ': ' + detail : ''}`);
       }
-    } catch (error) {
-      showCustomAlert('❌ Error', 'Network error occurred');
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error?.name === 'AbortError') {
+        showCustomAlert('❌ Timed Out', 'The server did not respond. Check your connection and that the backend is reachable, then try again.');
+      } else {
+        showCustomAlert('❌ Error', `Network error: ${error?.message || 'request failed'}`);
+      }
     }
   };
 
