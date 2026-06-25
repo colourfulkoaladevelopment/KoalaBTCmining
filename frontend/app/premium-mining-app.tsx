@@ -35,7 +35,9 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
   const [allUsers, setAllUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
-  const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '' });
+  const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '', operation: 'add' });
+  const [pendingAddressChanges, setPendingAddressChanges] = useState([]);
+  const [setAddrModal, setSetAddrModal] = useState({ visible: false, userId: '', userEmail: '', newAddress: '' });
 
   const loadAllUsers = async () => {
     try {
@@ -56,12 +58,13 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
   };
 
   const handleGiveBtc = (userId, userEmail) => {
-    setGiveBtcModal({ visible: true, userId, userEmail, amount: '' });
+    setGiveBtcModal({ visible: true, userId, userEmail, amount: '', operation: 'add' });
   };
 
   const confirmGiveBtc = async () => {
+    const operation = giveBtcModal.operation || 'add';
     const amount = parseFloat(giveBtcModal.amount);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount < 0 || (operation !== 'set' && amount <= 0)) {
       showCustomAlert('❌ Error', 'Please enter a valid BTC amount');
       return;
     }
@@ -78,18 +81,20 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, operation }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
       if (response.ok) {
-        showCustomAlert('✅ Success', `Added ₿ ${amount.toFixed(8)} to ${giveBtcModal.userEmail}`);
-        setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' });
+        const data = await response.json();
+        const verb = operation === 'add' ? 'Added' : operation === 'remove' ? 'Removed' : 'Set';
+        showCustomAlert('✅ Success', `${verb} ₿ ${amount.toFixed(8)} for ${giveBtcModal.userEmail}.\nNew balance: ₿ ${(data.new_balance || 0).toFixed(8)}`);
+        setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '', operation: 'add' });
         loadAllUsers();
       } else {
         let detail = '';
         try { detail = (await response.json())?.detail || ''; } catch (e) {}
-        showCustomAlert('❌ Error', `Failed to add BTC (HTTP ${response.status})${detail ? ': ' + detail : ''}`);
+        showCustomAlert('❌ Error', `Failed to adjust balance (HTTP ${response.status})${detail ? ': ' + detail : ''}`);
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
@@ -98,6 +103,79 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
       } else {
         showCustomAlert('❌ Error', `Network error: ${error?.message || 'request failed'}`);
       }
+    }
+  };
+
+  const loadPendingAddressChanges = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/pending-address-changes`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingAddressChanges(data.pending_changes || []);
+      }
+    } catch (error) {
+      console.error('Error loading pending address changes:', error);
+    }
+  };
+
+  const approveAddressChange = async (userId, userEmail, newAddress) => {
+    showCustomAlert(
+      '✅ Approve Address Change',
+      `Approve new address for ${userEmail}?\n\n${newAddress}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/approve-address-change/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                showCustomAlert('✅ Success', 'Address change approved');
+                loadPendingAddressChanges();
+                loadAllUsers();
+              } else {
+                showCustomAlert('❌ Error', 'Failed to approve address change');
+              }
+            } catch (error) {
+              showCustomAlert('❌ Error', 'Network error occurred');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const confirmSetAddress = async () => {
+    const newAddress = setAddrModal.newAddress.trim();
+    if (!newAddress) {
+      showCustomAlert('❌ Error', 'Please enter a new address');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/admin/set-address/${setAddrModal.userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_address: newAddress })
+      });
+      if (response.ok) {
+        showCustomAlert('✅ Success', `Address updated for ${setAddrModal.userEmail}`);
+        setSetAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '' });
+        loadAllUsers();
+      } else {
+        let detail = '';
+        try { detail = (await response.json())?.detail || ''; } catch (e) {}
+        showCustomAlert('❌ Error', `Failed to set address${detail ? ': ' + detail : ''}`);
+      }
+    } catch (error) {
+      showCustomAlert('❌ Error', 'Network error occurred');
     }
   };
 
@@ -180,11 +258,12 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
   useEffect(() => {
     loadPendingWallets();
     loadAllUsers();
+    loadPendingAddressChanges();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadPendingWallets(), loadAllUsers()]);
+    await Promise.all([loadPendingWallets(), loadAllUsers(), loadPendingAddressChanges()]);
     setRefreshing(false);
   };
 
@@ -284,6 +363,47 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
           )}
         </LinearGradient>
 
+        {/* Pending Address Changes */}
+        <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
+          <Text style={styles.sectionTitle}>🔁 Pending Address Changes ({pendingAddressChanges.length})</Text>
+
+          {pendingAddressChanges.length === 0 ? (
+            <Text style={styles.noDataText}>No pending address changes</Text>
+          ) : (
+            pendingAddressChanges.map((req) => (
+              <View key={req.user_id} style={styles.userItem}>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{req.name || 'Unknown'}</Text>
+                  <Text style={styles.userEmail}>{req.email}</Text>
+                  <Text style={{ color: '#888', fontSize: 10, marginTop: 4 }} numberOfLines={1} ellipsizeMode="middle">
+                    Current: {req.current_address || '—'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      await Clipboard.setString(req.new_address);
+                      showCustomAlert('Copied! 📋', 'New address copied to clipboard');
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}
+                  >
+                    <Ionicons name="copy" size={12} color="#FFD700" style={{ marginRight: 5 }} />
+                    <Text style={{ color: '#4CAF50', fontSize: 11 }} numberOfLines={1} ellipsizeMode="middle">
+                      New: {req.new_address}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={() => approveAddressChange(req.user_id, req.email, req.new_address)}
+                  style={{ marginLeft: 10 }}
+                >
+                  <LinearGradient colors={['#4CAF50', '#45A049']} style={{ padding: 12, borderRadius: 8 }}>
+                    <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold' }}>Approve</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </LinearGradient>
+
         {/* User Management */}
         <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.adminSection}>
           <Text style={styles.sectionTitle}>👥 User Management ({allUsers.length})</Text>
@@ -336,7 +456,13 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
                       onPress={() => handleGiveBtc(u.id, u.email)}
                       style={[styles.adminActionBtn, { backgroundColor: '#1E88E5' }]}
                     >
-                      <Text style={styles.adminActionBtnText}>+ BTC</Text>
+                      <Text style={styles.adminActionBtnText}>Balance</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setSetAddrModal({ visible: true, userId: u.id, userEmail: u.email, newAddress: '' })}
+                      style={[styles.adminActionBtn, { backgroundColor: '#00897B' }]}
+                    >
+                      <Text style={styles.adminActionBtnText}>Address</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleResetUser(u.id, u.email)}
@@ -374,20 +500,37 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
         </LinearGradient>
       </ScrollView>
 
-      {/* Give BTC Modal */}
+      {/* Adjust Balance Modal */}
       <Modal
         visible={giveBtcModal.visible}
         transparent
         animationType="fade"
-        onRequestClose={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' })}
+        onRequestClose={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '', operation: 'add' })}
       >
         <View style={styles.adminModalOverlay}>
           <View style={styles.adminModalCard}>
-            <Text style={styles.adminModalTitle}>Add BTC</Text>
+            <Text style={styles.adminModalTitle}>Adjust Balance</Text>
             <Text style={styles.adminModalSubtitle}>{giveBtcModal.userEmail}</Text>
+
+            {/* Operation selector */}
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              {['add', 'remove', 'set'].map((op) => (
+                <TouchableOpacity
+                  key={op}
+                  style={[
+                    styles.adminModalBtn,
+                    { marginRight: op !== 'set' ? 6 : 0, paddingVertical: 8, backgroundColor: giveBtcModal.operation === op ? '#1E88E5' : '#333' }
+                  ]}
+                  onPress={() => setGiveBtcModal({ ...giveBtcModal, operation: op })}
+                >
+                  <Text style={styles.adminModalBtnText}>{op === 'add' ? 'Add' : op === 'remove' ? 'Remove' : 'Set'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TextInput
               style={styles.adminModalInput}
-              placeholder="Amount (e.g. 0.001)"
+              placeholder={giveBtcModal.operation === 'set' ? 'Set balance to (BTC)' : 'Amount (e.g. 0.001)'}
               placeholderTextColor="#666"
               keyboardType="decimal-pad"
               value={giveBtcModal.amount}
@@ -397,7 +540,7 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
             <View style={{ flexDirection: 'row', marginTop: 16 }}>
               <TouchableOpacity
                 style={[styles.adminModalBtn, { backgroundColor: '#444', marginRight: 8 }]}
-                onPress={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '' })}
+                onPress={() => setGiveBtcModal({ visible: false, userId: '', userEmail: '', amount: '', operation: 'add' })}
               >
                 <Text style={styles.adminModalBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -405,7 +548,45 @@ function AdminPanelComponent({ user, setCurrentScreen, setIsAdmin, showCustomAle
                 style={[styles.adminModalBtn, { backgroundColor: '#1E88E5' }]}
                 onPress={confirmGiveBtc}
               >
-                <Text style={styles.adminModalBtnText}>Add BTC</Text>
+                <Text style={styles.adminModalBtnText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Set Withdrawal Address Modal (admin direct change) */}
+      <Modal
+        visible={setAddrModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSetAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '' })}
+      >
+        <View style={styles.adminModalOverlay}>
+          <View style={styles.adminModalCard}>
+            <Text style={styles.adminModalTitle}>Change Withdrawal Address</Text>
+            <Text style={styles.adminModalSubtitle}>{setAddrModal.userEmail}</Text>
+            <TextInput
+              style={styles.adminModalInput}
+              placeholder="New address"
+              placeholderTextColor="#666"
+              autoCapitalize="none"
+              value={setAddrModal.newAddress}
+              onChangeText={(t) => setSetAddrModal({ ...setAddrModal, newAddress: t })}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', marginTop: 16 }}>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#444', marginRight: 8 }]}
+                onPress={() => setSetAddrModal({ visible: false, userId: '', userEmail: '', newAddress: '' })}
+              >
+                <Text style={styles.adminModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.adminModalBtn, { backgroundColor: '#00897B' }]}
+                onPress={confirmSetAddress}
+              >
+                <Text style={styles.adminModalBtnText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -454,6 +635,12 @@ export default function PremiumBitcoinMiningApp() {
   const [walletAddress, setWalletAddress] = useState('');
   const [walletDebugLog, setWalletDebugLog] = useState('');
   const [giveBtcModal, setGiveBtcModal] = useState({ visible: false, userId: '', userEmail: '', amount: '' });
+
+  // Withdrawal address change (user side)
+  const [pendingAddressChange, setPendingAddressChange] = useState<any>(null);
+  const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+  const [changeAddressForm, setChangeAddressForm] = useState({ currentPassword: '', newAddress: '', confirmAddress: '' });
+  const [isSubmittingAddressChange, setIsSubmittingAddressChange] = useState(false);
   
   // Modal states
   const [showContactForm, setShowContactForm] = useState(false);
@@ -902,6 +1089,8 @@ export default function PremiumBitcoinMiningApp() {
       if (walletStatusResponse.ok) {
         const statusData = await walletStatusResponse.json();
         setWalletStatus(statusData.wallet_status || 'disconnected');
+        setWalletAddress(statusData.btc_wallet_address || '');
+        setPendingAddressChange(statusData.pending_address_change || null);
       }
 
       if (minersResponse.ok) {
@@ -1587,6 +1776,40 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
       }, 2000);
     } catch (error) {
       console.error('Error triggering app launch ad:', error);
+    }
+  };
+
+  const submitAddressChange = async () => {
+    const { currentPassword, newAddress, confirmAddress } = changeAddressForm;
+    if (!currentPassword || !newAddress || !confirmAddress) {
+      showCustomAlert('❌ Error', 'Please fill in all fields');
+      return;
+    }
+    if (newAddress.trim() !== confirmAddress.trim()) {
+      showCustomAlert('❌ Error', 'New addresses do not match');
+      return;
+    }
+    setIsSubmittingAddressChange(true);
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/request-address-change`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPassword, new_address: newAddress.trim() })
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setShowChangeAddressModal(false);
+        setChangeAddressForm({ currentPassword: '', newAddress: '', confirmAddress: '' });
+        showCustomAlert('✅ Request Submitted', result.message || 'Address change requested. It will be active after admin approval.');
+        loadAppData();
+      } else {
+        showCustomAlert('❌ Error', result.detail || 'Failed to request address change');
+      }
+    } catch (error: any) {
+      showCustomAlert('❌ Error', `Network error: ${error?.message || 'request failed'}`);
+    } finally {
+      setIsSubmittingAddressChange(false);
     }
   };
 
@@ -2669,6 +2892,33 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               )}
             </View>
 
+            {/* Current Withdrawal Address + Change Address */}
+            {!!walletAddress && walletStatus !== 'disconnected' && (
+              <View style={styles.addressCard}>
+                <Text style={styles.addressLabel}>Approved Withdrawal Address</Text>
+                <Text style={styles.addressValue} numberOfLines={1} ellipsizeMode="middle">{walletAddress}</Text>
+                {pendingAddressChange ? (
+                  <View style={styles.pendingChangeBox}>
+                    <Ionicons name="time" size={14} color="#FFA500" />
+                    <Text style={styles.pendingChangeText} numberOfLines={1} ellipsizeMode="middle">
+                      Change pending approval: {pendingAddressChange.new_address}
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.changeAddressButton}
+                    onPress={() => {
+                      setChangeAddressForm({ currentPassword: '', newAddress: '', confirmAddress: '' });
+                      setShowChangeAddressModal(true);
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={16} color="#FFD700" />
+                    <Text style={styles.changeAddressButtonText}>Change Address</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
             {/* Withdraw Button */}
             <TouchableOpacity 
               style={styles.withdrawButton}
@@ -3242,6 +3492,70 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
                 <TouchableOpacity style={styles.confirmButton} onPress={handleWithdraw}>
                   <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
                     <Text style={styles.confirmButtonText}>Withdraw</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </Modal>
+
+        {/* Change Withdrawal Address Modal */}
+        <Modal visible={showChangeAddressModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <LinearGradient colors={['#000000', '#1a1a1a']} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Change Withdrawal Address</Text>
+              <Text style={styles.modalSubtitle}>Requires admin approval before it becomes active</Text>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Current Password"
+                  placeholderTextColor="#666"
+                  value={changeAddressForm.currentPassword}
+                  onChangeText={(text) => setChangeAddressForm({...changeAddressForm, currentPassword: text})}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="wallet" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="New Withdrawal Address"
+                  placeholderTextColor="#666"
+                  value={changeAddressForm.newAddress}
+                  onChangeText={(text) => setChangeAddressForm({...changeAddressForm, newAddress: text})}
+                  autoCapitalize="none"
+                  multiline
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="checkmark-done" size={20} color="#FFD700" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm New Withdrawal Address"
+                  placeholderTextColor="#666"
+                  value={changeAddressForm.confirmAddress}
+                  onChangeText={(text) => setChangeAddressForm({...changeAddressForm, confirmAddress: text})}
+                  autoCapitalize="none"
+                  multiline
+                />
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowChangeAddressModal(false)}
+                  disabled={isSubmittingAddressChange}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={submitAddressChange} disabled={isSubmittingAddressChange}>
+                  <LinearGradient colors={['#FFD700', '#FFC000']} style={styles.buttonGradient}>
+                    <Text style={styles.confirmButtonText}>{isSubmittingAddressChange ? 'Submitting...' : 'Submit Request'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -4835,6 +5149,52 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  addressCard: {
+    backgroundColor: 'rgba(255,215,0,0.06)',
+    borderColor: 'rgba(255,215,0,0.25)',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  addressLabel: {
+    color: '#888',
+    fontSize: 11,
+    marginBottom: 4,
+  },
+  addressValue: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  changeAddressButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.4)',
+  },
+  changeAddressButtonText: {
+    color: '#FFD700',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  pendingChangeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  pendingChangeText: {
+    color: '#FFA500',
+    fontSize: 12,
+    marginLeft: 6,
+    flex: 1,
   },
   adminModalOverlay: {
     flex: 1,

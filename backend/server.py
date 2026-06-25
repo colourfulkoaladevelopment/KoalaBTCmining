@@ -28,6 +28,7 @@ from contextlib import asynccontextmanager
 import hmac
 import hashlib
 import json
+import re
 import requests
 
 load_dotenv()
@@ -230,6 +231,24 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
+
+def decode_bolt11_amount_btc(invoice: str):
+    """Parse a BOLT11 Lightning invoice and return its amount in BTC.
+    Returns 0.0 for an amountless invoice, or None if it is not a valid mainnet (lnbc) invoice."""
+    if not invoice:
+        return None
+    inv = invoice.strip().lower()
+    m = re.match(r'^ln(bc|tb|bcrt)(\d*)([munp]?)', inv)
+    if not m:
+        return None
+    if m.group(1) != 'bc':
+        return None  # only mainnet lnbc invoices are accepted
+    digits = m.group(2)
+    mult = m.group(3)
+    if not digits:
+        return 0.0  # amountless invoice
+    factor = {'': 1.0, 'm': 1e-3, 'u': 1e-6, 'n': 1e-9, 'p': 1e-12}[mult]
+    return int(digits) * factor
 
 def create_access_token(data: Dict[str, Any]) -> str:
     to_encode = data.copy()
@@ -786,14 +805,61 @@ async def register_btc_wallet(
         logger.error(f"Error registering wallet: {e}")
         raise HTTPException(status_code=500, detail="Failed to register wallet")
 
+@app.post("/api/wallet/request-address-change")
+async def request_address_change(data: Dict[str, str], current_user: Dict = Depends(get_current_user)):
+    """User requests a change to their approved withdrawal address (requires admin approval)."""
+    try:
+        current_password = data.get("current_password", "")
+        new_address = data.get("new_address", "").strip()
+
+        user = users_collection.find_one({"_id": current_user["id"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not verify_password(current_password, user.get("password_hash", "")):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+        if not new_address:
+            raise HTTPException(status_code=400, detail="New Bitcoin address is required")
+        if not (new_address.startswith('1') or new_address.startswith('3') or new_address.startswith('bc1')):
+            raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
+        if new_address == user.get("btc_wallet_address"):
+            raise HTTPException(status_code=400, detail="This is already your current withdrawal address")
+
+        existing = users_collection.find_one({"btc_wallet_address": new_address, "_id": {"$ne": current_user["id"]}})
+        if existing:
+            raise HTTPException(status_code=400, detail="This Bitcoin address is already registered")
+
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$set": {"pending_address_change": {
+                "new_address": new_address,
+                "requested_at": datetime.utcnow(),
+                "status": "pending"
+            }}}
+        )
+        logger.info(f"User {user.get('email')} requested address change to {new_address}")
+        return {"success": True, "message": "Address change requested. Your new address will be active after admin approval."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error requesting address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to request address change")
+
 @app.get("/api/wallet/status")
 async def get_wallet_status(current_user: Dict = Depends(get_current_user)):
     """Get user's wallet connection status"""
+    user = users_collection.find_one({"_id": current_user["id"]}) or current_user
+    pac = user.get("pending_address_change")
     return {
-        "wallet_status": current_user.get("wallet_status", "disconnected"),
-        "btc_wallet_address": current_user.get("btc_wallet_address"),
-        "wallet_registered_at": current_user.get("wallet_registered_at"),
-        "wallet_approved_at": current_user.get("wallet_approved_at")
+        "wallet_status": user.get("wallet_status", "disconnected"),
+        "btc_wallet_address": user.get("btc_wallet_address"),
+        "wallet_registered_at": user.get("wallet_registered_at"),
+        "wallet_approved_at": user.get("wallet_approved_at"),
+        "pending_address_change": {
+            "new_address": pac.get("new_address"),
+            "status": pac.get("status")
+        } if pac and pac.get("status") == "pending" else None
     }
 
 # Miner management
@@ -1327,17 +1393,24 @@ async def withdraw_bitcoin(
             raise HTTPException(status_code=404, detail="User not found")
         
         wallet_status = user.get("wallet_status", "disconnected")
-        if wallet_status != "connected":
-            if wallet_status == "pending":
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Your wallet is pending admin approval. Please wait for approval before withdrawing."
-                )
-            else:
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Please register your Bitcoin wallet address first in your Profile settings."
-                )
+        # On-chain withdrawals require a pre-approved (whitelisted) address.
+        # Lightning withdrawals use a single-use invoice and need no whitelisting.
+        if network == "bitcoin":
+            if wallet_status != "connected":
+                if wallet_status == "pending":
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Your wallet is pending admin approval. Please wait for approval before withdrawing."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Please register your Bitcoin wallet address first in your Profile settings."
+                    )
+            # Force on-chain payouts to the user's approved whitelisted address
+            approved_address = user.get("btc_wallet_address")
+            if approved_address:
+                address = approved_address
         
         if not address:
             raise HTTPException(status_code=400, detail=f"{'Lightning invoice' if network == 'lightning' else 'Bitcoin address'} is required")
@@ -1358,6 +1431,18 @@ async def withdraw_bitcoin(
                 raise HTTPException(
                     status_code=400, 
                     detail=f"Amount {amount} BTC exceeds Lightning Network maximum of {max_withdrawal} BTC. Please use Bitcoin network for amounts >= 0.001 BTC"
+                )
+            # Validate the single-use BOLT11 invoice and match its encoded amount
+            invoice_amount = decode_bolt11_amount_btc(address)
+            if invoice_amount is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid Lightning invoice. Please paste a valid mainnet BOLT11 invoice (starts with 'lnbc')."
+                )
+            if invoice_amount > 0 and abs(invoice_amount - amount) > 1e-9:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invoice amount ({invoice_amount:.8f} BTC) does not match the requested amount ({amount:.8f} BTC). Lightning invoices are single-use - please generate a new invoice for the exact amount."
                 )
         else:
             min_withdrawal = 0.001  # 0.001 BTC for Bitcoin network
@@ -1508,6 +1593,8 @@ async def withdraw_bitcoin(
         
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing Bitcoin withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
@@ -4176,6 +4263,92 @@ async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_
         logger.error(f"Error approving wallet: {e}")
         raise HTTPException(status_code=500, detail="Failed to approve wallet")
 
+@app.get("/api/admin/pending-address-changes")
+async def get_pending_address_changes(current_user: Dict = Depends(get_current_user)):
+    """Get all users with a pending withdrawal-address change request"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        cursor = users_collection.find({"pending_address_change.status": "pending"})
+        pending_changes = []
+        for user in list(cursor):
+            pac = user.get("pending_address_change", {})
+            pending_changes.append({
+                "user_id": str(user["_id"]),
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email", ""),
+                "current_address": user.get("btc_wallet_address", ""),
+                "new_address": pac.get("new_address", ""),
+                "requested_at": pac.get("requested_at"),
+                "balance": user.get("bitcoin_balance", 0.0)
+            })
+        return {"pending_changes": pending_changes, "count": len(pending_changes)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting pending address changes: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending address changes")
+
+@app.post("/api/admin/approve-address-change/{user_id}")
+async def approve_address_change(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Approve a user's pending withdrawal-address change (admin has already updated it on Kraken)"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user or not user.get("pending_address_change"):
+            raise HTTPException(status_code=404, detail="No pending address change for this user")
+        new_address = user["pending_address_change"].get("new_address")
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "btc_wallet_address": new_address,
+                    "wallet_status": "connected",
+                    "wallet_approved_at": datetime.utcnow()
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin approved address change for {user.get('email')}: {new_address}")
+        return {"success": True, "message": "Address change approved", "btc_wallet_address": new_address}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve address change")
+
+@app.post("/api/admin/set-address/{user_id}")
+async def admin_set_address(user_id: str, data: Dict[str, str], current_user: Dict = Depends(get_current_user)):
+    """Admin manually sets a user's withdrawal address"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        new_address = data.get("new_address", "").strip()
+        if not new_address:
+            raise HTTPException(status_code=400, detail="New address is required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "btc_wallet_address": new_address,
+                    "wallet_status": "connected",
+                    "wallet_approved_at": datetime.utcnow()
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin manually set address for {user.get('email')}: {new_address}")
+        return {"success": True, "message": "Address updated", "btc_wallet_address": new_address}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting address: {e}")
+        raise HTTPException(status_code=500, detail="Failed to set address")
+
 @app.delete("/api/admin/delete-user/{user_id}")
 async def delete_user(user_id: str, current_user: Dict = Depends(get_current_user)):
     """Delete a user and all their data"""
@@ -4223,13 +4396,18 @@ async def delete_user(user_id: str, current_user: Dict = Depends(get_current_use
 
 @app.post("/api/admin/give-btc/{user_id}")
 async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_current_user)):
-    """Give BTC to a user"""
+    """Adjust a user's BTC balance: add to, remove from, or set the balance."""
     try:
         if not is_admin(current_user):
             raise HTTPException(status_code=403, detail="Admin access required")
         
+        operation = (body.get("operation") or "add").lower()
+        if operation not in ("add", "remove", "set"):
+            raise HTTPException(status_code=400, detail="Invalid operation. Must be add, remove or set")
         amount = float(body.get("amount", 0))
-        if amount <= 0:
+        if amount < 0:
+            raise HTTPException(status_code=400, detail="Amount cannot be negative")
+        if operation in ("add", "remove") and amount <= 0:
             raise HTTPException(status_code=400, detail="Amount must be greater than 0")
         
         # Try to find user by string ID first, then by ObjectId
@@ -4246,30 +4424,36 @@ async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_cu
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Update user balance
-        result = users_collection.update_one(
-            {"_id": user_id},
-            {"$inc": {"bitcoin_balance": amount}}
-        )
+        current_balance = float(user.get("bitcoin_balance", 0) or 0)
+        if operation == "add":
+            new_balance = current_balance + amount
+        elif operation == "remove":
+            new_balance = max(0.0, current_balance - amount)
+        else:  # set
+            new_balance = amount
         
-        if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="User not found")
+        users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {"bitcoin_balance": new_balance}}
+        )
         
         # Get updated user info
         user = users_collection.find_one({"_id": user_id})
-        logger.info(f"Admin gave ₿ {amount} to user {user.get('email')}")
+        logger.info(f"Admin {operation} balance for {user.get('email')}: {current_balance} -> {new_balance}")
         
+        verb = {"add": "Added", "remove": "Removed", "set": "Set"}[operation]
         return {
             "success": True,
-            "message": f"Successfully added ₿ {amount} to {user.get('email')}",
-            "new_balance": user.get("bitcoin_balance", 0)
+            "operation": operation,
+            "message": f"{verb} ₿ {amount} for {user.get('email')}",
+            "new_balance": new_balance
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error giving BTC: {e}")
-        raise HTTPException(status_code=500, detail="Failed to add BTC")
+        logger.error(f"Error adjusting balance: {e}")
+        raise HTTPException(status_code=500, detail="Failed to adjust balance")
 
 # Add payment configuration to .env file
 @app.post("/api/admin/configure-payments")
