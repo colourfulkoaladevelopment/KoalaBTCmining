@@ -322,10 +322,10 @@ async def check_expired_miners():
     """Check for expired miners and send notifications"""
     try:
         current_time = datetime.utcnow()
-        expired_miners = list(miners_collection.find({
-            "status": "active",
-            "expires_at": {"$lte": current_time}
-        }))
+        expired_miners = list(miners_collection.find(
+            {"status": "active", "expires_at": {"$lte": current_time}},
+            {"_id": 1, "user_id": 1, "miner_type": 1, "name": 1}
+        ).limit(1000))
         
         for miner in expired_miners:
             # Deactivate miner
@@ -355,7 +355,10 @@ async def check_expired_miners():
             logger.info(f"Expired miner {miner['_id']} for user {miner['user_id']}")
         
         # Update active miners' time remaining
-        active_miners = list(miners_collection.find({"status": "active"}))
+        active_miners = list(miners_collection.find(
+            {"status": "active"},
+            {"_id": 1, "expires_at": 1}
+        ).limit(1000))
         for miner in active_miners:
             if miner.get("expires_at"):
                 time_remaining = (miner["expires_at"] - current_time).total_seconds() / 3600
@@ -370,7 +373,10 @@ async def check_expired_miners():
 async def process_mining_earnings():
     """Process mining earnings for active miners"""
     try:
-        active_miners = list(miners_collection.find({"status": "active"}))
+        active_miners = list(miners_collection.find(
+            {"status": "active"},
+            {"_id": 1, "user_id": 1, "hash_rate": 1, "name": 1}
+        ).limit(1000))
         
         for miner in active_miners:
             # Calculate earnings based on advertised daily_reward
