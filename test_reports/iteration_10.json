@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 10 = REGRESSION smoke after junk-file removal from /app/frontend/. Backend: 13/13 pytest passed in /app/backend/tests/test_regression_smoke_iter10.py covering (1) /api/health 200, (2) admin & koalatest login (token returned as access_token + user object), (3) all five core reads /api/wallet/balance, /api/wallet/status, /api/miners/list, /api/store/miners, /api/activity/recent return 200 for koalatest with well-formed JSON, (4) /api/admin/users 200 for admin and 403 for non-admin, (5) /api/admin/pending-address-changes 200 for admin, (6) POST /api/admin/give-btc/{koalatest_id} {operation:add,amount:0.0001} 200 and verified persisted via subsequent GET /api/wallet/balance (total_balance increased by >=0.0001), (7) background process_mining_earnings still crediting -- with 1 active 10 GH/s miner the user's total_balance strictly increased over a 16s sleep. APScheduler logs show check_expired_miners & process_mining_earnings 'executed successfully' on every 5s tick throughout the run. Frontend smoke: app loads at the EXPO_PUBLIC_BACKEND_URL preview (Koala Mining / Elite Mining Platform login screen rendered with email+password+SIGN IN). Admin login succeeds (POST /api/auth/login -> 200), the 'Success! Welcome back' alert is shown then dismissed via OK, and the Admin Panel renders correctly with: Pending Wallet Approvals (0), Pending Address Changes (0), User Management (4 users) with each row showing Balance / Address / Reset / Delete buttons, plus the Developer Tools section. No red screen, no blank screen, no console errors (only the known expo-notifications + shadow*/textShadow* style deprecations which are pre-existing warnings, not bugs). Verdict: app is healthy and the junk-file cleanup is non-regressive.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_regression_smoke_iter10.py",
+    "/app/test_reports/pytest/iteration_10_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "No application code changes this iteration (junk binary file removed only). Carryover from iteration_9: premium-mining-app.tsx is still 5400+ lines and missing per-element testID coverage -- not in scope of this smoke regression.",
+    "Pre-existing non-blocking console warnings on web preview: 'expo-notifications listening to push token changes is not fully supported on web' and 'shadow*/textShadow* style props deprecated, use boxShadow/textShadow'. These are RN Web compatibility shims, do not affect production native build.",
+    "Login response shape is {access_token, token_type:'bearer', user:{...}} (OAuth2-style). Documented for next testing agent: do NOT look for 'token', use 'access_token'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_regression_smoke_iter10.py (NEW, 13 tests)",
+    "/app/test_reports/pytest/iteration_10_results.xml (NEW, 13/13 passed)",
+    "/app/test_reports/iteration_10.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13)",
+    "frontend": "100% (login + admin panel render smoke passed)"
+  },
+  "seed_data_creation": "None. No test data inserted. give-btc test added 0.0001 BTC to koalatest's balance (cumulative effect: koalatest's total_balance went from ~0.0052 to ~0.0053 -- benign and matches previous iterations' pattern). No production data wiped or schema mutated.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login token field is 'access_token' (NOT 'token'). Wallet balance field is 'total_balance' (NOT 'bitcoin_balance'). /api/admin/users returns {users:[...]}. /api/admin/pending-address-changes 200 admin / 403 non-admin (gating works). The 'Success! Welcome back' modal on login must be OK-dismissed before admin panel buttons are clickable -- confirmed working. Background scheduler ticks every 5s; allow >=15s for visible bitcoin_balance / total_balance delta in tests. App is fully healthy post junk-file removal. The platform-side deploy failure mentioned in the request (internal_server_error from eas-update) is OUT OF SCOPE for in-container testing and was not assessed here.",
+  "rca_of_issue": "No bug. Cleanup-only regression confirmation passed end-to-end."
+}
