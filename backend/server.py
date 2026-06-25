@@ -832,11 +832,14 @@ async def request_address_change(data: Dict[str, str], current_user: Dict = Depe
 
         users_collection.update_one(
             {"_id": current_user["id"]},
-            {"$set": {"pending_address_change": {
-                "new_address": new_address,
-                "requested_at": datetime.utcnow(),
-                "status": "pending"
-            }}}
+            {
+                "$set": {"pending_address_change": {
+                    "new_address": new_address,
+                    "requested_at": datetime.utcnow(),
+                    "status": "pending"
+                }},
+                "$unset": {"last_address_change_rejection": ""}
+            }
         )
         logger.info(f"User {user.get('email')} requested address change to {new_address}")
         return {"success": True, "message": "Address change requested. Your new address will be active after admin approval."}
@@ -846,11 +849,21 @@ async def request_address_change(data: Dict[str, str], current_user: Dict = Depe
         logger.error(f"Error requesting address change: {e}")
         raise HTTPException(status_code=500, detail="Failed to request address change")
 
+@app.post("/api/wallet/dismiss-rejection")
+async def dismiss_address_rejection(current_user: Dict = Depends(get_current_user)):
+    """Dismiss the last address-change rejection notice"""
+    users_collection.update_one(
+        {"_id": current_user["id"]},
+        {"$unset": {"last_address_change_rejection": ""}}
+    )
+    return {"success": True}
+
 @app.get("/api/wallet/status")
 async def get_wallet_status(current_user: Dict = Depends(get_current_user)):
     """Get user's wallet connection status"""
     user = users_collection.find_one({"_id": current_user["id"]}) or current_user
     pac = user.get("pending_address_change")
+    rejection = user.get("last_address_change_rejection")
     return {
         "wallet_status": user.get("wallet_status", "disconnected"),
         "btc_wallet_address": user.get("btc_wallet_address"),
@@ -859,7 +872,12 @@ async def get_wallet_status(current_user: Dict = Depends(get_current_user)):
         "pending_address_change": {
             "new_address": pac.get("new_address"),
             "status": pac.get("status")
-        } if pac and pac.get("status") == "pending" else None
+        } if pac and pac.get("status") == "pending" else None,
+        "last_address_change_rejection": {
+            "new_address": rejection.get("new_address"),
+            "reason": rejection.get("reason"),
+            "rejected_at": rejection.get("rejected_at")
+        } if rejection else None
     }
 
 # Miner management

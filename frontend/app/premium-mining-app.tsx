@@ -711,6 +711,7 @@ export default function PremiumBitcoinMiningApp() {
 
   // Withdrawal address change (user side)
   const [pendingAddressChange, setPendingAddressChange] = useState<any>(null);
+  const [addressRejection, setAddressRejection] = useState<any>(null);
   const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
   const [changeAddressForm, setChangeAddressForm] = useState({ currentPassword: '', newAddress: '', confirmAddress: '' });
   const [isSubmittingAddressChange, setIsSubmittingAddressChange] = useState(false);
@@ -1164,6 +1165,7 @@ export default function PremiumBitcoinMiningApp() {
         setWalletStatus(statusData.wallet_status || 'disconnected');
         setWalletAddress(statusData.btc_wallet_address || '');
         setPendingAddressChange(statusData.pending_address_change || null);
+        setAddressRejection(statusData.last_address_change_rejection || null);
       }
 
       if (minersResponse.ok) {
@@ -1850,6 +1852,17 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
     } catch (error) {
       console.error('Error triggering app launch ad:', error);
     }
+  };
+
+  const dismissAddressRejection = async () => {
+    setAddressRejection(null);
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/wallet/dismiss-rejection`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {}
   };
 
   const submitAddressChange = async () => {
@@ -2970,6 +2983,23 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <View style={styles.addressCard}>
                 <Text style={styles.addressLabel}>Approved Withdrawal Address</Text>
                 <Text style={styles.addressValue} numberOfLines={1} ellipsizeMode="middle">{walletAddress}</Text>
+                {addressRejection && !pendingAddressChange && (
+                  <View style={styles.rejectionBox}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <Ionicons name="close-circle" size={16} color="#E57373" style={{ marginTop: 1 }} />
+                      <View style={{ flex: 1, marginLeft: 6 }}>
+                        <Text style={styles.rejectionTitle}>Your last address change was declined</Text>
+                        {!!addressRejection.reason && (
+                          <Text style={styles.rejectionReason}>Reason: {addressRejection.reason}</Text>
+                        )}
+                        <Text style={styles.rejectionHint}>You can submit a new request below.</Text>
+                      </View>
+                      <TouchableOpacity onPress={dismissAddressRejection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Ionicons name="close" size={16} color="#888" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
                 {pendingAddressChange ? (
                   <View style={styles.pendingChangeBox}>
                     <Ionicons name="time" size={14} color="#FFA500" />
@@ -5268,6 +5298,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 6,
     flex: 1,
+  },
+  rejectionBox: {
+    backgroundColor: 'rgba(229,115,115,0.10)',
+    borderColor: 'rgba(229,115,115,0.35)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  rejectionTitle: {
+    color: '#E57373',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  rejectionReason: {
+    color: '#FFCDD2',
+    fontSize: 12,
+    marginTop: 3,
+  },
+  rejectionHint: {
+    color: '#999',
+    fontSize: 11,
+    marginTop: 3,
   },
   adminModalOverlay: {
     flex: 1,
