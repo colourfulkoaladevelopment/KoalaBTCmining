@@ -225,6 +225,50 @@ def generate_referral_code() -> str:
         if not existing:
             return code
 
+def grant_referral_rewards(referrer_id: str, referee_id: str):
+    """Create the referral record and grant the identical 50 GH/s / 30-day
+    welcome miner to BOTH the referrer and the referee. Used on signup and on
+    one-time post-signup redeem."""
+    # Create referral record
+    referrals_collection.insert_one({
+        "referrer_id": str(referrer_id),
+        "referee_id": str(referee_id),
+        "reward_given": False,
+        "commission_earned": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+    # 50 GH/s miner for 30 days for the referrer
+    miners_collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": str(referrer_id),
+        "name": "Referral Reward Miner",
+        "hash_rate": 50.0,
+        "miner_type": "referral_reward",
+        "status": "inactive",
+        "duration_hours": 720.0,  # 30 days
+        "time_remaining": 720.0,
+        "total_earned": 0.0,
+        "purchase_price": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+    # Same reward for the referee (the user who entered the code)
+    miners_collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": str(referee_id),
+        "name": "Welcome Referral Miner",
+        "hash_rate": 50.0,
+        "miner_type": "referral_reward",
+        "status": "inactive",
+        "duration_hours": 720.0,
+        "time_remaining": 720.0,
+        "total_earned": 0.0,
+        "purchase_price": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+
 def hash_password(password: str) -> str:
     # Simple hash for testing - NOT for production use
     return hashlib.sha256(password.encode()).hexdigest()
@@ -491,51 +535,15 @@ async def register(request: RegisterRequest):
     
     users_collection.insert_one(user_data)
     
-    # Handle referral if provided
+    # Handle referral if provided (only link + reward when the code is valid)
     if request.referral_code:
         referrer = users_collection.find_one({"referral_code": request.referral_code})
-        if referrer:
-            # Create referral record
-            referral_data = {
-                "referrer_id": str(referrer["_id"]),
-                "referee_id": user_id,
-                "reward_given": False,
-                "commission_earned": 0.0,
-                "created_at": datetime.utcnow()
-            }
-            referrals_collection.insert_one(referral_data)
-            
-            # Give referral rewards (50 GH/s miner for 30 days)
-            reward_miner_data = {
-                "_id": str(uuid.uuid4()),
-                "user_id": str(referrer["_id"]),
-                "name": "Referral Reward Miner",
-                "hash_rate": 50.0,
-                "miner_type": "referral_reward",
-                "status": "inactive",
-                "duration_hours": 720.0,  # 30 days
-                "time_remaining": 720.0,
-                "total_earned": 0.0,
-                "purchase_price": 0.0,
-                "created_at": datetime.utcnow()
-            }
-            miners_collection.insert_one(reward_miner_data)
-            
-            # Give same reward to new user
-            new_user_miner_data = {
-                "_id": str(uuid.uuid4()),
-                "user_id": user_id,
-                "name": "Welcome Referral Miner",
-                "hash_rate": 50.0,
-                "miner_type": "referral_reward",
-                "status": "inactive",
-                "duration_hours": 720.0,
-                "time_remaining": 720.0,
-                "total_earned": 0.0,
-                "purchase_price": 0.0,
-                "created_at": datetime.utcnow()
-            }
-            miners_collection.insert_one(new_user_miner_data)
+        if referrer and str(referrer["_id"]) != user_id:
+            grant_referral_rewards(str(referrer["_id"]), user_id)
+        else:
+            # Invalid code: don't keep a dangling referred_by so the user can
+            # still redeem a valid code later from the Invites screen.
+            users_collection.update_one({"_id": user_id}, {"$set": {"referred_by": None}})
     
     # Create session
     session_token = create_access_token({"sub": user_id})
@@ -610,6 +618,7 @@ async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
         "name": current_user["name"],
         "email": current_user["email"],
         "referral_code": current_user["referral_code"],
+        "referred_by": current_user.get("referred_by"),
         "bitcoin_balance": current_balance,
         "total_earnings": current_total_earnings,
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0),
@@ -1182,10 +1191,57 @@ async def get_referral_stats(current_user: Dict = Depends(get_current_user)):
     
     return {
         "referral_code": current_user["referral_code"],
+        "referred_by": current_user.get("referred_by"),
         "total_referrals": total_referrals,
         "total_commission": total_commission,
         "referral_miners": referral_miners,
         "total_referral_rewards": current_user.get("total_referral_rewards", 0.0)
+    }
+
+@app.post("/api/referrals/redeem")
+async def redeem_referral_code(
+    data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """One-time redemption of a referral code after signup. Once a user has a
+    referrer set, it can never be changed. Grants identical rewards to signup:
+    a 50 GH/s / 30-day miner for both the referrer and the current user."""
+    code = (data.get("referral_code") or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="Please enter a referral code.")
+
+    # Re-read the latest user state (current_user may be cached)
+    user = users_collection.find_one({"_id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # One-time only
+    if user.get("referred_by"):
+        raise HTTPException(
+            status_code=400,
+            detail="You have already entered a referral code. It cannot be changed."
+        )
+
+    # Can't use your own code
+    if code == user.get("referral_code"):
+        raise HTTPException(status_code=400, detail="You cannot use your own referral code.")
+
+    referrer = users_collection.find_one({"referral_code": code})
+    if not referrer:
+        raise HTTPException(status_code=400, detail="Invalid referral code. Please check and try again.")
+
+    # Link and grant rewards
+    users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"referred_by": code}}
+    )
+    grant_referral_rewards(str(referrer["_id"]), str(user["_id"]))
+
+    return {
+        "success": True,
+        "referred_by": code,
+        "message": "Referral code applied! You and your referrer each received a 50 GH/s miner for 30 days. Activate it to start earning.",
+        "reward": {"hash_rate": 50.0, "duration_days": 30}
     }
 
 # Support endpoints

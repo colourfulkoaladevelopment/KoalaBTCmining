@@ -727,6 +727,8 @@ export default function PremiumBitcoinMiningApp() {
   const [showFreeMiners, setShowFreeMiners] = useState(false);
   const [showPremiumMiners, setShowPremiumMiners] = useState(false);
   const [showReferralMiners, setShowReferralMiners] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemingCode, setRedeemingCode] = useState(false);
   
   // Tracks an in-flight PayPal checkout so we can refresh miner state when the app returns to foreground
   const paypalPendingRef = useRef(false);
@@ -1264,6 +1266,39 @@ export default function PremiumBitcoinMiningApp() {
       setRefreshing(false);
     }
   };
+
+  const handleRedeemReferral = async () => {
+    const code = redeemCode.trim().toUpperCase();
+    if (!code) {
+      showCustomAlert('Enter a Code', 'Please enter a referral code to redeem.');
+      return;
+    }
+    setRedeemingCode(true);
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/referrals/redeem`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ referral_code: code }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setRedeemCode('');
+        await loadAppData();
+        showCustomAlert('🎁 Code Applied!', result.message || 'Referral code applied successfully.');
+      } else {
+        showCustomAlert('Could Not Apply Code', result.detail || 'Failed to apply referral code.');
+      }
+    } catch (error) {
+      showCustomAlert('Error', 'Network error. Please try again.');
+    } finally {
+      setRedeemingCode(false);
+    }
+  };
+
 
   // Admin functions
   const handleDeleteUser = async (userId, userEmail) => {
@@ -3346,6 +3381,55 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               </Text>
             </LinearGradient>
 
+            {/* One-time referral code redemption */}
+            {referralStats?.referred_by ? (
+              <LinearGradient colors={['#1a2a1a', '#102010']} style={styles.referralCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="lock-closed" size={22} color="#4CAF50" />
+                  <Text style={styles.cardTitle}>Referral Code Applied</Text>
+                </View>
+                <Text style={styles.referralDescription}>
+                  You were referred with code{' '}
+                  <Text style={{ color: '#FFD700', fontWeight: 'bold' }}>{referralStats.referred_by}</Text>.
+                  This is permanent and cannot be changed.
+                </Text>
+              </LinearGradient>
+            ) : (
+              <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.referralCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="pricetag" size={22} color="#FFD700" />
+                  <Text style={styles.cardTitle}>Have a Referral Code?</Text>
+                </View>
+                <Text style={styles.referralDescription}>
+                  Enter a code from a friend to claim your 50 GH/s welcome miner (30 days). You can only do this once and it cannot be changed later.
+                </Text>
+                <View style={styles.redeemRow}>
+                  <TextInput
+                    style={styles.redeemInput}
+                    placeholder="ENTER CODE"
+                    placeholderTextColor="#777"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    value={redeemCode}
+                    editable={!redeemingCode}
+                    onChangeText={(text) => setRedeemCode(text.toUpperCase())}
+                  />
+                  <TouchableOpacity
+                    style={[styles.redeemButton, redeemingCode && { opacity: 0.6 }]}
+                    onPress={handleRedeemReferral}
+                    disabled={redeemingCode}
+                  >
+                    {redeemingCode ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <Text style={styles.redeemButtonText}>Redeem</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            )}
+
+
             <LinearGradient colors={['#2a2a2a', '#1a1a1a']} style={styles.referralCard}>
               <View style={styles.cardHeader}>
                 <Ionicons name="gift" size={24} color="#FFD700" />
@@ -4733,6 +4817,40 @@ const styles = StyleSheet.create({
     color: '#CCC',
     lineHeight: 20,
     marginTop: 12,
+  },
+  redeemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 10,
+  },
+  redeemInput: {
+    flex: 1,
+    backgroundColor: '#0f0f0f',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#FFD700',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  redeemButton: {
+    backgroundColor: '#FFD700',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minWidth: 96,
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  redeemButtonText: {
+    color: '#000',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
   referralCodeContainer: {
     flexDirection: 'row',
