@@ -3540,25 +3540,21 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.modalTitle}>Withdraw Bitcoin</Text>
               <Text style={styles.modalSubtitle}>Send BTC to your wallet</Text>
               <Text style={[styles.modalSubtitle, { fontSize: 14, color: '#FFD700', marginTop: 5 }]}>
-                {withdrawForm.network === 'lightning' 
-                  ? 'Lightning: ₿ 0.00001 - 0.001' 
-                  : 'Bitcoin: Min ₿ 0.001'}
+                Bitcoin: Min ₿ 0.0001
               </Text>
               
               {/* Network Selection */}
               <View style={styles.networkSelection}>
                 <TouchableOpacity 
-                  style={[styles.networkButton, withdrawForm.network === 'bitcoin' && styles.selectedNetwork]}
+                  style={[styles.networkButton, styles.selectedNetwork]}
                   onPress={() => setWithdrawForm({...withdrawForm, network: 'bitcoin'})}
                 >
                   <Text style={styles.networkText}>Bitcoin Network</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.networkButton, withdrawForm.network === 'lightning' && styles.selectedNetwork]}
-                  onPress={() => setWithdrawForm({...withdrawForm, network: 'lightning'})}
-                >
-                  <Text style={styles.networkText}>Lightning Network</Text>
-                </TouchableOpacity>
+                <View style={[styles.networkButton, styles.disabledNetwork]}>
+                  <Text style={styles.disabledNetworkText}>Lightning Network</Text>
+                  <Text style={styles.comingSoonText}>Coming Soon</Text>
+                </View>
               </View>
               
               <View style={styles.inputContainer}>
@@ -4906,6 +4902,23 @@ const styles = StyleSheet.create({
   selectedNetwork: {
     backgroundColor: '#FFD700',
   },
+  disabledNetwork: {
+    backgroundColor: '#222',
+    borderWidth: 1,
+    borderColor: '#444',
+    opacity: 0.6,
+  },
+  disabledNetworkText: {
+    color: '#777',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  comingSoonText: {
+    color: '#FFA500',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   networkText: {
     color: '#FFF',
     fontSize: 14,
@@ -5260,6 +5273,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
+    marginBottom: 15,
   },
   addressLabel: {
     color: '#888',

@@ -1478,11 +1478,11 @@ async def withdraw_bitcoin(
                     detail=f"Invoice amount ({invoice_amount:.8f} BTC) does not match the requested amount ({amount:.8f} BTC). Lightning invoices are single-use - please generate a new invoice for the exact amount."
                 )
         else:
-            min_withdrawal = 0.001  # 0.001 BTC for Bitcoin network
+            min_withdrawal = 0.0001  # 0.0001 BTC for Bitcoin network
             if amount < min_withdrawal:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC. For amounts below 0.001 BTC, please use Lightning Network"
+                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC"
                 )
         
         # Check user balance
@@ -2041,9 +2041,9 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
             if amount >= 0.001:
                 raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.001 BTC")
         else:
-            app_min = 0.001
+            app_min = 0.0001
             if amount < app_min:
-                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC. For amounts below 0.001 BTC, please use Lightning Network")
+                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC")
         
         # Kraken uses "XBT" for Bitcoin
         # Use method_id for direct address withdrawal
