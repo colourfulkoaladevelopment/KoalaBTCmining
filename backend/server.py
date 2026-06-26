@@ -4049,10 +4049,10 @@ async def get_admin_stats(
         
         # Calculate total BTC owed (future earnings from active miners)
         total_btc_owed = 0.0
-        active_miners_cursor = miners_collection.find({
-            "status": "active",
-            "expires_at": {"$gt": datetime.utcnow()}
-        })
+        active_miners_cursor = miners_collection.find(
+            {"status": "active", "expires_at": {"$gt": datetime.utcnow()}},
+            {"_id": 1, "hash_rate": 1, "expires_at": 1}
+        ).limit(10000)
         active_miners_list = list(active_miners_cursor)
         
         for miner in active_miners_list:
@@ -4099,13 +4099,16 @@ async def get_all_users(current_user: Dict = Depends(get_current_user)):
         users_cursor = users_collection.find({})
         users_list = list(users_cursor)
         
+        # Batch-fetch active miner counts for all users in a single query
+        miner_counts_pipeline = [
+            {"$match": {"status": "active", "expires_at": {"$gt": datetime.utcnow()}}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
+        ]
+        miner_counts = {doc["_id"]: doc["count"] for doc in miners_collection.aggregate(miner_counts_pipeline)}
+        
         for user in users_list:
-            # Count active miners for this user
-            active_miners_count = miners_collection.count_documents({
-                "user_id": str(user["_id"]),
-                "status": "active",
-                "expires_at": {"$gt": datetime.utcnow()}
-            })
+            # Active miners for this user (from pre-fetched counts)
+            active_miners_count = miner_counts.get(str(user["_id"]), 0)
             
             users.append({
                 "id": str(user["_id"]),
