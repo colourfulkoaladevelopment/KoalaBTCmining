@@ -1,0 +1,65 @@
+{
+  "summary": "Iteration 11 — Bitcoin withdrawal fee structure + Kraken integration backend tests. 7/8 pytest passed in /app/backend/tests/test_iteration_11_btc_withdrawal_fees.py. PASSING: (a) GET /api/bitcoin/network-fee returns positive network_fee_btc, (b) POST /api/withdraw/bitcoin requires auth (403 without token), (c) amount=0 rejected with 400, (d) amount=-1 rejected with 400, (e) Bitcoin network minimum 0.0002 BTC enforced with explicit 'Bitcoin network minimum is 0.0002 BTC' message, (f) Insufficient balance returns 400 itemizing 'amount + network fee {value} + withdrawal fee 0.00002000 + service fee 0.00001000', (g) fresh user flow: /api/wallet/register + admin /api/admin/approve-wallet -> wallet_status='connected' works. FAILING (1 test, the most important per the request): with sufficient balance + connected wallet, posting a withdrawal that reaches Kraken returns a GENERIC 500 'Bitcoin network error occurred. Your balance has been restored. Please try again later.' instead of a CLEAR error mentioning the underlying Kraken issue ('not whitelisted' / 'Permission denied'). Balance refund IS working correctly — the user's balance was fully restored to its pre-attempt value. The kraken_send_bitcoin function does raise specific exceptions (e.g. 'Address ... is not whitelisted in Kraken' or 'Withdrawal methods error: EGeneral:Permission denied'), but the outer try/except in withdraw_bitcoin (/app/backend/server.py:1614-1642) catches them and replaces the detail with the generic message. This is exactly the behavior the user reported and asked to fix.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/withdraw/bitcoin",
+        "issue": "Generic 500 'Bitcoin network error occurred. Your balance has been restored. Please try again later.' swallows the real Kraken error. The kraken_send_bitcoin function raises a clear 'Address {address} is not whitelisted in Kraken. Add and confirm it under Funding -> Withdraw -> Bitcoin -> Add address, then retry.' (server.py:2097-2101) — but the outer except in withdraw_bitcoin (server.py:1614-1642) discards it. Fix: in that except, pass `detail=str(wallet_error)` (or build a user-friendly message that includes str(wallet_error)) instead of the generic string. Reference: /app/backend/server.py:1614-1642.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "POST /api/withdraw/bitcoin (Kraken integration)",
+        "issue": "Kraken API key in /app/backend/.env returns 'EGeneral:Permission denied' on /0/private/WithdrawMethods (logged in backend.err.log). Until a key with 'Query Funds' + 'Withdraw Funds' + 'Query withdrawal addresses' permissions is configured, ALL real bitcoin sends will fail before the WithdrawAddresses lookup is even reached — so the 'not whitelisted' code path the user asked to surface is currently unreachable. Fix: rotate KRAKEN_API_KEY/KRAKEN_API_SECRET with the correct Funding permissions enabled.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/withdraw/bitcoin",
+        "issue": "Transaction record description still says '+ 0.5% fee' (server.py:1572) even though the fee model is now the fixed amounts. Update the description to itemize network/withdrawal/service fees so the user's activity log matches the new fee structure."
+      },
+      {
+        "endpoint": "POST /api/withdraw/bitcoin (kraken_send_bitcoin)",
+        "issue": "Stale 0.5% processing_fee math still computed inside kraken_send_bitcoin (server.py:1958-1959) although it is no longer used to deduct from the user. Dead-code, but confusing — recommend removing."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_11_btc_withdrawal_fees.py",
+    "/app/test_reports/pytest/iteration_11_results.xml"
+  ],
+  "action_items": [
+    "FIX (CRITICAL): /app/backend/server.py line 1639-1642 — replace generic 500 with the actual underlying error so users see e.g. 'Address bc1q... is not whitelisted in Kraken' instead of 'Bitcoin network error occurred'. Suggested change: `raise HTTPException(status_code=502, detail=f'Bitcoin withdrawal failed: {str(wallet_error)}. Your balance has been restored.')`.",
+    "FIX (CRITICAL): rotate KRAKEN_API_KEY/KRAKEN_API_SECRET in /app/backend/.env with Kraken Funding permissions enabled ('Query Funds', 'Withdraw Funds', 'Query withdrawal addresses'). Current key gets 'EGeneral:Permission denied' on /0/private/WithdrawMethods so no real send ever reaches the WithdrawAddresses lookup.",
+    "CLEANUP: update transaction description in server.py:1572 — replace '+ 0.5% fee' with itemized fee breakdown to match the new model.",
+    "CLEANUP: remove the dead `processing_fee = amount * 0.005` block inside kraken_send_bitcoin (server.py:1958-1959).",
+    "OPTIONAL: surface `network_fee_btc`, `withdrawal_fee_btc`, `service_fee_btc`, `total_deducted_btc` in the failure response too (currently only returned on success) so the frontend can display the breakdown in error toasts as well."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1614-1642 — broad `except Exception as wallet_error` followed by a generic HTTPException(500) is the root cause of the user-reported issue. The specific exception string is logged but never returned to the client.",
+    "server.py is 4677 lines (>700 LOC threshold) — refactor candidate: split withdrawal, admin, payments, ads into separate routers.",
+    "server.py:1572 — withdrawal transaction description hardcodes '+ 0.5% fee' even though that fee model has been removed. Misleading in user activity history.",
+    "server.py:1958-1959 — leftover 0.5% processing_fee calculation inside kraken_send_bitcoin is unused dead code.",
+    "server.py:1531-1543 — withdrawal_record returns network_fee_btc / withdrawal_fee_btc / service_fee_btc / total_deducted_btc on SUCCESS only; the failure path could include them too to help the frontend render error toasts."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_11_btc_withdrawal_fees.py (NEW, 8 tests)",
+    "/app/test_reports/pytest/iteration_11_results.xml (NEW, 7 passed / 1 failed)",
+    "/app/test_reports/iteration_11.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "87.5% (7/8) — only the 'clear error from Kraken' assertion failed, which is the exact behavior the user reported and asked to fix.",
+    "frontend": "Not tested (testing_type=backend only)"
+  },
+  "seed_data_creation": "Created one fresh test user per pytest session: TEST_btcw_<8hex>@example.com / TestPass#2026. Registered BTC address bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq, admin-approved it, then admin-set balance to 0.005 BTC. No production data wiped. The test user remains in the DB but is prefixed with 'TEST_' for easy identification/cleanup.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth: admin = colourfulkoaladevelopment@gmail.com / KoalaAdmin#2026 (login returns access_token + user). Register requires `name` field (NOT first_name/last_name). Wallet balance is returned as `total_balance` from /api/wallet/balance. Wallet status is returned from /api/wallet/status as `wallet_status` ('disconnected' | 'pending' | 'connected'). On-chain Kraken withdraws CANNOT succeed in preview (current API key returns 'EGeneral:Permission denied' on /0/private/WithdrawMethods, and even with a valid key the destination address is not whitelisted). Important: the fee structure tests pass — validation, minimum=0.0002, itemized insufficient-balance error, and balance refund all work as specified. The ONE remaining failure is the broad except at server.py:1614-1642 that swallows the real Kraken error into a generic 500. Main agent should fix that single block + rotate the Kraken key.",
+  "rca_of_issue": "Reproduction: POST /api/withdraw/bitcoin with valid token, connected+approved wallet, balance >= 0.0005, amount=0.0003, address=bc1q... -> backend goes through all validation, debits balance, calls process_bitcoin_withdrawal -> kraken_send_bitcoin -> Kraken returns {'error': ['EGeneral:Permission denied']} on /0/private/WithdrawMethods -> kraken_send_bitcoin raises Exception('Kraken withdrawal error: Withdrawal methods error: EGeneral:Permission denied') -> caught at server.py:1614 -> withdrawal record marked failed, user balance fully restored (verified), transaction record deleted -> BUT response is HTTPException(500, 'Bitcoin network error occurred. Your balance has been restored. Please try again later.') with the original error stripped out. Mitigation: in server.py:1639-1642, change `detail=` to include str(wallet_error) so 'not whitelisted' / 'Permission denied' / etc surface to the client. Independently, rotate KRAKEN_API_KEY in /app/backend/.env to one with proper Funding permissions so the WithdrawAddresses lookup is actually reachable in production."
+}

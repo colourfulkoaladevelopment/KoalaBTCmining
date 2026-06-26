@@ -1751,7 +1751,12 @@ Your miner is now active and earning Bitcoin!`,
       setShowAdModal(false);
       
       if (!adWatched) {
+        const adType = currentAdType;
         setCurrentAdType(null);
+        // The ad is optional before a withdrawal - never block the withdrawal itself
+        if (adType === 'withdrawal') {
+          setTimeout(() => proceedWithWithdrawal(), 300);
+        }
         return;
       }
 
@@ -1803,6 +1808,13 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
           showCustomAlert('Welcome!', 'Thank you for watching. Enjoy mining!');
         }
       } else {
+        // Ad tracking failed (e.g., daily limit). Never block a withdrawal.
+        if (currentAdType === 'withdrawal') {
+          setShowAdModal(false);
+          setCurrentAdType(null);
+          setTimeout(() => proceedWithWithdrawal(), 300);
+          return;
+        }
         // Handle backend errors (e.g., daily limit reached)
         if (response.status === 429) {
           showCustomAlert('Daily Limit Reached', result.detail || 'You have watched the maximum number of ads for today.');
@@ -1815,8 +1827,14 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
       setCurrentAdType(null);
     } catch (error) {
       console.error('Error handling ad watch:', error);
+      const adType = currentAdType;
       setShowAdModal(false);
       setCurrentAdType(null);
+      // Never block a withdrawal because of an ad failure
+      if (adType === 'withdrawal') {
+        setTimeout(() => proceedWithWithdrawal(), 300);
+        return;
+      }
       // Show error alert
       showCustomAlert('Ad Unavailable', 'Could not load advertisement. Please try again later.');
     }
@@ -1906,7 +1924,7 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
     }
 
     const amount = parseFloat(withdrawForm.amount);
-    const minWithdrawal = 0.00001;
+    const minWithdrawal = 0.0002;
 
     if (isNaN(amount) || amount <= 0) {
       showCustomAlert('Error', 'Please enter a valid withdrawal amount');
@@ -1932,23 +1950,26 @@ ${result.daily_stats.ads_watched_today} videos watched today, keep it up!`,
   const proceedWithWithdrawal = async () => {
     console.log('=== WITHDRAWAL PROCESS STARTED ===');
     const amount = parseFloat(withdrawForm.amount);
-    const processingFee = amount * 0.005; // 0.5% fee
-    const totalDeduction = amount + processingFee + networkFee; // User receives full amount, fees are added on top
+    const WITHDRAWAL_FEE = 0.00002; // Kraken withdrawal fee
+    const SERVICE_FEE = 0.00001;    // Colourful Koala service fee
+    const totalDeduction = amount + networkFee + WITHDRAWAL_FEE + SERVICE_FEE;
     const usdValue = amount * bitcoinPrice;
 
     console.log('Withdrawal details:', {
       amount,
-      processingFee,
       networkFee,
+      withdrawalFee: WITHDRAWAL_FEE,
+      serviceFee: SERVICE_FEE,
       totalDeduction,
       address: withdrawForm.address
     });
 
     showCustomAlert(
       '🪙 Confirm Bitcoin Withdrawal',
-      `User Receives: ₿ ${amount.toFixed(8)}
-System Fee: ₿ ${processingFee.toFixed(8)}
+      `Withdrawal Amount: ₿ ${amount.toFixed(8)}
 Network Fee: ₿ ${networkFee.toFixed(8)}
+Withdrawal Fee: ₿ ${WITHDRAWAL_FEE.toFixed(8)}
+Service Fee: ₿ ${SERVICE_FEE.toFixed(8)}
 ─────────────────────────────
 Total Deducted: ₿ ${totalDeduction.toFixed(8)}
 USD Value: $${usdValue.toFixed(2)}
@@ -2012,7 +2033,9 @@ This withdrawal will be sent to the Bitcoin blockchain and cannot be reversed.`,
                 
 Withdrawal ID: ${result.withdrawal_id}
 Amount: ₿ ${result.amount_btc}
-Processing Fee: ₿ ${result.processing_fee_btc.toFixed(8)}
+Network Fee: ₿ ${(result.network_fee_btc || 0).toFixed(8)}
+Withdrawal Fee: ₿ ${(result.withdrawal_fee_btc || 0).toFixed(8)}
+Service Fee: ₿ ${(result.service_fee_btc || 0).toFixed(8)}
 USD Value: $${result.usd_value}
 
 Your Bitcoin will be sent to: ${result.bitcoin_address}`,
@@ -3540,7 +3563,7 @@ Your Bitcoin will be sent to: ${result.bitcoin_address}`,
               <Text style={styles.modalTitle}>Withdraw Bitcoin</Text>
               <Text style={styles.modalSubtitle}>Send BTC to your wallet</Text>
               <Text style={[styles.modalSubtitle, { fontSize: 14, color: '#FFD700', marginTop: 5 }]}>
-                Bitcoin: Min ₿ 0.0001
+                Bitcoin: Min ₿ 0.0002
               </Text>
               
               {/* Network Selection */}

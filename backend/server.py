@@ -1478,7 +1478,7 @@ async def withdraw_bitcoin(
                     detail=f"Invoice amount ({invoice_amount:.8f} BTC) does not match the requested amount ({amount:.8f} BTC). Lightning invoices are single-use - please generate a new invoice for the exact amount."
                 )
         else:
-            min_withdrawal = 0.0001  # 0.0001 BTC for Bitcoin network
+            min_withdrawal = 0.0002  # 0.0002 BTC for Bitcoin network (matches Kraken)
             if amount < min_withdrawal:
                 raise HTTPException(
                     status_code=400, 
@@ -1492,14 +1492,25 @@ async def withdraw_bitcoin(
             
         current_balance = user.get("bitcoin_balance", 0)
         
-        # Calculate processing fee (0.5% as requested)
-        processing_fee = amount * 0.005  # 0.5% fee
+        # Fee structure for Bitcoin network withdrawals:
+        # - Network Fee: variable, paid to the BTC network
+        # - Withdrawal Fee: 0.00002 BTC, paid to Kraken
+        # - Service Fee: 0.00001 BTC, paid to Colourful Koala
+        WITHDRAWAL_FEE = 0.00002  # Kraken withdrawal fee
+        SERVICE_FEE = 0.00001     # Colourful Koala service fee
+        try:
+            fee_info = await get_bitcoin_network_fee()
+            network_fee = float(fee_info.get("network_fee_btc", 0.00001))
+        except Exception:
+            network_fee = 0.00001
+        # Keep processing_fee as the aggregate of all fees (legacy field name)
+        processing_fee = network_fee + WITHDRAWAL_FEE + SERVICE_FEE
         total_deduction = amount + processing_fee
         
         if total_deduction > current_balance:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Insufficient balance. Available: {current_balance:.8f} BTC, Required: {total_deduction:.8f} BTC (including 0.5% fee)"
+                detail=f"Insufficient balance. Available: {current_balance:.8f} BTC, Required: {total_deduction:.8f} BTC (amount + network fee {network_fee:.8f} + withdrawal fee {WITHDRAWAL_FEE:.8f} + service fee {SERVICE_FEE:.8f})"
             )
         
         # Get current Bitcoin price for USD value calculation
@@ -1526,6 +1537,9 @@ async def withdraw_bitcoin(
             "network": network,  # bitcoin or lightning
             "amount_btc": amount,
             "processing_fee_btc": processing_fee,
+            "network_fee_btc": network_fee,
+            "withdrawal_fee_btc": WITHDRAWAL_FEE,
+            "service_fee_btc": SERVICE_FEE,
             "total_deducted_btc": total_deduction,
             "usd_value": usd_value,
             "btc_price_at_withdrawal": btc_price,
@@ -1584,6 +1598,9 @@ async def withdraw_bitcoin(
                     "withdrawal_id": withdrawal_id,
                     "amount_btc": amount,
                     "processing_fee_btc": processing_fee,
+                    "network_fee_btc": network_fee,
+                    "withdrawal_fee_btc": WITHDRAWAL_FEE,
+                    "service_fee_btc": SERVICE_FEE,
                     "total_deducted_btc": total_deduction,
                     "usd_value": round(usd_value, 2),
                     "bitcoin_address": address,
@@ -2041,18 +2058,56 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
             if amount >= 0.001:
                 raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.001 BTC")
         else:
-            app_min = 0.0001
+            app_min = 0.0002
             if amount < app_min:
                 raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC")
         
-        # Kraken uses "XBT" for Bitcoin
-        # Use method_id for direct address withdrawal
+        # Kraken Spot Withdraw requires a withdrawal "key" (the label of a
+        # pre-whitelisted address), NOT a raw address + method_id. Look up the
+        # key for this address from the account's withdrawal address book.
+        nonce = int(time.time() * 1000000)
+        addresses_url_path = '/0/private/WithdrawAddresses'
+        addresses_data = {'nonce': nonce, 'asset': 'XBT'}
+        addresses_signature = get_kraken_signature(addresses_url_path, addresses_data, kraken_api_secret)
+        addresses_headers = {
+            'API-Key': kraken_api_key,
+            'API-Sign': addresses_signature,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        logger.info(f"Step 3b: Looking up withdrawal key for address {address}...")
+        addresses_response = requests.post(
+            f"{kraken_base_url}{addresses_url_path}",
+            data=addresses_data,
+            headers=addresses_headers,
+            timeout=30
+        )
+        logger.info(f"  - WithdrawAddresses status: {addresses_response.status_code}")
+        logger.info(f"  - WithdrawAddresses body: {addresses_response.text}")
+        if addresses_response.status_code != 200:
+            raise Exception(f"Failed to fetch withdrawal addresses: {addresses_response.text}")
+        addresses_result = addresses_response.json()
+        if 'error' in addresses_result and addresses_result['error']:
+            raise Exception(f"Withdrawal addresses error: {', '.join(addresses_result['error'])}")
+
+        withdraw_key = None
+        for entry in addresses_result.get('result', []):
+            if entry.get('address') == address:
+                withdraw_key = entry.get('key')
+                break
+        if not withdraw_key:
+            raise Exception(
+                f"Address {address} is not whitelisted in Kraken. Add and confirm it under "
+                f"Funding → Withdraw → Bitcoin → Add address, then retry."
+            )
+        logger.info(f"  ✅ Found withdrawal key '{withdraw_key}' for address {address}")
+
+        # Build the Spot Withdraw request using key (+ address for validation)
         nonce = int(time.time() * 1000000)  # New nonce for withdrawal
         user_withdrawal_data = {
             'nonce': nonce,
             'asset': 'XBT',
-            'method_id': method_id,
-            'address': address,  # Direct Bitcoin address
+            'key': withdraw_key,
+            'address': address,  # used by Kraken to validate it matches the key
             'amount': str(amount)
         }
         
