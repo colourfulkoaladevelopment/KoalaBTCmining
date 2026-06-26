@@ -1569,7 +1569,7 @@ async def withdraw_bitcoin(
             "type": "withdrawal",
             "amount": -total_deduction,  # Negative for withdrawal (includes fee)
             "balance_after": new_balance,
-            "description": f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal to {address[:10]}...{address[-6:]} + 0.5% fee",
+            "description": f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal to {address[:10]}...{address[-6:]} + fees",
             "withdrawal_id": withdrawal_id,
             "created_at": datetime.utcnow()
         }
@@ -1636,9 +1636,12 @@ async def withdraw_bitcoin(
             # Remove the transaction record since it failed
             transactions_collection.delete_one({"withdrawal_id": withdrawal_id})
             
+            # Surface the real underlying error so issues (e.g. address not
+            # whitelisted, missing Kraken permissions) are visible for debugging.
+            clean_error = str(wallet_error).replace("Kraken withdrawal error: ", "")
             raise HTTPException(
-                status_code=500, 
-                detail="Bitcoin network error occurred. Your balance has been restored. Please try again later."
+                status_code=400, 
+                detail=f"Withdrawal could not be processed: {clean_error} Your balance has been restored."
             )
         
     except ValueError:
@@ -1952,18 +1955,10 @@ async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, n
             logger.warning("Kraken credentials not configured - using demo mode")
             return await demo_bitcoin_transaction(address, amount, withdrawal_id)
         
-        # Fee collection address (0.5% processing fee goes here)
-        fee_collection_address = os.getenv("FEE_COLLECTION_BTC_ADDRESS", "13VSe3qiy3TdZNWzhcJB4pb7ossQ4766ez")
-        
-        # Calculate fee (0.5% of withdrawal amount)
-        processing_fee = amount * 0.005
-        
         logger.info(f"Step 2: Withdrawal details...")
         logger.info(f"  - Destination address: {address}")
         logger.info(f"  - Amount: {amount} BTC")
         logger.info(f"  - Network: {network}")
-        logger.info(f"  - Processing fee (0.5%): {processing_fee} BTC")
-        logger.info(f"  - Fee collection address: {fee_collection_address}")
         
         def get_kraken_signature(urlpath, data, secret):
             """Generate HMAC-SHA512 signature for Kraken API"""
