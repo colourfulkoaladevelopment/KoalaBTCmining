@@ -3977,7 +3977,7 @@ async def get_user_purchases(current_user: Dict = Depends(get_current_user)):
 
 # ==================== ADMIN ENDPOINTS ====================
 # Admin email configuration
-ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "colourfulkoaladevelopment@gmail.com")
 
 def is_admin(current_user: Dict) -> bool:
     """Check if current user is admin"""
