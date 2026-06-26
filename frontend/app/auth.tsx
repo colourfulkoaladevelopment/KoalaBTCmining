@@ -27,8 +27,6 @@ export default function AuthScreen() {
   });
 
   const handleGoogleLogin = () => {
-    const authUrl = `https://auth.emergentagent.com/?redirect=koalamining://dashboard`;
-    
     // In a real app, this would open the Google OAuth flow
     // For now, we'll simulate it
     Alert.alert(
