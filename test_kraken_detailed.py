@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
+BACKEND_URL = "https://admin-balance-mgmt-1.preview.emergentagent.com/api"
 TEST_USER_EMAIL = "kraken.detailed.test@bitcoinminer.com"
 TEST_USER_PASSWORD = "KrakenDetailedTest2024!"
 TEST_USER_NAME = "Kraken Detailed Test User"

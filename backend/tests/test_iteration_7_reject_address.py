@@ -14,7 +14,7 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://paypal-ads-rebuild.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://admin-balance-mgmt-1.preview.emergentagent.com").rstrip("/")
 
 ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
 ADMIN_PASSWORD = "KoalaAdmin#2026"

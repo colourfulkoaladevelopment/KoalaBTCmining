@@ -16,7 +16,7 @@ import requests
 BASE_URL = (
     os.environ.get("EXPO_PUBLIC_BACKEND_URL")
     or os.environ.get("EXPO_BACKEND_URL")
-    or "https://paypal-ads-rebuild.preview.emergentagent.com"
+    or "https://admin-balance-mgmt-1.preview.emergentagent.com"
 ).rstrip("/")
 
 USER_EMAIL = "koalatest@example.com"

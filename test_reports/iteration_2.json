@@ -50,7 +50,7 @@
       },
       {
         "component": "Linking deep link handler",
-        "issue": "handleDeepLink is also invoked with the regular web URL on page load (console log 'Deep link received: https://paypal-ads-rebuild.preview.emergentagent.com/'). It correctly no-ops because the URL doesn't contain 'paypal/success' or 'paypal/cancel', but the substring match `url.includes('paypal/success')` could false-positive if the app's own URL ever contains 'paypal/success' as a path segment. Consider exact-prefix match on 'koala-mining://paypal/' instead of substring. Ref: premium-mining-app.tsx:597-614."
+        "issue": "handleDeepLink is also invoked with the regular web URL on page load (console log 'Deep link received: https://admin-balance-mgmt-1.preview.emergentagent.com/'). It correctly no-ops because the URL doesn't contain 'paypal/success' or 'paypal/cancel', but the substring match `url.includes('paypal/success')` could false-positive if the app's own URL ever contains 'paypal/success' as a path segment. Consider exact-prefix match on 'koala-mining://paypal/' instead of substring. Ref: premium-mining-app.tsx:597-614."
       }
     ]
   },

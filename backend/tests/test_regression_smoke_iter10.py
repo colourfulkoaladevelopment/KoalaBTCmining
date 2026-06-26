@@ -7,7 +7,7 @@ import time
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://paypal-ads-rebuild.preview.emergentagent.com"
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://admin-balance-mgmt-1.preview.emergentagent.com"
 ADMIN_EMAIL = "colourfulkoaladevelopment@gmail.com"
 ADMIN_PASS = "KoalaAdmin#2026"
 USER_EMAIL = "koalatest@example.com"

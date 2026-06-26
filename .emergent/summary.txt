@@ -1,88 +1,138 @@
-<analysis>
-The AI engineer's work involved an iterative and robust process of enhancing the Koala Mining application, driven by detailed user feedback and critical bug reports. The development journey encompassed significant architectural refinements, moving from demo features to live Kraken payment integration, and addressing complex UI/UX issues. Key challenges included recurring data type mismatches (e.g., MongoDB  vs. string UUIDs), backend async/sync conflicts, and persistent frontend layout problems (button alignment, modal rendering, dropdown glitches). The agent demonstrated strong debugging skills, often leveraging a  to diagnose root causes like race conditions and duplicate styles. Important features like Lightning Network withdrawals, avatar uploads, and password visibility toggles were implemented. A notable aspect was the frequent environment forking, which led to user frustration over lost account data and build issues, prompting the agent to focus on robust build processes and comprehensive handover documentation. The work concluded with a partial fix of several reported issues and a clear plan for the next iteration.
-</analysis>
+<analysis>**original_problem_statement:** 
+The user's initial goal was to fix a critical P0 bug where the PayPal checkout successfully charged the user but failed to redirect back to the app (), leaving them stuck. 
 
-<product_requirements>
-The Koala Mining app simulates Bitcoin mining with Google/email authentication, a black marble and gold UI, and password reset. The core problem it solves is enabling real BTC withdrawals (originally min 0.00001 BTC, 0.5% fee) with automated miner activation and real-time balance updates, monetized by Google AdMob. Initial demo withdrawals were to be replaced by Kraken integration.
+**PRODUCT REQUIREMENTS added during session:**
+- Fix the PayPal Return to App deep link routing.
+- Force users to watch the app-launch ad by removing the Back button.
+- Adjust hashrates: Daily free miner to 10GH/s, Rewarded ad miner to 20GH/s, Referral reward miners to 50GH/s for 30 days. Double all Store miner hashrates.
+- Fix UI hang in the Admin Panel Give BTC button.
+- Support single-use Lightning invoices for withdrawals *without* requiring address whitelisting, while keeping On-Chain BTC withdrawals restricted to whitelisted addresses.
+- Implement a user-facing Change Address request UI requiring current password.
+- Implement Admin UI to approve, reject (with reason), and manually set user withdrawal addresses.
+- Surface address rejection reasons to the user in their wallet UI.
+- Enable Admin to Add, Remove, or Set exact BTC balances for users.
+- Deploy the application to production successfully.
 
-Explicit user requests and implemented features include:
--   **UI/UX**: Remove Simulated text, improve app icon, fix miner time formats, display Total Estimated Daily Bitcoin, expandable miner sections, refactored Watch Ad and Daily Free Miner buttons, Suggest a Feature button, remove est. B xx.xx per day., add password visibility toggle, fix daily earning estimate format, always-visible miner dropdowns.
--   **Withdrawal**: Transition to Kraken, dynamic network fee, 3-way fee breakdown, updated withdrawal button labels, specific wallet registration modal text. Key implementations: Lightning Network withdrawals (0.00001-0.001 BTC) and Bitcoin Network (min 0.001 BTC), Lightning field changed to Invoice.
--   **Admin Panel**: Access for , total BTC owed, user management, broadcast notification, consistent black/gold popups, factory reset, Total Miner Revenue (30 days/all-time), one-click copy for BTC addresses, delete user, give BTC.
--   **Core Features**: Avatar upload with initials as default and 2MB limit (local storage/MongoDB base64), notification feed (real/fake activity), persistent profile pictures.
--   **Stability/Fixes**: Kraken withdrawal processing, login screen errors, Expo Go crashes, daily miner button alignment, PayPal button functionality, correct Contact Support and Suggest a Feature popups with functional Send Message buttons.
-</product_requirements>
+**User's preferred language**: English
+*(INSTRUCTION: Next agent MUST respond in English)*
 
-<key_technical_concepts>
--   **Mobile Framework**: Expo (React Native)
--   **Backend**: FastAPI (Python)
--   **Database**: MongoDB (using PyMongo)
--   **Navigation**:  (custom tab-based via )
--   **Payments**: PayPal SDK, Kraken API
--   **Advertising**: Google AdMob ()
--   **Build System**: EAS Build
--   **State Management**: React , 
--   **Authentication**: JWT tokens
--   **Image Handling**: , base64 encoding
-</key_technical_concepts>
+**what currently exists?** 
+A production-ready full-stack Expo (React Native) and FastAPI application. The platform features user authentication, a live PayPal integration (with proper success/cancel routing), AdMob mediation (Meta Audience Network), and a Kraken integration for both On-Chain and Lightning BTC withdrawals. The Admin panel is highly robust, supporting manual balance adjustments, withdrawal address approvals/rejections, and user resets/deletions. Database queries have been optimized with bulk operations.
 
-<code_architecture>
-The application utilizes an Expo (React Native) frontend, a FastAPI backend, and a MongoDB database. Frontend routing is primarily handled by a custom tab-based navigation implemented within , overriding default  behavior for core user screens.
+**Last working item**:
+    - Last item agent was working: Preparing the application for a fresh deployment via a **Project Fork**. The codebase itself is 100% deployment-ready (passing all deployment scans and 13/13 regression tests). However, Emergent platform-side s prevented the actual publish action. Support advised the user to fork the project and deploy from the new fork. The agent provided a checklist of environment variables the user must verify post-fork.
+    - Status: USER VERIFICATION PENDING (Waiting on user to fork and deploy).
+    - Agent Testing Done: Y
+    - Which testing method agent to use?: Frontend/Backend testing agent + deployment_agent.
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:  
+None. All requested features, bugs, and deployment blockers were resolved and heavily tested.
+
+**In progress Task List**: 
+None.
+
+**Upcoming and Future Tasks**
+  - Task 1: (P2) Migrate password hashing from SHA-256 to  for production security hardening (seamless upgrade on next user login).
+  - Task 2: (P3) Refactor  (currently a 5,400+ line monolith) into smaller per-screen components.
+  - Task 3: (P4) Clean up RN-Web  and  deprecation warnings in the frontend logs (cosmetic).
+
+**Completed work in this session**
+- Hardened PayPal return flow with  foreground listener ().
+- Fixed real-money store catalog parity: Unified UI store and PayPal backend to use a single  truth ().
+- Added  and  to expo-router to fix the Unmatched Route bug upon PayPal redirection.
+- Removed Back button on forced app-launch ad gate.
+- Updated all miner hashrates (doubled store miners, adjusted daily/ad/referral rewards).
+- Fixed 30-45s silent hang on Admin Give BTC button by adding a 20s timeout and exposing real HTTP errors.
+- Decoupled Kraken withdrawals: Lightning bypasses address whitelisting, On-Chain strictly enforces it.
+- Built User UI for requesting withdrawal address changes (requires password verification).
+- Built Admin UI for Pending Address Changes (Approve, Reject with reason) and Manual Set Address.
+- Built User UI to display Rejection Reason for declined address changes.
+- Upgraded Admin Balance UI to allow Add, Remove (clamps to 0), and Set exact amounts.
+- Fixed 3 critical N+1 MongoDB query performance blockers in background tasks using  and  (, , ).
+- Cleaned up a stray binary junk file () that was causing 128 errors during EAS builds.
+
+**Earlier issues found/mentioned but not fixed**
+- Issue 1: Expired-miner deactivation background task loops per-row to send individual push notifications. 
+  - Debug checklist:  -> 
+  - Why to solve this issue and what will be achieved with this?: Could cause performance degradation if thousands of miners expire at the exact same second.
+  - Should Test frontend/backend/both after fix: Backend
+  - Is recurring issue?: N
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: URL mismatches. 
+  - Recurrence count: 3
+  - Status: USER VERIFICATION PENDING
+  - Note: This is a **FORKED JOB**. The  (frontend) and  (backend) environment variables MUST be updated to reflect the new forked environment URLs. If the user complains about CORS or connection errors immediately after this fork, check the  URLs first.
+
+**Code Architecture**
 
 
+**Key Technical Concepts**
+React Native (Expo), Expo Router, FastAPI, MongoDB (PyMongo with bulk operations), Kraken API (Crypto Withdrawals for Lightning/On-Chain), PayPal Checkout SDK.
 
--   ****
-    -   **Importance**: Contains all backend API logic for user management, mining, referrals, payments, and crypto withdrawals.
-    -   **Changes Made**:
-        -   **Kraken Integration**: Corrected  usage and adapted  for new API parameters ( instead of ). Implemented support for both Bitcoin and Lightning Network withdrawals with distinct limits (Lightning: 0.00001-0.001 BTC; Bitcoin: min 0.001 BTC).
-        -   **Ad Tracking**: Modified  to only count  ads towards the daily counter.
-        -   **User Profile**: Added  for avatar uploads and updated  to return the  field.
-        -   **Error Handling**: Removed  from PyMongo calls, and applied various Object ID vs. string UUID fixes.
+**key DB schema**
+  - : 
 
--   ****
-    -   **Importance**: The primary frontend component handling most UI rendering, state management, and user interaction logic, including custom tab-based navigation.
-    -   **Changes Made**:
-        -   **UI Fixes**: Fixed Daily Miner button alignment by resolving duplicate styles and adding width constraints. Added  to  for better spacing.
-        -   **Withdrawal UI**: Removed Minimum withdrawal text from the button. Dynamic placeholder text for withdrawal addresses (Bitcoin Address/Invoice). Updated displayed withdrawal limits.
-        -   **Miner Display**: Split into always-visible Free Miners, Premium Miners, Referral Rewards (on Invites tab). Resolved glitches by initializing  state with empty miner arrays and using optional chaining. Removed old  and  state to prevent crashes.
-        -   **Ad/Reward System**:  now called immediately after successful ad watch.
-        -   **Authentication/Profile**: Added password visibility toggle. Implemented avatar upload using  with initials fallback.  now merges user state to preserve miner categorization.  updated for new miner state structure.
-        -   **Referral Section**: Relocated Share Referral Code button, added referral description.
-        -   **PayPal**: Added  import.
-        -   **Modals**: Corrected Contact Support modal title, added  state for a separate Suggest a Feature modal (JSX and functionality pending).
-        -   **Error Handling**: Added optional chaining for user object access, removed duplicate  import.
+**changes in tech stack**
+- Transitioned background tasks from simple looping to PyMongo  operations to survive deployment scale limits.
 
--   ****
-    -   **Importance**: Expo app configuration.
-    -   **Changes Made**:  was iteratively incremented from 12 to 25.
+**All files of reference**
+- : Heavily updated with new admin features, Lightning support, and N+1 query fixes.
+- : Updated with Address Request UI, Admin Reject/Approve UI, Balance UI, and Notice Cards.
+-  & : Created to catch deep link redirects.
 
--   ****
-    -   **Importance**: Backend environment variables.
-    -   **Changes Made**: Verified . Corrected  to .
+**Areas that need refactoring**
+- : Severely monolithic (5,400+ lines). Needs splitting into a standard Expo Router multi-file layout.
+- : Over 4,600 lines. Routes should be split.
 
--   ****
-    -   **Importance**: New file created to summarize the project's state, credentials, and pending tasks for seamless handover.
+**key api endpoints**
+-  & 
+- , , 
+- , , 
+-  (Now handles Add/Remove/Set)
+-  (Handles Lightning + On-chain)
 
-</code_architecture>
+**Critical Info for New Agent**
+- **ENVIRONMENT FORK:** The user is arriving here from a fresh fork specifically because Emergent's deployment services threw a 500 error on the previous instance. Make sure the user has verified their  secrets (Kraken, PayPal, JWT, SMTP) as forks sometimes reset these.
+- **URL Handling:** Do NOT hardcode preview/deployment URLs. Rely strictly on  and ensure it matches the current environment.
+- **Kraken Context:** The app does not custody crypto. It uses a single Kraken API key to fund user withdrawals directly from the Admin's Kraken XBT (Spot BTC) balance. 
 
-<pending_tasks>
--   Complete the Suggest a Feature modal's JSX and full functionality, including the Send Message button.
--   Implement the Send Message button functionality for the Contact Support modal to send emails.
--   Investigate and fix the Pay with PayPal button, which is still not working.
--   Implement the activity feed with real and fake data on the Dashboard as per user's request.
-</pending_tasks>
+**documents and test reports created in this job**
+-  through 
+- 
 
-<current_work>
-Immediately prior to this summary, the AI engineer was addressing five specific issues reported by the user, related to UI persistence, text accuracy, modal separation, and button functionality:
-1.  **Profile picture not persisting**: Resolved by modifying 's  endpoint to return the  field, ensuring the frontend  can correctly load and display it upon relogin.
-2.  **Incorrect minimum withdrawal text**: Resolved by updating  to dynamically display the correct withdrawal limits (0.00001-0.001 BTC for Lightning, min 0.001 BTC for Bitcoin).
-3.  **Merged Contact Support and Suggest a Feature popups**: The engineer started to address this by introducing a new state variable, , in  to manage a separate modal. However, the actual JSX for the Suggest a Feature modal and the full functionality for both Send Message buttons are explicitly pending.
-4.  **Send Message button not working**: This is directly tied to the modal separation and email sending functionality, which remains unimplemented.
-5.  **Pay with PayPal button not working**: This issue was reported as still unresolved by the user, indicating that an earlier fix (adding  import) was insufficient.
+**Last 10 User Messages and any pending HUMAN messages** 
+- *Msg 447*: User relays support response: Job is unblocked, but user must Fork the project, verify secrets, and trigger a redeployment.
+- *Msg 443*: User asks how to get a job ID if deployment creates no logs.
+- *Msg 439*: User asks to run the Deployment Agent Health Check (it passed 100%).
+- *Msg 438*: Agent clarifies to user that the code is perfect, a junk file was removed, and the error is platform-side.
+- *Msg 424*: User complains that agent fixed things making it break further and shares frontend build logs with  errors.
+- *Msg 421*: User shares Expo EAS build logs showing warnings.
+- *Msg 410*: User reports waiting 30 minutes, but deployment still throws Internal Server Error.
+- *Msg 404*: User clarifies the error is actually Internal Server Error (HTTP 500 from deployment service).
+- *Msg 399*: User reports deployment failed with network error, then rate limited.
+- *Msg 357*: User asks why deployment failed (prompting the initial fix of the N+1 MongoDB queries).
 
-At the point of this summary request, the first two issues were completed, and work on the third had begun with a state change. The remaining aspects of issue #3, and all of issues #4 and #5 are still pending. A  document was created to aid the next agent in continuing this work efficiently.
-</current_work>
+**Project Health Check:**
+- Broken: None. 
+- Mocked: None.
 
-<optional_next_step>
-The next step is to complete the full implementation of the Suggest a Feature modal and its Send Message functionality, the Send Message button for the Contact Support modal, and investigate/fix the Pay with PayPal button.
-</optional_next_step>
+**3rd Party Integrations**
+- PayPal SDK (Payments) — requires User API Key
+- Kraken API (Crypto Withdrawals) — requires User API Key
+- Google AdMob / Meta Audience Network (Ads) — requires User API Key
+- Gmail SMTP (Email Sending) — requires User API Key
+
+**Testing status**
+- Testing agent used after significant changes: YES (Iterations 2 through 10)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created:  (and previous iterations)
+- Known regressions: None.
+
+**Credentials to test flow:**
+- Admin:  / 
+- Test User:  / 
+
+**What agent forgot to execute**
+Nothing. The previous agent successfully completed all tasks and prepared the repository for deployment via this fork.</analysis>

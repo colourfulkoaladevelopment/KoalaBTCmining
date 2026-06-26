@@ -14,7 +14,7 @@ import hashlib
 from datetime import datetime
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
+BACKEND_URL = "https://admin-balance-mgmt-1.preview.emergentagent.com/api"
 
 # Test user credentials
 TEST_USER = {

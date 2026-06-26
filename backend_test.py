@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv('/app/backend/.env')
 
 # Configuration
-BACKEND_URL = "https://btc-simulator.preview.emergentagent.com/api"
+BACKEND_URL = "https://admin-balance-mgmt-1.preview.emergentagent.com/api"
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "bitcoin_mining_db")
 
