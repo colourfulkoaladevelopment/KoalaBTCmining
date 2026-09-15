@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration_4 verified ALL 4 changes from this iteration. Backend: 18/18 pytest passed (14/14 existing test_paypal_flow.py + 4/4 new test_iteration_4_hashrate_changes.py). (1) GET /api/store/miners returns the DOUBLED hashrates per spec: miner_100gh=200, miner_200gh=400, miner_400gh=800, miner_1th=2000, miner_2th=4000, miner_4th=8000, miner_10th=20000, miner_15th=30000, miner_20th=40000 GH/s. Prices UNCHANGED (7.99/14.99/29.99/79.99/159.99/299.99/449.99/749.99/999.99). (2) Real-money parity HOLDS after doubling: for every miner in the catalog (9/9), POST /api/payments/create-paypal-order returns 200 with original_price AND final_price EXACTLY matching the store price. (3) POST /api/miners/activate-free creates the free miner with hash_rate == 10.0 (verified via /api/miners/list). (4) POST /api/ads/watch with ad_type='miner_activation' returns ad_miner.hash_rate == 20.0 AND duration_hours == 24. Frontend (mobile 390x844): (a) PayPal deep-link routes FIXED - navigating to /paypal/success no longer shows 'Unmatched Route'; it redirects to '/' and displays '✅ Payment Successful! Your miner has been activated and is now generating Bitcoin!' alert. /paypal/cancel redirects to '/' and displays 'Payment Canceled. Your payment was canceled. No charges were made.' alert. Console confirmed: 'Deep link received: koala-mining://paypal/success' and 'koala-mining://paypal/cancel' are emitted by the AsyncStorage flag handler. (b) Forced app_launch ad gate VERIFIED on real UI: after login the 'Advertisement Required' modal renders ONLY the 'Watch Ad' button - NO 'Back' AND NO 'Skip' button (confirmed by Playwright text scan AND by code review at premium-mining-app.tsx:3396 `{currentAdType !== 'app_launch' && (...)}`). The Skip path for miner_activation is preserved via the ternary at line 3406 `{currentAdType === 'miner_activation' ? 'Skip' : 'Back'}`. (c) Dashboard display text confirmed: 'Watch Ad (+20 GH/s)' present on dashboard. '10 GH/s for 24 hours' string is present in source at line 2705 (`canActivateFreeMiner ? '10 GH/s for 24 hours' : 'Available in ' + freeMinerResetTime`); during the live run the test user's free miner was on cooldown so the fallback 'Available in 2h 58m' renders - this is correct behavior. (d) Invites screen 'Referral Rewards' info text 'you both receive a 50 GH/s miner for 30 days' confirmed via code review at premium-mining-app.tsx:2937. Fixed one minor stale text: rewarded-ad modal preview at line 3390 still said 'Reward: +2 GH/s for 24 hours' - updated to '+20 GH/s for 24 hours' to match AD_MINER_HASHRATE=20.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Post-login flow",
+        "issues": [
+          "Carryover from iteration_2/3: 'Success! Welcome back' alert + 'Advertisement Required' modal still stack on top of the Dashboard after login, requiring two dismissals. Cosmetic, non-blocking."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "RN-Web deprecation warnings",
+        "issue": "Still emits 'shadow*' style props deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow), 'props.pointerEvents' deprecated (use style.pointerEvents). Non-blocking. Reference: /app/frontend/app/premium-mining-app.tsx multiple lines."
+      },
+      {
+        "component": "expo-notifications",
+        "issue": "'Listening to push token changes is not yet fully supported on web' - expected on web preview, no action."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_4_hashrate_changes.py",
+    "/app/backend/tests/test_paypal_flow.py",
+    "/app/test_reports/pytest/iteration_4_results.xml",
+    "/app/test_reports/pytest/paypal_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (carryover): chain/auto-dismiss 'Welcome back' success alert with the next 'Advertisement Required' modal to avoid double-tap dismissal.",
+    "OPTIONAL (carryover): migrate RN-Web deprecated style props (shadow*/textShadow*/props.pointerEvents) to the new APIs.",
+    "OPTIONAL (carryover): add testID props to Store cards, 'Purchase & Activate', 'Pay with PayPal', 'Cancel Purchase' buttons and tab bar items."
+  ],
+  "critical_code_review_comments": [
+    "Forced ad gate is implemented correctly with a SINGLE conditional `{currentAdType !== 'app_launch' && (...)}` at premium-mining-app.tsx:3396 that wraps the cancel/back TouchableOpacity entirely. Verified both via source and live runtime - the rendered modal has only the Watch Ad button for app_launch.",
+    "STORE_MINERS module-level constant at server.py:963 remains the single source of truth, consumed by both /api/store/miners (line 978) and create-paypal-order (line 2711). Doubling the hash_rate values did not introduce any divergence with PayPal pricing.",
+    "AD_MINER_HASHRATE=20.0 and AD_MINER_DURATION_HOURS=24 at server.py:53-54 centralize the rewarded-ad miner economics. The /api/ads/watch endpoint references them throughout (lines 3656, 3690-3692, 3712-3717) which keeps the ad miner spec consistent end-to-end.",
+    "Free miner at server.py:891 hard-codes hash_rate=10.0 inline rather than a constant. Consider hoisting to FREE_MINER_HASHRATE = 10.0 alongside AD_MINER_HASHRATE for symmetry/discoverability. Non-blocking.",
+    "premium-mining-app.tsx is still 4897 lines - consider splitting Dashboard / Store / Profile / Admin into separate files."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_4_hashrate_changes.py (NEW: 4 tests covering doubled hashrates + paypal parity + free miner + ad miner)",
+    "/app/test_reports/pytest/iteration_4_results.xml (NEW: 4/4 passed)",
+    "/app/test_reports/pytest/paypal_results.xml (regenerated, 14/14 still passing)",
+    "/app/frontend/app/premium-mining-app.tsx (1-line text fix: ad preview '+2 GH/s for 24 hours' -> '+20 GH/s for 24 hours' at line 3390 to match doubled AD_MINER_HASHRATE)",
+    "/app/test_reports/iteration_4.json (NEW)"
+  ],
+  "success_rate": {"backend": "100% (18/18 across both test files)", "frontend": "100% for tested flows (paypal/success + paypal/cancel deep-link landings, post-login dashboard text, forced app_launch ad gate)"},
+  "seed_data_creation": "None. Reused koalatest@example.com from /app/memory/test_credentials.md. Note: test_activate_free_miner now consumes the test user's daily free-miner activation (or asserts the existing one) and test_watch_miner_activation_ad consumes one of the daily ad slots - both are idempotent enough to re-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Two test files now cover the backend: test_paypal_flow.py (PayPal flow + loadAppData regression + admin gating, 14 tests) and test_iteration_4_hashrate_changes.py (doubled hashrates + free miner + rewarded ad miner, 4 tests). Both files read EXPO_PUBLIC_BACKEND_URL/EXPO_BACKEND_URL and use the credentials from /app/memory/test_credentials.md. The native koala-mining:// scheme handoff from the PayPal return HTML back into the installed APK still cannot be exercised on web - the web-preview equivalent is to navigate directly to /paypal/success or /paypal/cancel which now ARE real expo-router routes (app/paypal/success.tsx and app/paypal/cancel.tsx). The 'Daily Free Miner' label '10 GH/s for 24 hours' only renders when canActivateFreeMiner is true; if a previous run already activated the free miner for the day the label flips to 'Available in Xh Ym' until next UTC midnight.",
+  "rca_of_issue": "Iteration_4 was a feature-batch verification, not a bug fix. RCAs from prior iterations stand: (a) PayPal deep link 'Unmatched Route' was caused by absence of an expo-router screen for /paypal/* - fixed by adding app/paypal/success.tsx and app/paypal/cancel.tsx which set 'paypal_payment_result' in AsyncStorage and router.replace('/'); main app reads the flag and shows the alert. (b) Hashrate doubling/changes were all centralized in server.py constants - STORE_MINERS (line 963), AD_MINER_HASHRATE/AD_MINER_DURATION_HOURS (lines 53-54), and inline free-miner hash_rate=10.0 (line 891). The single-source-of-truth pattern made the doubling a 1-edit change per constant. (c) Forced ad gate (no Back on app_launch) is enforced by wrapping the cancel TouchableOpacity in `{currentAdType !== 'app_launch' && (...)}` so the entire button is unmounted for app_launch while remaining mounted (and labeled 'Skip') for miner_activation."
+}

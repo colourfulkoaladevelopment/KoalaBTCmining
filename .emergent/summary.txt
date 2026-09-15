@@ -1,0 +1,138 @@
+<analysis>**original_problem_statement:** 
+The user's initial goal was to fix a critical P0 bug where the PayPal checkout successfully charged the user but failed to redirect back to the app (), leaving them stuck. 
+
+**PRODUCT REQUIREMENTS added during session:**
+- Fix the PayPal Return to App deep link routing.
+- Force users to watch the app-launch ad by removing the Back button.
+- Adjust hashrates: Daily free miner to 10GH/s, Rewarded ad miner to 20GH/s, Referral reward miners to 50GH/s for 30 days. Double all Store miner hashrates.
+- Fix UI hang in the Admin Panel Give BTC button.
+- Support single-use Lightning invoices for withdrawals *without* requiring address whitelisting, while keeping On-Chain BTC withdrawals restricted to whitelisted addresses.
+- Implement a user-facing Change Address request UI requiring current password.
+- Implement Admin UI to approve, reject (with reason), and manually set user withdrawal addresses.
+- Surface address rejection reasons to the user in their wallet UI.
+- Enable Admin to Add, Remove, or Set exact BTC balances for users.
+- Deploy the application to production successfully.
+
+**User's preferred language**: English
+*(INSTRUCTION: Next agent MUST respond in English)*
+
+**what currently exists?** 
+A production-ready full-stack Expo (React Native) and FastAPI application. The platform features user authentication, a live PayPal integration (with proper success/cancel routing), AdMob mediation (Meta Audience Network), and a Kraken integration for both On-Chain and Lightning BTC withdrawals. The Admin panel is highly robust, supporting manual balance adjustments, withdrawal address approvals/rejections, and user resets/deletions. Database queries have been optimized with bulk operations.
+
+**Last working item**:
+    - Last item agent was working: Preparing the application for a fresh deployment via a **Project Fork**. The codebase itself is 100% deployment-ready (passing all deployment scans and 13/13 regression tests). However, Emergent platform-side s prevented the actual publish action. Support advised the user to fork the project and deploy from the new fork. The agent provided a checklist of environment variables the user must verify post-fork.
+    - Status: USER VERIFICATION PENDING (Waiting on user to fork and deploy).
+    - Agent Testing Done: Y
+    - Which testing method agent to use?: Frontend/Backend testing agent + deployment_agent.
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:  
+None. All requested features, bugs, and deployment blockers were resolved and heavily tested.
+
+**In progress Task List**: 
+None.
+
+**Upcoming and Future Tasks**
+  - Task 1: (P2) Migrate password hashing from SHA-256 to  for production security hardening (seamless upgrade on next user login).
+  - Task 2: (P3) Refactor  (currently a 5,400+ line monolith) into smaller per-screen components.
+  - Task 3: (P4) Clean up RN-Web  and  deprecation warnings in the frontend logs (cosmetic).
+
+**Completed work in this session**
+- Hardened PayPal return flow with  foreground listener ().
+- Fixed real-money store catalog parity: Unified UI store and PayPal backend to use a single  truth ().
+- Added  and  to expo-router to fix the Unmatched Route bug upon PayPal redirection.
+- Removed Back button on forced app-launch ad gate.
+- Updated all miner hashrates (doubled store miners, adjusted daily/ad/referral rewards).
+- Fixed 30-45s silent hang on Admin Give BTC button by adding a 20s timeout and exposing real HTTP errors.
+- Decoupled Kraken withdrawals: Lightning bypasses address whitelisting, On-Chain strictly enforces it.
+- Built User UI for requesting withdrawal address changes (requires password verification).
+- Built Admin UI for Pending Address Changes (Approve, Reject with reason) and Manual Set Address.
+- Built User UI to display Rejection Reason for declined address changes.
+- Upgraded Admin Balance UI to allow Add, Remove (clamps to 0), and Set exact amounts.
+- Fixed 3 critical N+1 MongoDB query performance blockers in background tasks using  and  (, , ).
+- Cleaned up a stray binary junk file () that was causing 128 errors during EAS builds.
+
+**Earlier issues found/mentioned but not fixed**
+- Issue 1: Expired-miner deactivation background task loops per-row to send individual push notifications. 
+  - Debug checklist:  -> 
+  - Why to solve this issue and what will be achieved with this?: Could cause performance degradation if thousands of miners expire at the exact same second.
+  - Should Test frontend/backend/both after fix: Backend
+  - Is recurring issue?: N
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: URL mismatches. 
+  - Recurrence count: 3
+  - Status: USER VERIFICATION PENDING
+  - Note: This is a **FORKED JOB**. The  (frontend) and  (backend) environment variables MUST be updated to reflect the new forked environment URLs. If the user complains about CORS or connection errors immediately after this fork, check the  URLs first.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+React Native (Expo), Expo Router, FastAPI, MongoDB (PyMongo with bulk operations), Kraken API (Crypto Withdrawals for Lightning/On-Chain), PayPal Checkout SDK.
+
+**key DB schema**
+  - : 
+
+**changes in tech stack**
+- Transitioned background tasks from simple looping to PyMongo  operations to survive deployment scale limits.
+
+**All files of reference**
+- : Heavily updated with new admin features, Lightning support, and N+1 query fixes.
+- : Updated with Address Request UI, Admin Reject/Approve UI, Balance UI, and Notice Cards.
+-  & : Created to catch deep link redirects.
+
+**Areas that need refactoring**
+- : Severely monolithic (5,400+ lines). Needs splitting into a standard Expo Router multi-file layout.
+- : Over 4,600 lines. Routes should be split.
+
+**key api endpoints**
+-  & 
+- , , 
+- , , 
+-  (Now handles Add/Remove/Set)
+-  (Handles Lightning + On-chain)
+
+**Critical Info for New Agent**
+- **ENVIRONMENT FORK:** The user is arriving here from a fresh fork specifically because Emergent's deployment services threw a 500 error on the previous instance. Make sure the user has verified their  secrets (Kraken, PayPal, JWT, SMTP) as forks sometimes reset these.
+- **URL Handling:** Do NOT hardcode preview/deployment URLs. Rely strictly on  and ensure it matches the current environment.
+- **Kraken Context:** The app does not custody crypto. It uses a single Kraken API key to fund user withdrawals directly from the Admin's Kraken XBT (Spot BTC) balance. 
+
+**documents and test reports created in this job**
+-  through 
+- 
+
+**Last 10 User Messages and any pending HUMAN messages** 
+- *Msg 447*: User relays support response: Job is unblocked, but user must Fork the project, verify secrets, and trigger a redeployment.
+- *Msg 443*: User asks how to get a job ID if deployment creates no logs.
+- *Msg 439*: User asks to run the Deployment Agent Health Check (it passed 100%).
+- *Msg 438*: Agent clarifies to user that the code is perfect, a junk file was removed, and the error is platform-side.
+- *Msg 424*: User complains that agent fixed things making it break further and shares frontend build logs with  errors.
+- *Msg 421*: User shares Expo EAS build logs showing warnings.
+- *Msg 410*: User reports waiting 30 minutes, but deployment still throws Internal Server Error.
+- *Msg 404*: User clarifies the error is actually Internal Server Error (HTTP 500 from deployment service).
+- *Msg 399*: User reports deployment failed with network error, then rate limited.
+- *Msg 357*: User asks why deployment failed (prompting the initial fix of the N+1 MongoDB queries).
+
+**Project Health Check:**
+- Broken: None. 
+- Mocked: None.
+
+**3rd Party Integrations**
+- PayPal SDK (Payments) — requires User API Key
+- Kraken API (Crypto Withdrawals) — requires User API Key
+- Google AdMob / Meta Audience Network (Ads) — requires User API Key
+- Gmail SMTP (Email Sending) — requires User API Key
+
+**Testing status**
+- Testing agent used after significant changes: YES (Iterations 2 through 10)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created:  (and previous iterations)
+- Known regressions: None.
+
+**Credentials to test flow:**
+- Admin:  / 
+- Test User:  / 
+
+**What agent forgot to execute**
+Nothing. The previous agent successfully completed all tasks and prepared the repository for deployment via this fork.</analysis>

@@ -1,0 +1,4772 @@
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field, validator
+from pymongo import MongoClient, UpdateOne, ReturnDocument
+from bson import ObjectId
+from datetime import datetime, timedelta
+from typing import List, Optional, Dict, Any
+import os
+import uuid
+import random
+import string
+import logging
+from dotenv import load_dotenv
+from jose import jwt, JWTError
+import bcrypt
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from exponent_server_sdk import (
+    DeviceNotRegisteredError,
+    PushClient,
+    PushMessage,
+    PushServerError,
+)
+import asyncio
+from contextlib import asynccontextmanager
+import hmac
+import hashlib
+import html
+import json
+import re
+import requests
+
+load_dotenv()
+
+# Payment Processing Configuration
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")  # sandbox or live
+
+# Facebook Ads Configuration
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "")
+FACEBOOK_PLACEMENT_ID = os.getenv("FACEBOOK_PLACEMENT_ID", "")
+
+# Promo Codes Configuration
+PROMO_CODES = {
+    "WELCOME10": {"discount_percent": 10, "max_uses": 1000, "used": 0},
+    "CRYPTO20": {"discount_percent": 20, "max_uses": 500, "used": 0},
+    "NEWUSER15": {"discount_percent": 15, "max_uses": 2000, "used": 0}
+}
+
+# Ad system constants
+MAX_DAILY_ADS = 100  # Generous for real users, but bounds automated reward farming
+AD_MINER_HASHRATE = 20.0  # 20 GH/s
+AD_MINER_DURATION_HOURS = 24  # 24 hours instead of 30 minutes
+
+# Bitcoin wallet configuration (add these to your .env file in production)
+BITCOIN_WALLET_TYPE = os.getenv("BITCOIN_WALLET_TYPE", "demo")  # demo, bitgo, coinbase, rpc
+BITGO_API_KEY = os.getenv("BITGO_API_KEY", "")
+BITGO_WALLET_ID = os.getenv("BITGO_WALLET_ID", "")
+BITGO_WALLET_PASSPHRASE = os.getenv("BITGO_WALLET_PASSPHRASE", "")
+BITGO_ENV = os.getenv("BITGO_ENV", "test")  # test or prod
+COINBASE_API_KEY = os.getenv("COINBASE_API_KEY", "")
+BITCOIN_RPC_USER = os.getenv("BITCOIN_RPC_USER", "")
+BITCOIN_RPC_PASSWORD = os.getenv("BITCOIN_RPC_PASSWORD", "")
+BITCOIN_RPC_URL = os.getenv("BITCOIN_RPC_URL", "http://localhost:8332")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# MongoDB connection
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+client = MongoClient(MONGO_URL)
+db = client[os.getenv("DB_NAME", "bitcoin_mining_db")]
+
+# Collections
+users_collection = db.users
+user_sessions_collection = db.user_sessions
+miners_collection = db.miners
+transactions_collection = db.transactions
+mining_sessions_collection = db.mining_sessions
+devices_collection = db.devices
+referrals_collection = db.referrals
+purchases_collection = db.purchases
+
+# Security setup
+SECRET_KEY = os.environ["JWT_SECRET_KEY"]
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+security = HTTPBearer()
+push_client = PushClient()
+
+# Initialize scheduler
+scheduler = AsyncIOScheduler()
+
+# Pydantic models
+class User(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    email: str
+    name: str
+    picture: Optional[str] = None
+    referral_code: str
+    referred_by: Optional[str] = None
+    bitcoin_balance: float = 0.0
+    total_earnings: float = 0.0
+    total_referral_rewards: float = 0.0
+    total_cashed_out: float = 0.0
+    btc_wallet_address: Optional[str] = None
+    wallet_status: str = "disconnected"  # disconnected, pending, connected
+    wallet_registered_at: Optional[datetime] = None
+    wallet_approved_at: Optional[datetime] = None
+    role: str = "user"
+    created_at: datetime = datetime.utcnow()
+    
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+
+class UserSession(BaseModel):
+    user_id: str
+    session_token: str
+    expires_at: datetime
+    created_at: datetime = datetime.utcnow()
+
+class Device(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    user_id: str
+    expo_push_token: str
+    device_type: str  # ios, android
+    app_version: str
+    is_active: bool = True
+    created_at: datetime = datetime.utcnow()
+
+class Miner(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    user_id: str
+    name: str
+    hash_rate: float
+    miner_type: str  # free, premium, ad
+    status: str = "inactive"  # active, inactive, expired
+    duration_hours: float = 24.0
+    time_remaining: float = 0.0
+    total_earned: float = 0.0
+    purchase_price: float = 0.0
+    created_at: datetime = datetime.utcnow()
+    expires_at: Optional[datetime] = None
+    activated_at: Optional[datetime] = None
+
+class MiningSession(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    user_id: str
+    miner_id: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    hash_rate: float
+    bitcoins_mined: float = 0.0
+    status: str = "active"  # active, completed, expired
+
+class Transaction(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    user_id: str
+    transaction_type: str  # purchase, earning, withdrawal, referral_reward
+    amount: float
+    description: str
+    miner_id: Optional[str] = None
+    created_at: datetime = datetime.utcnow()
+
+class Referral(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    referrer_id: str
+    referee_id: str
+    reward_given: bool = False
+    commission_earned: float = 0.0
+    created_at: datetime = datetime.utcnow()
+
+class Purchase(BaseModel):
+    id: Optional[str] = Field(alias="_id")
+    user_id: str
+    miner_name: str
+    hash_rate: float
+    price: float
+    payment_method: str
+    payment_status: str = "pending"
+    created_at: datetime = datetime.utcnow()
+
+# Request/Response models
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
+MIN_PASSWORD_LENGTH = 8
+
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    referral_code: Optional[str] = None
+
+    @validator("email")
+    def validate_email(cls, v):
+        v = (v or "").strip().lower()
+        if not EMAIL_RE.match(v):
+            raise ValueError("Please enter a valid email address.")
+        return v
+
+    @validator("password")
+    def validate_password(cls, v):
+        if not v or len(v) < MIN_PASSWORD_LENGTH:
+            raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+        return v
+
+    @validator("name")
+    def validate_name(cls, v):
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Please enter your name.")
+        return v[:100]
+
+class CreateMinerRequest(BaseModel):
+    name: str
+    hash_rate: float
+    miner_type: str
+    duration_hours: float = 24.0
+    purchase_price: float = 0.0
+
+class DeviceRegistration(BaseModel):
+    expo_push_token: str
+    device_type: str
+    app_version: str
+    
+    @validator('expo_push_token')
+    def validate_expo_token(cls, v):
+        if not v.startswith('ExponentPushToken['):
+            raise ValueError('Invalid Expo push token format')
+        return v
+
+# Helper functions
+def generate_referral_code() -> str:
+    """Generate unique referral code"""
+    while True:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        existing = users_collection.find_one({"referral_code": code})
+        if not existing:
+            return code
+
+def grant_referral_rewards(referrer_id: str, referee_id: str):
+    """Create the referral record and grant the identical 50 GH/s / 30-day
+    welcome miner to BOTH the referrer and the referee. Used on signup and on
+    one-time post-signup redeem."""
+    # Create referral record
+    referrals_collection.insert_one({
+        "referrer_id": str(referrer_id),
+        "referee_id": str(referee_id),
+        "reward_given": False,
+        "commission_earned": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+    # 50 GH/s miner for 30 days for the referrer
+    miners_collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": str(referrer_id),
+        "name": "Referral Reward Miner",
+        "hash_rate": 50.0,
+        "miner_type": "referral_reward",
+        "status": "inactive",
+        "duration_hours": 720.0,  # 30 days
+        "time_remaining": 720.0,
+        "total_earned": 0.0,
+        "purchase_price": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+    # Same reward for the referee (the user who entered the code)
+    miners_collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": str(referee_id),
+        "name": "Welcome Referral Miner",
+        "hash_rate": 50.0,
+        "miner_type": "referral_reward",
+        "status": "inactive",
+        "duration_hours": 720.0,
+        "time_remaining": 720.0,
+        "total_earned": 0.0,
+        "purchase_price": 0.0,
+        "created_at": datetime.utcnow()
+    })
+
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def decode_bolt11_amount_btc(invoice: str):
+    """Parse a BOLT11 Lightning invoice and return its amount in BTC.
+    Returns 0.0 for an amountless invoice, or None if it is not a valid mainnet (lnbc) invoice."""
+    if not invoice:
+        return None
+    inv = invoice.strip().lower()
+    m = re.match(r'^ln(bc|tb|bcrt)(\d*)([munp]?)', inv)
+    if not m:
+        return None
+    if m.group(1) != 'bc':
+        return None  # only mainnet lnbc invoices are accepted
+    digits = m.group(2)
+    mult = m.group(3)
+    if not digits:
+        return 0.0  # amountless invoice
+    factor = {'': 1.0, 'm': 1e-3, 'u': 1e-6, 'n': 1e-9, 'p': 1e-12}[mult]
+    return int(digits) * factor
+
+def create_access_token(data: Dict[str, Any]) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+    """Get current authenticated user"""
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Check session in database
+        session = user_sessions_collection.find_one({
+            "session_token": token,
+            "expires_at": {"$gt": datetime.utcnow()}
+        })
+        
+        if not session:
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        user = users_collection.find_one({"_id": session["user_id"]})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        user["id"] = str(user["_id"])
+        return user
+        
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+async def send_push_notification(user_id: str, title: str, body: str, data: Dict[str, Any] = None):
+    """Send push notification to user's devices"""
+    try:
+        devices = list(devices_collection.find({"user_id": user_id, "is_active": True}))
+        
+        for device in devices:
+            try:
+                message = PushMessage(
+                    to=device["expo_push_token"],
+                    title=title,
+                    body=body,
+                    data=data or {},
+                    sound="default",
+                    badge=1
+                )
+                
+                response = push_client.publish(message)
+                response.validate_response()
+                logger.info(f"Notification sent to device {device['_id']}")
+                
+            except DeviceNotRegisteredError:
+                devices_collection.update_one(
+                    {"_id": device["_id"]},
+                    {"$set": {"is_active": False}}
+                )
+                logger.warning(f"Device {device['_id']} token invalid, deactivated")
+            except Exception as e:
+                logger.error(f"Error sending notification: {e}")
+                
+    except Exception as e:
+        logger.error(f"Error in send_push_notification: {e}")
+
+# Background tasks
+async def check_expired_miners():
+    """Check for expired miners and send notifications"""
+    try:
+        current_time = datetime.utcnow()
+        expired_miners = list(miners_collection.find(
+            {"status": "active", "expires_at": {"$lte": current_time}},
+            {"_id": 1, "user_id": 1, "miner_type": 1, "name": 1}
+        ).limit(1000))
+        
+        for miner in expired_miners:
+            # Deactivate miner
+            miners_collection.update_one(
+                {"_id": miner["_id"]},
+                {"$set": {"status": "expired", "time_remaining": 0}}
+            )
+            
+            # Send notification
+            miner_type_text = {
+                "free": "free miner",
+                "ad": "ad-boost miner",
+                "premium": "premium miner"
+            }.get(miner["miner_type"], "miner")
+            
+            await send_push_notification(
+                user_id=miner["user_id"],
+                title="Miner Deactivated ⚠️",
+                body=f"Your {miner_type_text} has expired and been deactivated.",
+                data={
+                    "type": "miner_expired",
+                    "miner_id": str(miner["_id"]),
+                    "miner_type": miner["miner_type"]
+                }
+            )
+            
+            logger.info(f"Expired miner {miner['_id']} for user {miner['user_id']}")
+        
+        # Update active miners' time remaining
+        active_miners = list(miners_collection.find(
+            {"status": "active"},
+            {"_id": 1, "expires_at": 1}
+        ).limit(1000))
+        time_ops = []
+        for miner in active_miners:
+            if miner.get("expires_at"):
+                time_remaining = (miner["expires_at"] - current_time).total_seconds() / 3600
+                time_ops.append(UpdateOne(
+                    {"_id": miner["_id"]},
+                    {"$set": {"time_remaining": max(0, time_remaining)}}
+                ))
+        if time_ops:
+            miners_collection.bulk_write(time_ops, ordered=False)
+        
+    except Exception as e:
+        logger.error(f"Error in check_expired_miners: {e}")
+
+async def process_mining_earnings():
+    """Process mining earnings for active miners"""
+    try:
+        active_miners = list(miners_collection.find(
+            {"status": "active"},
+            {"_id": 1, "user_id": 1, "hash_rate": 1, "name": 1}
+        ).limit(1000))
+        
+        miner_ops = []
+        user_earnings = {}
+        transactions = []
+        now = datetime.utcnow()
+        base_rate_per_gh_per_tick = 0.0000000027175 / 144  # 144 ticks per day (every 10 min)
+
+        for miner in active_miners:
+            # Calculate earnings based on advertised daily_reward
+            earnings = miner["hash_rate"] * base_rate_per_gh_per_tick
+
+            miner_ops.append(UpdateOne(
+                {"_id": miner["_id"]},
+                {"$inc": {"total_earned": earnings}}
+            ))
+
+            uid = miner["user_id"]
+            user_earnings[uid] = user_earnings.get(uid, 0) + earnings
+
+            transactions.append({
+                "user_id": uid,
+                "transaction_type": "earning",
+                "amount": earnings,
+                "description": f"Mining earnings from {miner['name']}",
+                "miner_id": str(miner["_id"]),
+                "created_at": now
+            })
+
+        if miner_ops:
+            miners_collection.bulk_write(miner_ops, ordered=False)
+        if user_earnings:
+            users_collection.bulk_write([
+                UpdateOne({"_id": uid}, {"$inc": {"bitcoin_balance": amt, "total_earnings": amt}})
+                for uid, amt in user_earnings.items()
+            ], ordered=False)
+        if transactions:
+            transactions_collection.insert_many(transactions, ordered=False)
+        
+    except Exception as e:
+        logger.error(f"Error in process_mining_earnings: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    scheduler.start()
+    
+    # Schedule background tasks to run every 10 minutes to avoid flooding
+    # the database with excessive transaction records
+    scheduler.add_job(
+        check_expired_miners,
+        IntervalTrigger(minutes=10),
+        id="check_expired_miners",
+        replace_existing=True
+    )
+
+    scheduler.add_job(
+        process_mining_earnings,
+        IntervalTrigger(minutes=10),
+        id="process_mining_earnings",
+        replace_existing=True
+    )
+    
+    logger.info("Bitcoin Mining Simulator API started")
+    yield
+    
+    # Shutdown
+    scheduler.shutdown()
+
+app = FastAPI(
+    title="Bitcoin Mining Simulator API",
+    description="Complete Bitcoin mining simulator with authentication, payments, and referrals",
+    version="2.0.0",
+    lifespan=lifespan,
+    redirect_slashes=False
+)
+
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in ALLOWED_ORIGINS if o.strip()],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Client-Info", "Apikey"],
+)
+
+# Authentication routes
+@app.post("/api/auth/register")
+async def register(request: RegisterRequest):
+    """Register new user"""
+    # Canonical email form: lookups and uniqueness must not depend on casing
+    # or stray whitespace, otherwise two accounts can differ only by case.
+    email = request.email.strip().lower()
+
+    # Check if user exists. The response is deliberately generic so the form
+    # cannot be used to test which email addresses have an account.
+    existing_user = users_collection.find_one({"email": email})
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="We couldn't complete registration with those details. If you already have an account, try signing in or resetting your password.",
+        )
+    
+    # Create user
+    user_id = str(uuid.uuid4())
+    referral_code = generate_referral_code()
+    
+    user_data = {
+        "_id": user_id,
+        "email": email,
+        "name": request.name,
+        "password_hash": hash_password(request.password),
+        "referral_code": referral_code,
+        "referred_by": request.referral_code,
+        "bitcoin_balance": 0.0,
+        "total_earnings": 0.0,
+        "total_referral_rewards": 0.0,
+        "total_cashed_out": 0.0,  # Track total withdrawals
+        "role": "user",
+        "created_at": datetime.utcnow()
+    }
+    
+    users_collection.insert_one(user_data)
+    
+    # Handle referral if provided (only link + reward when the code is valid)
+    if request.referral_code:
+        referrer = users_collection.find_one({"referral_code": request.referral_code})
+        if referrer and str(referrer["_id"]) != user_id:
+            grant_referral_rewards(str(referrer["_id"]), user_id)
+        else:
+            # Invalid code: don't keep a dangling referred_by so the user can
+            # still redeem a valid code later from the Invites screen.
+            users_collection.update_one({"_id": user_id}, {"$set": {"referred_by": None}})
+    
+    # Create session
+    session_token = create_access_token({"sub": user_id})
+    session_data = {
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": datetime.utcnow() + timedelta(days=7),
+        "created_at": datetime.utcnow()
+    }
+    user_sessions_collection.insert_one(session_data)
+    
+    return {
+        "message": "Registration successful",
+        "user": {
+            "id": user_id,
+            "name": request.name,
+            "email": email,
+            "referral_code": referral_code
+        },
+        "access_token": session_token,
+        "token_type": "bearer"
+    }
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """Login user"""
+    user = users_collection.find_one({"email": request.email.strip().lower()})
+    if not user or not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Create session
+    session_token = create_access_token({"sub": str(user["_id"])})
+    session_data = {
+        "user_id": str(user["_id"]),
+        "session_token": session_token,
+        "expires_at": datetime.utcnow() + timedelta(days=7),
+        "created_at": datetime.utcnow()
+    }
+    user_sessions_collection.insert_one(session_data)
+    
+    return {
+        "message": "Login successful",
+        "user": {
+            "id": str(user["_id"]),
+            "name": user["name"],
+            "email": user["email"],
+            "referral_code": user["referral_code"]
+        },
+        "access_token": session_token,
+        "token_type": "bearer"
+    }
+
+@app.get("/api/auth/me")
+async def get_current_user_info(current_user: Dict = Depends(get_current_user)):
+    """Get current user information"""
+    
+    # Ensure data consistency: total_earnings should never be less than current balance
+    current_balance = current_user.get("bitcoin_balance", 0.0)
+    current_total_earnings = current_user.get("total_earnings", 0.0)
+    
+    if current_total_earnings < current_balance:
+        # Fix data inconsistency - update total_earnings to match balance
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$set": {"total_earnings": current_balance}}
+        )
+        logger.info(f"Fixed total_earnings for user {current_user['id']}: updated from {current_total_earnings} to {current_balance}")
+        current_total_earnings = current_balance
+    
+    return {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "referral_code": current_user["referral_code"],
+        "referred_by": current_user.get("referred_by"),
+        "bitcoin_balance": current_balance,
+        "total_earnings": current_total_earnings,
+        "total_referral_rewards": current_user.get("total_referral_rewards", 0.0),
+        "total_cashed_out": current_user.get("total_cashed_out", 0.0),
+        "avatar": current_user.get("avatar"),  # Include avatar
+        "created_at": current_user["created_at"]
+    }
+
+@app.post("/api/auth/logout")
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Logout user"""
+    token = credentials.credentials
+    user_sessions_collection.delete_one({"session_token": token})
+    return {"message": "Logout successful"}
+
+
+# User Profile Management
+@app.put("/api/user/avatar")
+async def update_avatar(
+    avatar_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Update user avatar (base64 image)"""
+    try:
+        avatar_base64 = avatar_data.get("avatar")
+        
+        if not avatar_base64:
+            raise HTTPException(status_code=400, detail="Avatar data is required")
+        
+        # Basic validation: check if it's a data URL or just base64
+        if not avatar_base64.startswith('data:image'):
+            raise HTTPException(status_code=400, detail="Invalid image format. Must be a data URL")
+        
+        # Check size (rough estimate: base64 is ~1.37x original size, so 2MB = ~2.74MB base64)
+        if len(avatar_base64) > 3000000:  # ~2.2MB in base64
+            raise HTTPException(status_code=400, detail="Image too large. Maximum size is 2MB")
+        
+        # Update user avatar
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$set": {"avatar": avatar_base64, "updated_at": datetime.utcnow()}}
+        )
+        
+        logger.info(f"User {current_user['id']} updated avatar")
+        
+        return {
+            "success": True,
+            "message": "Avatar updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating avatar: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update avatar")
+
+@app.delete("/api/user/avatar")
+async def delete_avatar(current_user: Dict = Depends(get_current_user)):
+    """Remove user avatar"""
+    try:
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {"$unset": {"avatar": ""}, "$set": {"updated_at": datetime.utcnow()}}
+        )
+        
+        logger.info(f"User {current_user['id']} deleted avatar")
+        
+        return {
+            "success": True,
+            "message": "Avatar removed successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error deleting avatar: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete avatar")
+
+# Device management
+@app.post("/api/devices/register")
+async def register_device(
+    device_data: DeviceRegistration,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Register device for push notifications"""
+    # Check if device already exists
+    existing_device = devices_collection.find_one({
+        "user_id": current_user["id"],
+        "expo_push_token": device_data.expo_push_token
+    })
+    
+    if existing_device:
+        # Update existing device
+        devices_collection.update_one(
+            {"_id": existing_device["_id"]},
+            {"$set": {
+                "device_type": device_data.device_type,
+                "app_version": device_data.app_version,
+                "is_active": True
+            }}
+        )
+        return {"message": "Device updated successfully"}
+    
+    # Create new device
+    device_id = str(uuid.uuid4())
+    new_device = {
+        "_id": device_id,
+        "user_id": current_user["id"],
+        "expo_push_token": device_data.expo_push_token,
+        "device_type": device_data.device_type,
+        "app_version": device_data.app_version,
+        "is_active": True,
+        "created_at": datetime.utcnow()
+    }
+    
+    devices_collection.insert_one(new_device)
+    return {"message": "Device registered successfully"}
+
+# Wallet endpoints
+@app.get("/api/wallet/balance")
+async def get_wallet_balance(current_user: Dict = Depends(get_current_user)):
+    """Get user wallet balance and stats"""
+    # Calculate today's earnings
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_earnings_pipeline = [
+        {"$match": {
+            "user_id": current_user["id"],
+            "transaction_type": "earning",
+            "created_at": {"$gte": today_start}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    
+    today_earnings_result = list(transactions_collection.aggregate(today_earnings_pipeline))
+    today_total = today_earnings_result[0]["total"] if today_earnings_result else 0.0
+    
+    # Count miners
+    total_miners = miners_collection.count_documents({"user_id": current_user["id"]})
+    active_miners = miners_collection.count_documents({
+        "user_id": current_user["id"],
+        "status": "active"
+    })
+    
+    # Calculate current hash rate
+    current_hash_rate_pipeline = [
+        {"$match": {"user_id": current_user["id"], "status": "active"}},
+        {"$group": {"_id": None, "total_hash_rate": {"$sum": "$hash_rate"}}}
+    ]
+    
+    hash_rate_result = list(miners_collection.aggregate(current_hash_rate_pipeline))
+    current_hash_rate = hash_rate_result[0]["total_hash_rate"] if hash_rate_result else 0.0
+    
+    return {
+        "total_balance": current_user.get("bitcoin_balance", 0.0),
+        "today_earnings": today_total,
+        "total_miners": total_miners,
+        "active_miners": active_miners,
+        "current_hash_rate": current_hash_rate,
+        "total_referral_rewards": current_user.get("total_referral_rewards", 0.0)
+    }
+
+@app.post("/api/wallet/register")
+async def register_btc_wallet(
+    wallet_data: Dict[str, str],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Register BTC wallet address for withdrawals"""
+    try:
+        btc_address = wallet_data.get("btc_address", "").strip()
+        
+        if not btc_address:
+            raise HTTPException(status_code=400, detail="Bitcoin address is required")
+        
+        # Basic Bitcoin address validation (starts with 1, 3, or bc1)
+        if not (btc_address.startswith('1') or btc_address.startswith('3') or btc_address.startswith('bc1')):
+            raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
+        
+        # Use current_user["id"] which is the processed string UUID
+        user_id = current_user["id"]
+
+        # First registration only. Replacing an existing payout address must go
+        # through /api/wallet/request-address-change, which requires the account
+        # password. Without this check that password gate is trivially bypassed.
+        existing_user = users_collection.find_one({"_id": user_id})
+        if existing_user and existing_user.get("btc_wallet_address"):
+            raise HTTPException(
+                status_code=400,
+                detail="You already have a withdrawal address on file. To change it, use "
+                       "'Request address change' in your Profile settings and confirm your password."
+            )
+
+        # Check if address is already registered by another user (SYNCHRONOUS - no await)
+        existing = users_collection.find_one({
+            "btc_wallet_address": btc_address,
+            "_id": {"$ne": user_id}
+        })
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="This Bitcoin address is already registered")
+        
+        # Update user with wallet address and set status to pending (SYNCHRONOUS - no await)
+        users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "btc_wallet_address": btc_address,
+                "wallet_status": "pending",
+                "wallet_registered_at": datetime.utcnow()
+            }}
+        )
+        
+        logger.info(f"User {current_user['email']} registered BTC wallet: {btc_address}")
+        
+        return {
+            "success": True,
+            "message": "Your address has been submitted, and should be approved within 2 business days.",
+            "wallet_status": "pending"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error registering wallet: {e}")
+        raise HTTPException(status_code=500, detail="Failed to register wallet")
+
+@app.post("/api/wallet/request-address-change")
+async def request_address_change(data: Dict[str, str], current_user: Dict = Depends(get_current_user)):
+    """User requests a change to their approved withdrawal address (requires admin approval)."""
+    try:
+        current_password = data.get("current_password", "")
+        new_address = data.get("new_address", "").strip()
+
+        user = users_collection.find_one({"_id": current_user["id"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not verify_password(current_password, user.get("password_hash", "")):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+        if not new_address:
+            raise HTTPException(status_code=400, detail="New Bitcoin address is required")
+        if not (new_address.startswith('1') or new_address.startswith('3') or new_address.startswith('bc1')):
+            raise HTTPException(status_code=400, detail="Invalid Bitcoin address format")
+        if new_address == user.get("btc_wallet_address"):
+            raise HTTPException(status_code=400, detail="This is already your current withdrawal address")
+
+        existing = users_collection.find_one({"btc_wallet_address": new_address, "_id": {"$ne": current_user["id"]}})
+        if existing:
+            raise HTTPException(status_code=400, detail="This Bitcoin address is already registered")
+
+        users_collection.update_one(
+            {"_id": current_user["id"]},
+            {
+                "$set": {"pending_address_change": {
+                    "new_address": new_address,
+                    "requested_at": datetime.utcnow(),
+                    "status": "pending"
+                }},
+                "$unset": {"last_address_change_rejection": ""}
+            }
+        )
+        logger.info(f"User {user.get('email')} requested address change to {new_address}")
+        return {"success": True, "message": "Address change requested. Your new address will be active after admin approval."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error requesting address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to request address change")
+
+@app.post("/api/wallet/dismiss-rejection")
+async def dismiss_address_rejection(current_user: Dict = Depends(get_current_user)):
+    """Dismiss the last address-change rejection notice"""
+    users_collection.update_one(
+        {"_id": current_user["id"]},
+        {"$unset": {"last_address_change_rejection": ""}}
+    )
+    return {"success": True}
+
+@app.get("/api/wallet/status")
+async def get_wallet_status(current_user: Dict = Depends(get_current_user)):
+    """Get user's wallet connection status"""
+    user = users_collection.find_one({"_id": current_user["id"]}) or current_user
+    pac = user.get("pending_address_change")
+    rejection = user.get("last_address_change_rejection")
+    return {
+        "wallet_status": user.get("wallet_status", "disconnected"),
+        "btc_wallet_address": user.get("btc_wallet_address"),
+        "wallet_registered_at": user.get("wallet_registered_at"),
+        "wallet_approved_at": user.get("wallet_approved_at"),
+        "pending_address_change": {
+            "new_address": pac.get("new_address"),
+            "status": pac.get("status")
+        } if pac and pac.get("status") == "pending" else None,
+        "last_address_change_rejection": {
+            "new_address": rejection.get("new_address"),
+            "reason": rejection.get("reason"),
+            "rejected_at": rejection.get("rejected_at")
+        } if rejection else None
+    }
+
+# Miner management
+@app.get("/api/miners/list")
+async def get_user_miners(current_user: Dict = Depends(get_current_user)):
+    """Get user's miners"""
+    miners = list(miners_collection.find({"user_id": current_user["id"]}))
+    
+    miners_list = []
+    for miner in miners:
+        miners_list.append({
+            "id": str(miner["_id"]),
+            "name": miner["name"],
+            "hash_rate": miner["hash_rate"],
+            "miner_type": miner["miner_type"],
+            "status": miner["status"],
+            "duration_hours": miner["duration_hours"],
+            "time_remaining": miner.get("time_remaining", 0.0),
+            "total_earned": miner.get("total_earned", 0.0),
+            "purchase_price": miner.get("purchase_price", 0.0),
+            "created_at": miner["created_at"],
+            "expires_at": miner.get("expires_at"),
+            "activated_at": miner.get("activated_at")
+        })
+    
+    return {"miners": miners_list}
+
+@app.post("/api/miners/{miner_id}/activate")
+async def activate_miner(miner_id: str, current_user: Dict = Depends(get_current_user)):
+    """Activate a miner"""
+    miner = miners_collection.find_one({
+        "_id": miner_id,
+        "user_id": current_user["id"]
+    })
+    
+    if not miner:
+        raise HTTPException(status_code=404, detail="Miner not found")
+    
+    if miner["status"] == "active":
+        raise HTTPException(status_code=400, detail="Miner is already active")
+    
+    # Activate miner
+    now = datetime.utcnow()
+    expires_at = now + timedelta(hours=miner["duration_hours"])
+    
+    miners_collection.update_one(
+        {"_id": miner_id},
+        {"$set": {
+            "status": "active",
+            "activated_at": now,
+            "expires_at": expires_at,
+            "time_remaining": miner["duration_hours"]
+        }}
+    )
+    
+    return {"message": "Miner activated successfully"}
+
+@app.post("/api/miners/activate-free")
+async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
+    """Activate or create free daily miner (10 GH/s for 24h)"""
+    # Check if user already has an active free miner today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    existing_free = miners_collection.find_one({
+        "user_id": current_user["id"],
+        "miner_type": "free",
+        "created_at": {"$gte": today_start}
+    })
+    
+    if existing_free and existing_free["status"] == "active":
+        raise HTTPException(status_code=400, detail="Free miner already active today")
+    
+    # Create or reactivate free miner
+    now = datetime.utcnow()
+    expires_at = now + timedelta(hours=24)
+    
+    if existing_free:
+        # Reactivate existing free miner
+        miners_collection.update_one(
+            {"_id": existing_free["_id"]},
+            {"$set": {
+                "status": "active",
+                "activated_at": now,
+                "expires_at": expires_at,
+                "time_remaining": 24.0
+            }}
+        )
+        miner_id = existing_free["_id"]
+    else:
+        # Create new free miner
+        miner_id = str(uuid.uuid4())
+        free_miner_data = {
+            "_id": miner_id,
+            "user_id": current_user["id"],
+            "name": "Daily Free Miner",
+            "hash_rate": 10.0,
+            "miner_type": "free",
+            "status": "active",
+            "duration_hours": 24.0,
+            "time_remaining": 24.0,
+            "total_earned": 0.0,
+            "purchase_price": 0.0,
+            "created_at": now,
+            "activated_at": now,
+            "expires_at": expires_at
+        }
+        miners_collection.insert_one(free_miner_data)
+    
+    return {"message": "Free miner activated successfully", "miner_id": miner_id}
+
+@app.post("/api/miners/watch-ad")
+async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
+    """Activate ad miner (2 GH/s for 30 minutes, stackable up to 24h)"""
+    # Enforce the SAME daily reward limit as /api/ads/watch. Without this the
+    # route is a second, unlimited path to the same mining reward.
+    today = datetime.utcnow().date().isoformat()
+    counter = db.daily_ad_counters.find_one_and_update(
+        {"user_id": current_user["id"], "date": today},
+        {"$inc": {"ads_watched": 1}, "$setOnInsert": {"created_at": datetime.utcnow()}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    if counter.get("ads_watched", 0) > MAX_DAILY_ADS:
+        # Roll the increment back so the counter reflects rewards actually given
+        db.daily_ad_counters.update_one(
+            {"user_id": current_user["id"], "date": today},
+            {"$inc": {"ads_watched": -1}},
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
+        )
+
+    # Find existing ad miner or create new one
+    ad_miner = miners_collection.find_one({
+        "user_id": current_user["id"],
+        "miner_type": "ad",
+        "name": "Ad Boost Miner"
+    })
+    
+    now = datetime.utcnow()
+    
+    if ad_miner:
+        # Extend existing ad miner time (max 24 hours)
+        current_remaining = max(0, ad_miner.get("time_remaining", 0.0))
+        new_time_remaining = min(current_remaining + 0.5, 24.0)  # Add 30 minutes, cap at 24h
+        
+        expires_at = now + timedelta(hours=new_time_remaining)
+        
+        miners_collection.update_one(
+            {"_id": ad_miner["_id"]},
+            {"$set": {
+                "status": "active" if new_time_remaining > 0 else "inactive",
+                "time_remaining": new_time_remaining,
+                "expires_at": expires_at,
+                "activated_at": now if ad_miner["status"] != "active" else ad_miner.get("activated_at")
+            }}
+        )
+    else:
+        # Create new ad miner
+        miner_id = str(uuid.uuid4())
+        expires_at = now + timedelta(minutes=30)
+        
+        ad_miner_data = {
+            "_id": miner_id,
+            "user_id": current_user["id"],
+            "name": "Ad Boost Miner",
+            "hash_rate": 2.0,
+            "miner_type": "ad",
+            "status": "active",
+            "duration_hours": 0.5,
+            "time_remaining": 0.5,
+            "total_earned": 0.0,
+            "purchase_price": 0.0,
+            "created_at": now,
+            "activated_at": now,
+            "expires_at": expires_at
+        }
+        miners_collection.insert_one(ad_miner_data)
+    
+    return {"message": "Ad miner boost activated successfully"}
+
+# Store endpoints
+
+# Single source of truth for the purchasable miner catalog.
+# Used by BOTH /api/store/miners (display) and /api/payments/create-paypal-order (pricing),
+# so the price/hash-rate shown to the user always matches what PayPal charges.
+STORE_MINERS = [
+    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
+    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
+    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
+    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 40000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
+]
+
+@app.get("/api/store/miners")
+async def get_store_miners():
+    """Get available miners for purchase"""
+    return {"miners": STORE_MINERS}
+
+# Referral endpoints
+@app.get("/api/referrals/stats")
+async def get_referral_stats(current_user: Dict = Depends(get_current_user)):
+    """Get referral statistics"""
+    referrals = list(referrals_collection.find({"referrer_id": current_user["id"]}))
+    
+    total_referrals = len(referrals)
+    total_commission = sum(r.get("commission_earned", 0.0) for r in referrals)
+    
+    # Get referral miners count
+    referral_miners = miners_collection.count_documents({
+        "user_id": current_user["id"],
+        "miner_type": {"$in": ["referral_reward", "referral_commission"]}
+    })
+    
+    return {
+        "referral_code": current_user["referral_code"],
+        "referred_by": current_user.get("referred_by"),
+        "total_referrals": total_referrals,
+        "total_commission": total_commission,
+        "referral_miners": referral_miners,
+        "total_referral_rewards": current_user.get("total_referral_rewards", 0.0)
+    }
+
+@app.post("/api/referrals/redeem")
+async def redeem_referral_code(
+    data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """One-time redemption of a referral code after signup. Once a user has a
+    referrer set, it can never be changed. Grants identical rewards to signup:
+    a 50 GH/s / 30-day miner for both the referrer and the current user."""
+    code = (data.get("referral_code") or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="Please enter a referral code.")
+
+    # Re-read the latest user state (current_user may be cached)
+    user = users_collection.find_one({"_id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # One-time only
+    if user.get("referred_by"):
+        raise HTTPException(
+            status_code=400,
+            detail="You have already entered a referral code. It cannot be changed."
+        )
+
+    # Can't use your own code
+    if code == user.get("referral_code"):
+        raise HTTPException(status_code=400, detail="You cannot use your own referral code.")
+
+    referrer = users_collection.find_one({"referral_code": code})
+    if not referrer:
+        raise HTTPException(status_code=400, detail="Invalid referral code. Please check and try again.")
+
+    # Atomically claim the redemption. The filter requires that no referrer is
+    # set yet, so two concurrent requests cannot both be granted the reward.
+    claim = users_collection.update_one(
+        {"_id": user["_id"], "$or": [{"referred_by": None}, {"referred_by": {"$exists": False}}]},
+        {"$set": {"referred_by": code}}
+    )
+    if claim.modified_count != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="You have already entered a referral code. It cannot be changed."
+        )
+    grant_referral_rewards(str(referrer["_id"]), str(user["_id"]))
+
+    return {
+        "success": True,
+        "referred_by": code,
+        "message": "Referral code applied! You and your referrer each received a 50 GH/s miner for 30 days. Activate it to start earning.",
+        "reward": {"hash_rate": 50.0, "duration_days": 30}
+    }
+
+# Support endpoints
+@app.post("/api/support/contact")
+async def submit_contact_form(
+    contact_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Submit contact support form and send email to support team"""
+    try:
+        # Validate required fields
+        name = contact_data.get("name", "").strip()
+        email = contact_data.get("email", "").strip()
+        subject = contact_data.get("subject", "").strip()
+        message = contact_data.get("message", "").strip()
+        
+        if not name or not email or not subject or not message:
+            raise HTTPException(status_code=400, detail="All fields (name, email, subject, message) are required")
+
+        # Bound the sizes so a single ticket cannot be used to flood storage
+        # or the outgoing mail body.
+        name = name[:100]
+        email = email[:200]
+        # Strip CR/LF from anything that ends up in a mail header, otherwise a
+        # newline in the subject lets the sender inject extra headers.
+        subject = subject.replace("\r", " ").replace("\n", " ")[:150]
+        message = message[:5000]
+        
+        # Store support ticket in database
+        support_ticket = {
+            "user_id": current_user["id"],
+            "name": name,
+            "email": email,
+            "subject": subject,
+            "message": message,
+            "status": "open",
+            "created_at": datetime.utcnow()
+        }
+        
+        result = db.support_tickets.insert_one(support_ticket)
+        ticket_id = str(result.inserted_id)
+        
+        # Send email to support team (colourfulkoaladevelopment@gmail.com)
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Gmail SMTP configuration
+            smtp_server = "smtp.gmail.com"
+            smtp_port = 587
+            sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
+            sender_password = os.getenv("SMTP_PASSWORD", "")
+            recipient_email = os.getenv("SUPPORT_EMAIL", "colourfulkoaladevelopment@gmail.com")
+            
+            # The ticket fields are attacker controlled, so escape them before
+            # they are interpolated into the HTML mail body.
+            safe_name = html.escape(name)
+            safe_email = html.escape(email)
+            safe_subject = html.escape(subject)
+            safe_message = html.escape(message)
+            safe_account_email = html.escape(str(current_user.get("email", "")))
+
+            # Create email message
+            email_subject = f"Bitcoin Mining App Support Request - {subject}"
+            
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = recipient_email
+            msg['Subject'] = email_subject
+            
+            # Create HTML email body
+            email_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #FFD700; text-align: center;">🚀 Bitcoin Mining App Support Request</h2>
+                    
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">Contact Information</h3>
+                        <p><strong>Name:</strong> {safe_name}</p>
+                        <p><strong>Email:</strong> {safe_email}</p>
+                        <p><strong>Subject:</strong> {safe_subject}</p>
+                        <p><strong>Ticket ID:</strong> {ticket_id}</p>
+                    </div>
+                    
+                    <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">User Details</h3>
+                        <p><strong>User ID:</strong> {current_user['id']}</p>
+                        <p><strong>Account Email:</strong> {safe_account_email}</p>
+                        <p><strong>Submitted At:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+                    </div>
+                    
+                    <div style="background-color: #e8f4fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="color: #333; margin-top: 0;">📝 Message</h3>
+                        <p style="white-space: pre-wrap; background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #FFD700;">{safe_message}</p>
+                    </div>
+                    
+                    <hr style="margin: 30px 0; border: none; border-top: 2px solid #FFD700;">
+                    <p style="text-align: center; color: #666; font-size: 12px;">
+                        This email was automatically generated from the Bitcoin Mining App support system.
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(email_body, 'html'))
+            
+            # Send email using Gmail SMTP
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()  # Enable security
+            server.login(sender_email, sender_password)
+            text = msg.as_string()
+            server.sendmail(sender_email, recipient_email, text)
+            server.quit()
+            
+            logger.info(f"✅ Support email sent successfully to {recipient_email}: {email_subject}")
+            
+        except Exception as email_error:
+            logger.error(f"❌ Failed to send support email: {email_error}")
+            # Continue execution even if email fails - still create the ticket
+        
+        return {
+            "message": "Support request submitted successfully. We'll get back to you soon!",
+            "ticket_id": ticket_id
+        }
+        
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
+    except Exception as e:
+        logger.error(f"Error submitting contact form: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit support request")
+
+# Get live Bitcoin price
+@app.get("/api/bitcoin/price")
+async def get_bitcoin_price():
+    """Get current Bitcoin price in USD"""
+    try:
+        import requests
+        
+        # Try multiple APIs for better reliability
+        apis_to_try = [
+            {
+                "url": "https://api.coinbase.com/v2/exchange-rates?currency=BTC",
+                "parser": lambda data: float(data['data']['rates']['USD']),
+                "name": "Coinbase API"
+            },
+            {
+                "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", 
+                "parser": lambda data: float(data['price']),
+                "name": "Binance API"
+            },
+            {
+                "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+                "parser": lambda data: float(data['bitcoin']['usd']),
+                "name": "CoinGecko API"
+            }
+        ]
+        
+        for api in apis_to_try:
+            try:
+                response = requests.get(api["url"], timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    btc_price = api["parser"](data)
+                    
+                    # Sanity check - Bitcoin price should be reasonable (between $10k-$500k)
+                    if 10000 <= btc_price <= 500000:
+                        return {
+                            "btc_price_usd": btc_price,
+                            "last_updated": datetime.utcnow().isoformat(),
+                            "source": api["name"]
+                        }
+            except Exception as api_error:
+                logger.warning(f"Failed to fetch from {api['name']}: {api_error}")
+                continue
+        
+        # If all APIs fail, return fallback
+        logger.error("All Bitcoin price APIs failed")
+        return {
+            "btc_price_usd": 50000.0,
+            "last_updated": datetime.utcnow().isoformat(),
+            "source": "Fallback (All APIs failed)"
+        }
+            
+    except Exception as e:
+        logger.error(f"Error in Bitcoin price endpoint: {e}")
+        return {
+            "btc_price_usd": 50000.0,
+            "last_updated": datetime.utcnow().isoformat(),
+            "source": "Fallback (Endpoint error)"
+        }
+
+# Bitcoin withdrawal endpoints
+@app.get("/api/bitcoin/network-fee")
+async def get_bitcoin_network_fee():
+    """Get current recommended Bitcoin network fee"""
+    try:
+        # Fetch from blockchain.info API for recommended fees
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.blockchain.info/mempool/fees') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    # Return fee in BTC (convert from satoshis per byte)
+                    # Typical transaction size is ~250 bytes
+                    fee_per_byte_satoshis = data.get('regular', 50)  # Use 'regular' priority
+                    transaction_size_bytes = 250
+                    total_fee_satoshis = fee_per_byte_satoshis * transaction_size_bytes
+                    total_fee_btc = total_fee_satoshis / 100000000  # Convert to BTC
+                    
+                    return {
+                        "network_fee_btc": total_fee_btc,
+                        "network_fee_satoshis": total_fee_satoshis,
+                        "fee_per_byte": fee_per_byte_satoshis,
+                        "estimated_confirmation": "30-60 minutes"
+                    }
+                else:
+                    # Fallback to conservative estimate
+                    return {
+                        "network_fee_btc": 0.00001,
+                        "network_fee_satoshis": 1000,
+                        "fee_per_byte": 4,
+                        "estimated_confirmation": "30-60 minutes"
+                    }
+    except Exception as e:
+        logger.error(f"Error fetching network fee: {e}")
+        # Fallback
+        return {
+            "network_fee_btc": 0.00001,
+            "network_fee_satoshis": 1000,
+            "fee_per_byte": 4,
+            "estimated_confirmation": "30-60 minutes"
+        }
+
+@app.post("/api/withdraw/bitcoin")
+async def withdraw_bitcoin(
+    withdrawal_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Process Bitcoin withdrawal to external wallet (Bitcoin or Lightning Network)"""
+    try:
+        address = withdrawal_data.get("address", "").strip()
+        amount = float(withdrawal_data.get("amount", 0))
+        network = withdrawal_data.get("network", "bitcoin").lower()  # bitcoin or lightning
+        
+        # Validate network type
+        if network not in ["bitcoin", "lightning"]:
+            raise HTTPException(status_code=400, detail="Invalid network. Must be 'bitcoin' or 'lightning'")
+        
+        # Check wallet status first
+        user = users_collection.find_one({"_id": current_user["id"]})  # Synchronous, use string ID
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        wallet_status = user.get("wallet_status", "disconnected")
+        # On-chain withdrawals require a pre-approved (whitelisted) address.
+        # Lightning withdrawals use a single-use invoice and need no whitelisting.
+        if network == "bitcoin":
+            if wallet_status != "connected":
+                if wallet_status == "pending":
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Your wallet is pending admin approval. Please wait for approval before withdrawing."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Please register your Bitcoin wallet address first in your Profile settings."
+                    )
+            # Force on-chain payouts to the user's approved whitelisted address
+            approved_address = user.get("btc_wallet_address")
+            if approved_address:
+                address = approved_address
+        
+        if not address:
+            raise HTTPException(status_code=400, detail=f"{'Lightning invoice' if network == 'lightning' else 'Bitcoin address'} is required")
+        
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than 0")
+        
+        # Network-specific validation
+        if network == "lightning":
+            min_withdrawal = 0.00001  # 0.00001 BTC
+            max_withdrawal = 0.001  # 0.001 BTC maximum for Lightning
+            if amount < min_withdrawal:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Lightning Network minimum is {min_withdrawal} BTC"
+                )
+            if amount >= 0.001:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Amount {amount} BTC exceeds Lightning Network maximum of {max_withdrawal} BTC. Please use Bitcoin network for amounts >= 0.001 BTC"
+                )
+            # Validate the single-use BOLT11 invoice and match its encoded amount
+            invoice_amount = decode_bolt11_amount_btc(address)
+            if invoice_amount is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid Lightning invoice. Please paste a valid mainnet BOLT11 invoice (starts with 'lnbc')."
+                )
+            if invoice_amount > 0 and abs(invoice_amount - amount) > 1e-9:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invoice amount ({invoice_amount:.8f} BTC) does not match the requested amount ({amount:.8f} BTC). Lightning invoices are single-use - please generate a new invoice for the exact amount."
+                )
+        else:
+            min_withdrawal = 0.0002  # 0.0002 BTC for Bitcoin network (matches Kraken)
+            if amount < min_withdrawal:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Bitcoin network minimum is {min_withdrawal} BTC"
+                )
+        
+        # Check user balance
+        user = users_collection.find_one({"_id": current_user["id"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        current_balance = user.get("bitcoin_balance", 0)
+        
+        # Fee structure for Bitcoin network withdrawals:
+        # - Network Fee: variable, paid to the BTC network
+        # - Withdrawal Fee: 0.00002 BTC, paid to Kraken
+        # - Service Fee: 0.00001 BTC, paid to Colourful Koala
+        WITHDRAWAL_FEE = 0.00002  # Kraken withdrawal fee
+        SERVICE_FEE = 0.00001     # Colourful Koala service fee
+        try:
+            fee_info = await get_bitcoin_network_fee()
+            network_fee = float(fee_info.get("network_fee_btc", 0.00001))
+        except Exception:
+            network_fee = 0.00001
+        # Keep processing_fee as the aggregate of all fees (legacy field name)
+        processing_fee = network_fee + WITHDRAWAL_FEE + SERVICE_FEE
+        total_deduction = amount + processing_fee
+        
+        if total_deduction > current_balance:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient balance. Available: {current_balance:.8f} BTC, Required: {total_deduction:.8f} BTC (amount + network fee {network_fee:.8f} + withdrawal fee {WITHDRAWAL_FEE:.8f} + service fee {SERVICE_FEE:.8f})"
+            )
+        
+        # Get current Bitcoin price for USD value calculation
+        try:
+            import requests
+            price_response = requests.get(
+                "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+                timeout=5
+            )
+            btc_price = 50000.0  # fallback
+            if price_response.status_code == 200:
+                btc_price = price_response.json()["bitcoin"]["usd"]
+        except Exception:
+            btc_price = 50000.0  # fallback price
+        
+        usd_value = amount * btc_price
+        
+        # Create withdrawal record
+        withdrawal_id = str(uuid.uuid4())
+        withdrawal_record = {
+            "_id": withdrawal_id,
+            "user_id": current_user["id"],
+            "bitcoin_address": address,
+            "network": network,  # bitcoin or lightning
+            "amount_btc": amount,
+            "processing_fee_btc": processing_fee,
+            "network_fee_btc": network_fee,
+            "withdrawal_fee_btc": WITHDRAWAL_FEE,
+            "service_fee_btc": SERVICE_FEE,
+            "total_deducted_btc": total_deduction,
+            "usd_value": usd_value,
+            "btc_price_at_withdrawal": btc_price,
+            "status": "pending",
+            "transaction_hash": None,
+            "created_at": datetime.utcnow(),
+            "processed_at": None,
+            "notes": ""
+        }
+        
+        # Atomically claim the funds BEFORE creating the withdrawal record.
+        # The balance condition is part of the update filter, so two concurrent
+        # withdrawal requests cannot both pass the sufficiency check.
+        claim = users_collection.update_one(
+            {"_id": current_user["id"], "bitcoin_balance": {"$gte": total_deduction}},
+            {
+                "$inc": {
+                    "bitcoin_balance": -total_deduction,
+                    "total_cashed_out": amount,  # Track only the withdrawal amount, not fee
+                }
+            }
+        )
+        if claim.modified_count != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient balance for this withdrawal."
+            )
+
+        # Funds are claimed; now record the withdrawal.
+        db.withdrawals.insert_one(withdrawal_record)
+        new_balance = current_balance - total_deduction
+        
+        # Record transaction for balance tracking
+        transaction_record = {
+            "_id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "type": "withdrawal",
+            "amount": -total_deduction,  # Negative for withdrawal (includes fee)
+            "balance_after": new_balance,
+            "description": f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal to {address[:10]}...{address[-6:]} + fees",
+            "withdrawal_id": withdrawal_id,
+            "created_at": datetime.utcnow()
+        }
+        transactions_collection.insert_one(transaction_record)
+        
+        logger.info(f"{'Lightning' if network == 'lightning' else 'Bitcoin'} withdrawal created: {amount} BTC to {address} (User: {current_user['id']})")
+        
+        try:
+            # Process actual Bitcoin transaction from backend wallet to user address
+            tx_hash = await process_bitcoin_withdrawal(address, amount, withdrawal_id, network)
+            
+            if tx_hash:
+                # Update withdrawal record with successful transaction
+                db.withdrawals.update_one(
+                    {"_id": withdrawal_id},
+                    {"$set": {
+                        "transaction_hash": tx_hash,
+                        "status": "completed",
+                        "processed_at": datetime.utcnow()
+                    }}
+                )
+                logger.info(f"✅ Bitcoin withdrawal completed: {amount} BTC sent to {address} (TX: {tx_hash})")
+                
+                return {
+                    "success": True,
+                    "withdrawal_id": withdrawal_id,
+                    "amount_btc": amount,
+                    "processing_fee_btc": processing_fee,
+                    "network_fee_btc": network_fee,
+                    "withdrawal_fee_btc": WITHDRAWAL_FEE,
+                    "service_fee_btc": SERVICE_FEE,
+                    "total_deducted_btc": total_deduction,
+                    "usd_value": round(usd_value, 2),
+                    "bitcoin_address": address,
+                    "status": "completed",
+                    "message": "Withdrawal completed successfully.",
+                    "estimated_confirmation_time": "Completed"
+                }
+            else:
+                raise Exception("Bitcoin transaction failed")
+                
+        except Exception as wallet_error:
+            logger.error(f"❌ Bitcoin wallet integration error: {wallet_error}")
+            
+            # Mark withdrawal as failed
+            db.withdrawals.update_one(
+                {"_id": withdrawal_id},
+                {"$set": {
+                    "status": "failed",
+                    "notes": f"Wallet integration error: {str(wallet_error)}",
+                    "processed_at": datetime.utcnow()
+                }}
+            )
+            
+            # Refund user balance since withdrawal failed. Use $inc so a
+            # concurrent earning or withdrawal is not clobbered by a stale value.
+            users_collection.update_one(
+                {"_id": current_user["id"]},
+                {
+                    "$inc": {
+                        "bitcoin_balance": total_deduction,  # Give back amount + fees
+                        "total_cashed_out": -amount,  # Subtract from total cashed out
+                    }
+                }
+            )
+            
+            # Remove the transaction record since it failed
+            transactions_collection.delete_one({"withdrawal_id": withdrawal_id})
+            
+            # Surface the real underlying error so issues (e.g. address not
+            # whitelisted, missing Kraken permissions) are visible for debugging.
+            clean_error = str(wallet_error).replace("Kraken withdrawal error: ", "")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Withdrawal could not be processed: {clean_error} Your balance has been restored."
+            )
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid withdrawal amount")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing Bitcoin withdrawal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process withdrawal")
+
+async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id: str, network: str = "bitcoin") -> str:
+    """Process Bitcoin withdrawal using configured wallet service"""
+    
+    if BITCOIN_WALLET_TYPE == "bitgo":
+        return await bitgo_send_bitcoin(address, amount, withdrawal_id)
+    elif BITCOIN_WALLET_TYPE == "coinbase":
+        return await coinbase_send_bitcoin(address, amount, withdrawal_id)
+    elif BITCOIN_WALLET_TYPE == "kraken":
+        return await kraken_send_bitcoin(address, amount, withdrawal_id, network)
+    elif BITCOIN_WALLET_TYPE == "ndax":
+        return await ndax_send_bitcoin(address, amount, withdrawal_id)
+    elif BITCOIN_WALLET_TYPE == "blockchain":
+        return await blockchain_send_bitcoin(address, amount, withdrawal_id)
+    elif BITCOIN_WALLET_TYPE == "rpc":
+        return await bitcoin_rpc_send(address, amount, withdrawal_id)
+    else:
+        # Demo mode - simulate transaction
+        return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+
+async def bitgo_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using BitGo Express API"""
+    try:
+        import requests
+        
+        # Check if we have BitGo credentials configured
+        if not BITGO_API_KEY or not BITGO_WALLET_ID:
+            logger.warning("BitGo credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # BitGo Express API URL (should be configured in environment)
+        bitgo_express_url = os.getenv("BITGO_EXPRESS_URL", "http://localhost:3080")
+        
+        # Prepare headers for BitGo Express
+        headers = {
+            'Authorization': f'Bearer {BITGO_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Convert BTC to satoshis (1 BTC = 100,000,000 satoshis)
+        amount_satoshis = int(amount * 100_000_000)
+        
+        # Prepare transaction payload for BitGo Express
+        payload = {
+            'address': address,
+            'amount': str(amount_satoshis),
+            'walletPassphrase': BITGO_WALLET_PASSPHRASE,
+            'comment': f'Mining withdrawal {withdrawal_id}',
+            'feeRate': 1000  # 1 sat/byte in sat/kB
+        }
+        
+        # Determine wallet endpoint based on environment
+        coin_type = "btc" if BITGO_ENV == "prod" else "tbtc"
+        endpoint = f"{bitgo_express_url}/api/v2/{coin_type}/wallet/{BITGO_WALLET_ID}/sendcoins"
+        
+        logger.info(f"Sending BitGo Express request to: {endpoint}")
+        
+        # Send transaction via BitGo Express
+        response = requests.post(
+            endpoint,
+            headers=headers,
+            json=payload,
+            timeout=60  # Bitcoin transactions can take time
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            tx_hash = result.get('hash') or result.get('txid') or result.get('id')
+            
+            if tx_hash:
+                logger.info(f"✅ BitGo Express transaction successful: {tx_hash}")
+                return tx_hash
+            else:
+                logger.error(f"BitGo Express response missing transaction hash: {result}")
+                raise Exception("Transaction submitted but hash not received")
+        else:
+            error_msg = f"BitGo Express error ({response.status_code}): {response.text}"
+            logger.error(error_msg)
+            
+            # If BitGo Express is not available, fall back to demo mode with warning
+            if response.status_code == 404 or "connect" in response.text.lower():
+                logger.warning("BitGo Express not reachable - falling back to demo mode")
+                return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+            else:
+                raise Exception(error_msg)
+            
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"BitGo Express connection failed: {e}")
+        logger.warning("BitGo Express not reachable - using demo mode")
+        return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+    except Exception as e:
+        logger.error(f"BitGo withdrawal failed: {e}")
+        raise Exception(f"Bitcoin network error occurred. Your balance has been restored. Please try again later.")
+
+async def coinbase_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using Coinbase Advanced Trade API with fee collection"""
+    try:
+        from coinbase.rest import RESTClient
+        import uuid
+        
+        logger.info(f"=" * 80)
+        logger.info(f"COINBASE WITHDRAWAL DIAGNOSTICS - ID: {withdrawal_id}")
+        logger.info(f"=" * 80)
+        
+        # Check if we have Coinbase credentials configured
+        coinbase_api_key = os.getenv("COINBASE_API_KEY", "")
+        coinbase_private_key = os.getenv("COINBASE_PRIVATE_KEY", "")
+        
+        logger.info(f"Step 1: Checking Coinbase credentials...")
+        logger.info(f"  - API Key present: {bool(coinbase_api_key)}")
+        logger.info(f"  - API Key length: {len(coinbase_api_key) if coinbase_api_key else 0}")
+        logger.info(f"  - Private Key present: {bool(coinbase_private_key)}")
+        logger.info(f"  - Private Key length: {len(coinbase_private_key) if coinbase_private_key else 0}")
+        
+        if not coinbase_api_key or not coinbase_private_key:
+            logger.warning("Coinbase credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
+        logger.info(f"Step 2: Withdrawal details...")
+        logger.info(f"  - Destination address: {address}")
+        logger.info(f"  - Amount: {amount} BTC")
+        logger.info(f"  - Processing fee (0.5%): {processing_fee} BTC")
+        
+        # Initialize Coinbase REST client
+        logger.info(f"Step 3: Initializing Coinbase REST client...")
+        try:
+            client = RESTClient(api_key=coinbase_api_key, api_secret=coinbase_private_key)
+            logger.info(f"  ✅ Client initialized successfully")
+        except Exception as init_error:
+            logger.error(f"  ❌ Client initialization failed: {init_error}")
+            raise
+        
+        logger.info(f"Step 4: Fetching BTC account from Coinbase...")
+        
+        # Get BTC account UUID
+        try:
+            accounts_response = client.get_accounts()
+            logger.info(f"  ✅ Accounts retrieved successfully")
+            logger.info(f"  - Response type: {type(accounts_response)}")
+            logger.info(f"  - Has accounts attribute: {hasattr(accounts_response, 'accounts')}")
+            
+            if hasattr(accounts_response, 'accounts'):
+                logger.info(f"  - Number of accounts: {len(accounts_response.accounts) if accounts_response.accounts else 0}")
+        except Exception as account_error:
+            logger.error(f"  ❌ Failed to retrieve accounts: {account_error}")
+            logger.error(f"  - Error type: {type(account_error).__name__}")
+            logger.error(f"  - Error details: {str(account_error)}")
+            
+            # Check if it's a 401 error
+            if "401" in str(account_error) or "Unauthorized" in str(account_error):
+                logger.error(f"  🔒 AUTHENTICATION FAILED - Possible causes:")
+                logger.error(f"     1. API Key or Secret is invalid")
+                logger.error(f"     2. IP whitelisting is still enabled on Coinbase")
+                logger.error(f"     3. API Key doesn't have required permissions")
+                logger.error(f"     4. Private key format is incorrect")
+            raise
+        
+        btc_account = None
+        if hasattr(accounts_response, 'accounts') and accounts_response.accounts:
+            logger.info(f"Step 5: Searching for BTC account...")
+            for idx, account in enumerate(accounts_response.accounts):
+                currency = account.currency if hasattr(account, 'currency') else 'unknown'
+                logger.info(f"  - Account {idx + 1}: {currency}")
+                if hasattr(account, 'currency') and account.currency == 'BTC':
+                    btc_account = account
+                    logger.info(f"  ✅ Found BTC account!")
+                    break
+        
+        if not btc_account:
+            logger.error("  ❌ BTC account not found in Coinbase")
+            raise Exception("BTC wallet not found in your Coinbase account")
+        
+        logger.info(f"Step 6: BTC Account details...")
+        logger.info(f"  - Account UUID: {btc_account.uuid if hasattr(btc_account, 'uuid') else 'unknown'}")
+        if hasattr(btc_account, 'available_balance'):
+            logger.info(f"  - Available balance: {btc_account.available_balance}")
+        
+        # Transaction 1: Send withdrawal amount to user's address
+        user_withdrawal_params = {
+            "amount": str(amount),
+            "currency": "BTC",
+            "crypto_address": address,
+            "destination_type": "crypto_address",
+            "idempotency_key": str(uuid.uuid4()),
+            "note": f"Mining withdrawal {withdrawal_id}"
+        }
+        
+        logger.info(f"Step 7: Initiating user withdrawal...")
+        logger.info(f"  - Params: {user_withdrawal_params}")
+        
+        # Call Coinbase withdrawal endpoint
+        try:
+            user_withdrawal_response = client.post(
+                "/api/v3/brokerage/withdrawals/crypto",
+                json=user_withdrawal_params
+            )
+            logger.info(f"  ✅ User withdrawal API call completed")
+            logger.info(f"  - Response type: {type(user_withdrawal_response)}")
+        except Exception as withdrawal_error:
+            logger.error(f"  ❌ User withdrawal failed: {withdrawal_error}")
+            logger.error(f"  - Error type: {type(withdrawal_error).__name__}")
+            raise
+        
+        user_tx_id = None
+        if hasattr(user_withdrawal_response, 'id'):
+            user_tx_id = user_withdrawal_response.id
+            logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
+        elif isinstance(user_withdrawal_response, dict) and 'id' in user_withdrawal_response:
+            user_tx_id = user_withdrawal_response['id']
+            logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
+        else:
+            logger.error(f"  ❌ User withdrawal response unexpected format: {user_withdrawal_response}")
+            raise Exception("Failed to get withdrawal confirmation from Coinbase")
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
+        fee_tx_id = None
+        if processing_fee >= 0.00000001:
+            fee_withdrawal_params = {
+                "amount": str(processing_fee),
+                "currency": "BTC",
+                "crypto_address": fee_collection_address,
+                "destination_type": "crypto_address",
+                "idempotency_key": str(uuid.uuid4()),
+                "note": f"Processing fee for withdrawal {withdrawal_id}"
+            }
+            
+            logger.info(f"Step 8: Sending processing fee...")
+            logger.info(f"  - Amount: {processing_fee} BTC")
+            logger.info(f"  - Destination: {fee_collection_address}")
+            
+            try:
+                fee_withdrawal_response = client.post(
+                    "/api/v3/brokerage/withdrawals/crypto",
+                    json=fee_withdrawal_params
+                )
+                
+                if hasattr(fee_withdrawal_response, 'id'):
+                    fee_tx_id = fee_withdrawal_response.id
+                    logger.info(f"  ✅ Fee collection successful: {fee_tx_id}")
+                elif isinstance(fee_withdrawal_response, dict) and 'id' in fee_withdrawal_response:
+                    fee_tx_id = fee_withdrawal_response['id']
+                    logger.info(f"  ✅ Fee collection successful: {fee_tx_id}")
+                else:
+                    logger.warning("  ⚠️  Fee collection: unexpected response format")
+            except Exception as fee_error:
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"  ⚠️  Fee collection failed (user withdrawal still succeeded): {fee_error}")
+        else:
+            logger.info(f"Step 8: Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping")
+        
+        logger.info(f"=" * 80)
+        logger.info(f"COINBASE WITHDRAWAL COMPLETED SUCCESSFULLY")
+        logger.info(f"  - User TX ID: {user_tx_id}")
+        logger.info(f"  - Fee TX ID: {fee_tx_id or 'N/A'}")
+        logger.info(f"=" * 80)
+        
+        # Return user transaction ID (primary transaction)
+        return user_tx_id
+        
+    except Exception as e:
+        logger.error(f"=" * 80)
+        logger.error(f"COINBASE WITHDRAWAL FAILED - ID: {withdrawal_id}")
+        logger.error(f"  - Error type: {type(e).__name__}")
+        logger.error(f"  - Error message: {str(e)}")
+        logger.error(f"=" * 80)
+        # Re-raise with a user-friendly message
+        raise Exception(f"Coinbase withdrawal error: {str(e)}")
+
+async def kraken_send_bitcoin(address: str, amount: float, withdrawal_id: str, network: str = "bitcoin") -> str:
+    """Send Bitcoin using Kraken API with support for Bitcoin and Lightning networks"""
+    try:
+        import requests
+        import urllib.parse
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        logger.info("=" * 80)
+        logger.info(f"KRAKEN WITHDRAWAL DIAGNOSTICS - ID: {withdrawal_id}")
+        logger.info("=" * 80)
+        
+        # Check if we have Kraken credentials configured
+        kraken_api_key = os.getenv("KRAKEN_API_KEY", "")
+        kraken_api_secret = os.getenv("KRAKEN_API_SECRET", "")
+        kraken_base_url = os.getenv("KRAKEN_BASE_URL", "https://api.kraken.com")
+        
+        logger.info(f"Step 1: Checking Kraken credentials...")
+        logger.info(f"  - API Key present: {bool(kraken_api_key)}")
+        logger.info(f"  - API Key length: {len(kraken_api_key) if kraken_api_key else 0}")
+        logger.info(f"  - API Secret present: {bool(kraken_api_secret)}")
+        logger.info(f"  - API Secret length: {len(kraken_api_secret) if kraken_api_secret else 0}")
+        logger.info(f"  - Base URL: {kraken_base_url}")
+        
+        if not kraken_api_key or not kraken_api_secret:
+            logger.warning("Kraken credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        logger.info(f"Step 2: Withdrawal details...")
+        logger.info(f"  - Destination address: {address}")
+        logger.info(f"  - Amount: {amount} BTC")
+        logger.info(f"  - Network: {network}")
+        
+        def get_kraken_signature(urlpath, data, secret):
+            """Generate HMAC-SHA512 signature for Kraken API"""
+            postdata = urllib.parse.urlencode(data)
+            encoded = (str(data['nonce']) + postdata).encode()
+            message = urlpath.encode() + hashlib.sha256(encoded).digest()
+            mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
+            sigdigest = base64.b64encode(mac.digest())
+            return sigdigest.decode()
+        
+        # Transaction 1: Send withdrawal amount to user's address
+        # Using Kraken's Withdraw API v2 (newer method)
+        url_path = '/0/private/Withdraw'
+        nonce = int(time.time() * 1000000)  # Microsecond precision
+        
+        logger.info(f"Step 3: Preparing user withdrawal request...")
+        logger.info(f"  - URL path: {url_path}")
+        logger.info(f"  - Nonce: {nonce}")
+        
+        # Get Bitcoin withdrawal method ID from Kraken
+        # First, we need to get available withdrawal methods
+        methods_url_path = '/0/private/WithdrawMethods'
+        methods_data = {
+            'nonce': nonce,
+            'asset': 'XBT'
+        }
+        
+        logger.info(f"Step 3a: Fetching Bitcoin withdrawal methods...")
+        methods_signature = get_kraken_signature(methods_url_path, methods_data, kraken_api_secret)
+        methods_headers = {
+            'API-Key': kraken_api_key,
+            'API-Sign': methods_signature,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
+        methods_response = requests.post(
+            f"{kraken_base_url}{methods_url_path}",
+            data=methods_data,
+            headers=methods_headers,
+            timeout=30
+        )
+        
+        logger.info(f"  - Methods response status: {methods_response.status_code}")
+        logger.info(f"  - Methods response: {methods_response.text}")
+        
+        if methods_response.status_code != 200:
+            raise Exception(f"Failed to fetch withdrawal methods: {methods_response.text}")
+        
+        methods_result = methods_response.json()
+        if 'error' in methods_result and methods_result['error']:
+            raise Exception(f"Withdrawal methods error: {', '.join(methods_result['error'])}")
+        
+        # Find Bitcoin and Lightning methods
+        bitcoin_method = None
+        lightning_method = None
+        
+        if 'result' in methods_result and isinstance(methods_result['result'], list):
+            for method in methods_result['result']:
+                if method.get('method') == 'Bitcoin' and method.get('network') == 'Bitcoin':
+                    bitcoin_method = method
+                elif method.get('method') == 'Bitcoin Lightning' and method.get('network') == 'Lightning':
+                    lightning_method = method
+        
+        # Select method based on network
+        if network.lower() == 'lightning':
+            selected_method = lightning_method
+            if not selected_method:
+                raise Exception("Lightning Network withdrawal method not found in Kraken account")
+        else:
+            selected_method = bitcoin_method
+            if not selected_method:
+                raise Exception("Bitcoin withdrawal method not found in Kraken account")
+        
+        method_id = selected_method['method_id']
+        min_withdrawal = float(selected_method['minimum'])
+        network_fee = float(selected_method['fee']['fee'])
+        
+        logger.info(f"  ✅ Found {selected_method['method']} withdrawal method:")
+        logger.info(f"     - Network: {selected_method['network']}")
+        logger.info(f"     - Method ID: {method_id}")
+        logger.info(f"     - Minimum: {min_withdrawal} BTC")
+        logger.info(f"     - Network Fee: {network_fee} BTC")
+        
+        # Apply app-specific minimum amounts
+        # Lightning: 0.00001 - 0.001 BTC
+        # Bitcoin: 0.001 BTC minimum
+        if network.lower() == 'lightning':
+            app_min = 0.00001
+            app_max = 0.001
+            if amount < app_min:
+                raise Exception(f"Amount {amount} BTC is below Lightning minimum of {app_min} BTC")
+            if amount >= 0.001:
+                raise Exception(f"Amount {amount} BTC is above Lightning maximum of {app_max} BTC. Please use Bitcoin network for amounts >= 0.001 BTC")
+        else:
+            app_min = 0.0002
+            if amount < app_min:
+                raise Exception(f"Amount {amount} BTC is below Bitcoin network minimum of {app_min} BTC")
+        
+        # Kraken Spot Withdraw requires a withdrawal "key" (the label of a
+        # pre-whitelisted address), NOT a raw address + method_id. Look up the
+        # key for this address from the account's withdrawal address book.
+        nonce = int(time.time() * 1000000)
+        addresses_url_path = '/0/private/WithdrawAddresses'
+        addresses_data = {'nonce': nonce, 'asset': 'XBT'}
+        addresses_signature = get_kraken_signature(addresses_url_path, addresses_data, kraken_api_secret)
+        addresses_headers = {
+            'API-Key': kraken_api_key,
+            'API-Sign': addresses_signature,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        logger.info(f"Step 3b: Looking up withdrawal key for address {address}...")
+        addresses_response = requests.post(
+            f"{kraken_base_url}{addresses_url_path}",
+            data=addresses_data,
+            headers=addresses_headers,
+            timeout=30
+        )
+        logger.info(f"  - WithdrawAddresses status: {addresses_response.status_code}")
+        logger.info(f"  - WithdrawAddresses body: {addresses_response.text}")
+        if addresses_response.status_code != 200:
+            raise Exception(f"Failed to fetch withdrawal addresses: {addresses_response.text}")
+        addresses_result = addresses_response.json()
+        if 'error' in addresses_result and addresses_result['error']:
+            raise Exception(f"Withdrawal addresses error: {', '.join(addresses_result['error'])}")
+
+        withdraw_key = None
+        for entry in addresses_result.get('result', []):
+            if entry.get('address') == address:
+                withdraw_key = entry.get('key')
+                break
+        if not withdraw_key:
+            raise Exception(
+                f"Address {address} is not whitelisted in Kraken. Add and confirm it under "
+                f"Funding → Withdraw → Bitcoin → Add address, then retry."
+            )
+        logger.info(f"  ✅ Found withdrawal key '{withdraw_key}' for address {address}")
+
+        # Build the Spot Withdraw request using key (+ address for validation)
+        nonce = int(time.time() * 1000000)  # New nonce for withdrawal
+        user_withdrawal_data = {
+            'nonce': nonce,
+            'asset': 'XBT',
+            'key': withdraw_key,
+            'address': address,  # used by Kraken to validate it matches the key
+            'amount': str(amount)
+        }
+        
+        logger.info(f"Step 4: Generating API signature...")
+        try:
+            signature = get_kraken_signature(url_path, user_withdrawal_data, kraken_api_secret)
+            logger.info(f"  ✅ Signature generated successfully")
+        except Exception as sig_error:
+            logger.error(f"  ❌ Signature generation failed: {sig_error}")
+            raise
+        
+        headers = {
+            'API-Key': kraken_api_key,
+            'API-Sign': signature,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
+        logger.info(f"Step 5: Sending user withdrawal request to Kraken...")
+        logger.info(f"  - Full URL: {kraken_base_url}{url_path}")
+        
+        # Send user withdrawal
+        try:
+            user_response = requests.post(
+                f"{kraken_base_url}{url_path}",
+                data=user_withdrawal_data,
+                headers=headers,
+                timeout=30
+            )
+            logger.info(f"  - Response status: {user_response.status_code}")
+            logger.info(f"  - Response headers: {dict(user_response.headers)}")
+            logger.info(f"  - Response body: {user_response.text}")
+        except Exception as req_error:
+            logger.error(f"  ❌ Request failed: {req_error}")
+            raise
+        
+        user_tx_id = None
+        if user_response.status_code == 200:
+            result = user_response.json()
+            logger.info(f"Step 6: Parsing Kraken response...")
+            logger.info(f"  - Full response: {result}")
+            
+            if 'error' in result and result['error']:
+                error_msg = ', '.join(result['error'])
+                logger.error(f"  ❌ Kraken API error: {error_msg}")
+                raise Exception(f"Kraken error: {error_msg}")
+            
+            if 'result' in result and 'refid' in result['result']:
+                user_tx_id = result['result']['refid']
+                logger.info(f"  ✅ User withdrawal successful: {user_tx_id}")
+            else:
+                logger.warning(f"  ⚠️ Unexpected Kraken response format: {result}")
+                # Generate reference ID if no refid returned
+                user_tx_id = f"kraken_{withdrawal_id}"
+                logger.info(f"  - Using fallback TX ID: {user_tx_id}")
+        else:
+            error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
+            logger.error(f"  ❌ {error_msg}")
+            raise Exception(error_msg)
+        
+        logger.info("=" * 80)
+        logger.info(f"KRAKEN WITHDRAWAL COMPLETED")
+        logger.info(f"  - User TX ID: {user_tx_id}")
+        logger.info("=" * 80)
+        
+        # Return user transaction ID (primary transaction)
+        return user_tx_id
+        
+    except Exception as e:
+        logger.error("=" * 80)
+        logger.error(f"KRAKEN WITHDRAWAL FAILED - ID: {withdrawal_id}")
+        logger.error(f"  - Error type: {type(e).__name__}")
+        logger.error(f"  - Error message: {str(e)}")
+        logger.error("=" * 80)
+        raise Exception(f"Kraken withdrawal error: {str(e)}")
+
+async def ndax_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using NDAX API with fee collection"""
+    try:
+        import requests
+        import hmac
+        import hashlib
+        import base64
+        import time
+        
+        # Check if we have NDAX credentials configured
+        ndax_api_key = os.getenv("NDAX_API_KEY", "")
+        ndax_api_secret = os.getenv("NDAX_API_SECRET", "")
+        ndax_passphrase = os.getenv("NDAX_API_PASSPHRASE", "")
+        ndax_participant_code = os.getenv("NDAX_PARTICIPANT_CODE", "")
+        ndax_withdrawal_account_id = os.getenv("NDAX_WITHDRAWAL_ACCOUNT_ID", "")
+        ndax_base_url = os.getenv("NDAX_BASE_URL", "https://api.ndax.in")
+        
+        if not ndax_api_key or not ndax_api_secret:
+            logger.warning("NDAX credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
+        logger.info(f"Initializing NDAX withdrawal: {amount} BTC to {address}")
+        
+        def generate_signature(timestamp, method, path, body=""):
+            """Generate HMAC SHA256 signature for NDAX API"""
+            # NDAX requires base64-decoded secret for HMAC
+            import json
+            message = f"{timestamp}{method}{path}{body}"
+            
+            try:
+                # Try base64 decoding the secret
+                decoded_secret = base64.b64decode(ndax_api_secret)
+            except:
+                # If not base64, use as-is
+                decoded_secret = ndax_api_secret.encode('utf-8')
+            
+            signature = hmac.new(
+                decoded_secret,
+                message.encode('utf-8'),
+                hashlib.sha256
+            ).digest()
+            
+            # Return base64-encoded signature
+            return base64.b64encode(signature).decode('utf-8')
+        
+        # Transaction 1: Send withdrawal amount to user's address
+        timestamp = str(int(time.time()))
+        method = "POST"
+        path = "/withdrawals/requests"
+        
+        # Use address directly - NDAX will auto-create withdrawal account if needed
+        user_withdrawal_body = {
+            "address": address,  # Use address directly instead of withdrawal_account_id
+            "amount": str(amount),
+            "asset": "BTC",
+            "account_group": "00NDAX"  # Default account group
+        }
+        
+        # Add participant code if available
+        if ndax_participant_code:
+            user_withdrawal_body["participant_code"] = ndax_participant_code
+        
+        # Add client ID for tracking
+        user_withdrawal_body["client_withdrawal_request_id"] = withdrawal_id
+        
+        import json
+        body_json = json.dumps(user_withdrawal_body)
+        signature = generate_signature(timestamp, method, path, body_json)
+        
+        headers = {
+            "X-NDAX-API-KEY": ndax_api_key,
+            "X-NDAX-SIGNED": signature,
+            "X-NDAX-TIMESTAMP": timestamp,
+            "Content-Type": "application/json"
+        }
+        
+        if ndax_passphrase:
+            headers["X-NDAX-PASSPHRASE"] = ndax_passphrase
+        
+        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        
+        # Send user withdrawal
+        user_response = requests.post(
+            f"{ndax_base_url}{path}",
+            json=user_withdrawal_body,
+            headers=headers,
+            timeout=30
+        )
+        
+        user_tx_id = None
+        if user_response.status_code == 200 or user_response.status_code == 201:
+            user_result = user_response.json()
+            
+            # NDAX returns withdrawal ID in various possible fields
+            if 'id' in user_result:
+                user_tx_id = str(user_result['id'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            elif 'withdrawal_id' in user_result:
+                user_tx_id = str(user_result['withdrawal_id'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            elif 'ticket_number' in user_result:
+                user_tx_id = str(user_result['ticket_number'])
+                logger.info(f"✅ User withdrawal successful: {user_tx_id}")
+            else:
+                logger.info(f"✅ User withdrawal submitted: {user_result}")
+                # Generate reference ID if no ID returned
+                import hashlib
+                ref_data = f"{withdrawal_id}{address}{amount}{datetime.utcnow().isoformat()}"
+                user_tx_id = hashlib.sha256(ref_data.encode()).hexdigest()[:16]
+        else:
+            error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0.00000001 BTC)
+        fee_tx_id = None
+        if processing_fee >= 0.00000001:
+            timestamp_fee = str(int(time.time()))
+            
+            fee_withdrawal_body = {
+                "address": fee_collection_address,
+                "amount": str(processing_fee),
+                "asset": "BTC",
+                "account_group": "00NDAX",
+                "client_withdrawal_request_id": f"fee_{withdrawal_id}"
+            }
+            
+            # Add participant code if available
+            if ndax_participant_code:
+                fee_withdrawal_body["participant_code"] = ndax_participant_code
+            
+            body_json_fee = json.dumps(fee_withdrawal_body)
+            signature_fee = generate_signature(timestamp_fee, method, path, body_json_fee)
+            
+            headers_fee = {
+                "X-NDAX-API-KEY": ndax_api_key,
+                "X-NDAX-SIGNED": signature_fee,
+                "X-NDAX-TIMESTAMP": timestamp_fee,
+                "Content-Type": "application/json"
+            }
+            
+            if ndax_passphrase:
+                headers_fee["X-NDAX-PASSPHRASE"] = ndax_passphrase
+            
+            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            
+            try:
+                fee_response = requests.post(
+                    f"{ndax_base_url}{path}",
+                    json=fee_withdrawal_body,
+                    headers=headers_fee,
+                    timeout=30
+                )
+                
+                if fee_response.status_code == 200 or fee_response.status_code == 201:
+                    fee_result = fee_response.json()
+                    
+                    if 'id' in fee_result:
+                        fee_tx_id = str(fee_result['id'])
+                        logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    elif 'withdrawal_id' in fee_result:
+                        fee_tx_id = str(fee_result['withdrawal_id'])
+                        logger.info(f"✅ Fee collection successful: {fee_tx_id}")
+                    else:
+                        logger.info(f"✅ Fee collection submitted")
+                else:
+                    logger.warning(f"Fee collection failed ({fee_response.status_code}): {fee_response.text}")
+            except Exception as fee_error:
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"Fee collection failed (user withdrawal still succeeded): {fee_error}")
+        else:
+            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+        
+        # Return user transaction ID (primary transaction)
+        return user_tx_id
+        
+    except Exception as e:
+        logger.error(f"NDAX withdrawal failed: {e}")
+        logger.error(f"Error details: {type(e).__name__}: {str(e)}")
+        # Re-raise with a user-friendly message
+        raise Exception(f"NDAX withdrawal error: {str(e)}")
+
+async def blockchain_send_bitcoin(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using Blockchain.info API with fee collection"""
+    try:
+        import requests
+        
+        # Check if we have Blockchain.info credentials configured
+        blockchain_api_key = os.getenv("BLOCKCHAIN_API_KEY", "")
+        blockchain_wallet_id = os.getenv("BLOCKCHAIN_WALLET_ID", "")
+        blockchain_wallet_password = os.getenv("BLOCKCHAIN_WALLET_PASSWORD", "")
+        
+        if not blockchain_api_key or not blockchain_wallet_id:
+            logger.warning("Blockchain.info credentials not configured - using demo mode")
+            return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+        
+        # Fee collection address (0.5% processing fee goes here)
+        fee_collection_address = "bc1q3gj7w7egg6r3yslqnl742tge8y5gnh23wjwayf"
+        
+        # Calculate fee (0.5% of withdrawal amount)
+        processing_fee = amount * 0.005
+        
+        # Blockchain.info Wallet API URL
+        blockchain_base_url = "https://blockchain.info/merchant"
+        
+        # Convert amounts to satoshis (1 BTC = 100,000,000 satoshis)
+        amount_satoshis = int(amount * 100_000_000)
+        fee_satoshis = int(processing_fee * 100_000_000)
+        
+        # No network fees - absorb them on our end
+        # Transaction 1: Send withdrawal amount to user's address
+        payment_url = f"{blockchain_base_url}/{blockchain_wallet_id}/payment"
+        
+        user_params = {
+            'password': blockchain_wallet_password,
+            'to': address,
+            'amount': amount_satoshis,
+            'fee': 0,  # No network fee - absorbed by us
+            'note': f'Mining withdrawal {withdrawal_id}'
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {blockchain_api_key}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
+        logger.info(f"Sending user withdrawal: {amount} BTC to {address}")
+        
+        # Send user withdrawal
+        user_response = requests.post(
+            payment_url,
+            data=user_params,
+            headers=headers,
+            timeout=30
+        )
+        
+        user_tx_hash = None
+        if user_response.status_code == 200:
+            user_result = user_response.json()
+            
+            if 'tx_hash' in user_result:
+                user_tx_hash = user_result['tx_hash']
+                logger.info(f"✅ User withdrawal successful: {user_tx_hash}")
+            elif 'message' in user_result and 'success' in user_result.get('message', '').lower():
+                logger.info(f"✅ User withdrawal submitted successfully")
+                # Generate a reference ID for tracking
+                import hashlib
+                ref_data = f"{withdrawal_id}{address}{amount}{datetime.utcnow().isoformat()}"
+                user_tx_hash = hashlib.sha256(ref_data.encode()).hexdigest()
+            else:
+                error_msg = user_result.get('error', 'Unknown error from Blockchain.info')
+                logger.error(f"User withdrawal error: {error_msg}")
+                raise Exception(f"User withdrawal failed: {error_msg}")
+        else:
+            error_msg = f"User withdrawal HTTP error ({user_response.status_code}): {user_response.text}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+        
+        # Transaction 2: Send processing fee to fee collection address (if fee > 0)
+        fee_tx_hash = None
+        if processing_fee >= 0.00000001:  # Only send fee if it's above minimum (0.00000001 BTC)
+            fee_params = {
+                'password': blockchain_wallet_password,
+                'to': fee_collection_address,
+                'amount': fee_satoshis,
+                'fee': 0,  # No network fee - absorbed by us
+                'note': f'Processing fee for withdrawal {withdrawal_id}'
+            }
+            
+            logger.info(f"Sending processing fee: {processing_fee} BTC to {fee_collection_address}")
+            
+            # Send fee transaction
+            fee_response = requests.post(
+                payment_url,
+                data=fee_params,
+                headers=headers,
+                timeout=30
+            )
+            
+            if fee_response.status_code == 200:
+                fee_result = fee_response.json()
+                
+                if 'tx_hash' in fee_result:
+                    fee_tx_hash = fee_result['tx_hash']
+                    logger.info(f"✅ Fee collection successful: {fee_tx_hash}")
+                else:
+                    logger.warning(f"Fee transaction submitted but no hash returned")
+            else:
+                # Fee collection failed, but don't fail the entire withdrawal
+                logger.warning(f"Fee collection failed ({fee_response.status_code}): {fee_response.text}")
+        else:
+            logger.info(f"Processing fee too small ({processing_fee} BTC < 0.00000001 BTC), skipping fee collection")
+        
+        # Return user transaction hash (primary transaction)
+        return user_tx_hash
+                
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Blockchain.info connection failed: {e}")
+        logger.warning("Blockchain.info not reachable - using demo mode")
+        return await demo_bitcoin_transaction(address, amount, withdrawal_id)
+    except Exception as e:
+        logger.error(f"Blockchain.info withdrawal failed: {e}")
+        raise Exception(f"Bitcoin network error occurred. Your balance has been restored. Please try again later.")
+
+async def bitcoin_rpc_send(address: str, amount: float, withdrawal_id: str) -> str:
+    """Send Bitcoin using Bitcoin Core RPC"""
+    try:
+        import requests
+        import json
+        
+        rpc_data = {
+            'jsonrpc': '1.0',
+            'id': withdrawal_id,
+            'method': 'sendtoaddress',
+            'params': [address, amount, f'Mining withdrawal {withdrawal_id}']
+        }
+        
+        response = requests.post(
+            BITCOIN_RPC_URL,
+            auth=(BITCOIN_RPC_USER, BITCOIN_RPC_PASSWORD),
+            data=json.dumps(rpc_data),
+            headers={'Content-Type': 'application/json'},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if 'result' in result and result['result']:
+                return result['result']  # Transaction hash
+            else:
+                raise Exception(f"RPC error: {result.get('error', 'Unknown error')}")
+        else:
+            raise Exception(f"RPC connection error: {response.status_code}")
+            
+    except Exception as e:
+        logger.error(f"Bitcoin RPC withdrawal failed: {e}")
+        raise e
+
+async def demo_bitcoin_transaction(address: str, amount: float, withdrawal_id: str) -> str:
+    """Simulate Bitcoin transaction for demo purposes"""
+    try:
+        # Simulate processing time
+        await asyncio.sleep(2)
+        
+        # Generate a realistic-looking transaction hash for demo
+        import hashlib
+        tx_data = f"{withdrawal_id}{address}{amount}{datetime.utcnow().isoformat()}"
+        tx_hash = hashlib.sha256(tx_data.encode()).hexdigest()
+        
+        logger.info(f"🎯 DEMO MODE: Simulated Bitcoin transaction - {amount} BTC to {address}")
+        return tx_hash
+        
+    except Exception as e:
+        logger.error(f"Demo transaction simulation failed: {e}")
+        raise e
+
+# Password reset endpoints
+@app.post("/api/auth/forgot-password")
+async def forgot_password(email_data: Dict[str, str]):
+    """Send password reset email"""
+    try:
+        email = email_data.get("email", "").strip().lower()
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        # Check if user exists
+        user = users_collection.find_one({"email": email})
+        
+        # Always return success for security (don't reveal if email exists)
+        if user:
+            # Generate reset token
+            reset_token = str(uuid.uuid4())
+            reset_expires = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+            
+            # Store reset token in database
+            users_collection.update_one(
+                {"_id": user["_id"]},
+                {"$set": {
+                    "reset_token": reset_token,
+                    "reset_token_expires": reset_expires
+                }}
+            )
+            
+            # Send password reset email
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+                
+                # Gmail SMTP configuration (same as contact form)
+                smtp_server = "smtp.gmail.com"
+                smtp_port = 587
+                sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
+                sender_password = os.getenv("SMTP_PASSWORD", "")
+                
+                # Create email message
+                msg = MIMEMultipart()
+                msg['From'] = sender_email
+                msg['To'] = email
+                msg['Subject'] = "Bitcoin Mining App - Password Reset"
+                
+                # Create HTML email body with reset instructions
+                reset_link = f"{os.getenv('APP_URL', 'https://admin-balance-mgmt-1.preview.emergentagent.com')}/reset.html?token={reset_token}"
+                email_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); padding: 30px; text-align: center;">
+                        <h1 style="color: #FFD700; margin: 0;">🪙 Bitcoin Mining App</h1>
+                        <h2 style="color: #FFF; margin: 10px 0;">Password Reset Request</h2>
+                    </div>
+                    
+                    <div style="padding: 30px; background: #f8f9fa;">
+                        <p style="font-size: 16px; color: #333;">Hello,</p>
+                        
+                        <p style="font-size: 16px; color: #333;">
+                            You have requested a password reset for your Bitcoin Mining App account.
+                            Click the button below to reset your password:
+                        </p>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{reset_link}" style="background: linear-gradient(135deg, #FFD700 0%, #FFC000 100%); color: #000; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                                Reset My Password
+                            </a>
+                        </div>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            Or copy and paste this link into your browser:<br>
+                            <a href="{reset_link}" style="color: #007bff; word-break: break-all;">{reset_link}</a>
+                        </p>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            <strong>This link will expire in 1 hour.</strong>
+                        </p>
+                        
+                        <p style="font-size: 14px; color: #666;">
+                            If you didn't request this reset, you can safely ignore this email.
+                        </p>
+                    </div>
+                    
+                    <div style="background: #333; padding: 20px; text-align: center;">
+                        <p style="color: #AAA; font-size: 12px; margin: 0;">
+                            Bitcoin Mining App Team<br>
+                            colourfulkoaladevelopment@gmail.com
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg.attach(MIMEText(email_body, 'html'))
+                
+                # Send email using Gmail SMTP
+                server = smtplib.SMTP(smtp_server, smtp_port)
+                server.starttls()
+                server.login(sender_email, sender_password)
+                text = msg.as_string()
+                server.sendmail(sender_email, email, text)
+                server.quit()
+                
+                logger.info(f"✅ Password reset email sent successfully to {email}")
+                
+            except Exception as email_error:
+                logger.error(f"❌ Failed to send password reset email to {email}: {email_error}")
+                # Still return success to prevent email enumeration attacks
+                
+            logger.info(f"Password reset requested for {email}.")
+        
+        return {"message": "If an account with this email exists, you will receive password reset instructions."}
+        
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
+    except Exception as e:
+        logger.error(f"Error in forgot password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process password reset request")
+
+@app.post("/api/auth/reset-password")
+async def reset_password(reset_data: Dict[str, str]):
+    """Reset password using token"""
+    try:
+        token = reset_data.get("token", "").strip()
+        new_password = reset_data.get("new_password", "").strip()
+        
+        if not token or not new_password:
+            raise HTTPException(status_code=400, detail="Token and new password are required")
+        
+        if len(new_password) < MIN_PASSWORD_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters long",
+            )
+        
+        # Find user with valid reset token
+        user = users_collection.find_one({
+            "reset_token": token,
+            "reset_token_expires": {"$gt": datetime.utcnow()}
+        })
+        
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+        # Hash new password
+        hashed_password = hash_password(new_password)
+        
+        # Update password and remove reset token
+        users_collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {
+                "password_hash": hashed_password,
+                "updated_at": datetime.utcnow()
+            }, "$unset": {
+                "reset_token": "",
+                "reset_token_expires": ""
+            }}
+        )
+        
+        # Invalidate every existing session for this user. Without this, a
+        # session stolen before the reset keeps working after it.
+        user_sessions_collection.delete_many({"user_id": str(user["_id"])})
+
+        logger.info(f"Password reset successful for user {user['email']}")
+        
+        return {"message": "Password has been reset successfully. You can now log in with your new password."}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in reset password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset password")
+
+# Reset test account endpoint
+@app.post("/api/test/reset-account")
+async def reset_test_account(current_user: Dict = Depends(get_current_user)):
+    """Reset test account - clear balance and miners for testing"""
+    try:
+        user_id = current_user["id"]
+        
+        # Reset user balance and earnings
+        users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "bitcoin_balance": 0.0,
+                "total_earnings": 0.0,
+                "total_referral_rewards": 0.0,
+                "total_cashed_out": 0.0
+            }}
+        )
+        
+        # Remove all miners for this user
+        miners_collection.delete_many({"user_id": user_id})
+        
+        # Remove all transactions for this user
+        transactions_collection.delete_many({"user_id": user_id})
+        
+        # Remove all mining sessions for this user
+        mining_sessions_collection.delete_many({"user_id": user_id})
+        
+        # Remove all purchases for this user
+        purchases_collection.delete_many({"user_id": user_id})
+        
+        # Remove all withdrawals for this user
+        db.withdrawals.delete_many({"user_id": user_id})
+        
+        logger.info(f"Test account reset completed for user {user_id}")
+        
+        return {
+            "message": "Test account reset successfully",
+            "reset_items": [
+                "Bitcoin balance set to 0",
+                "All miners removed",
+                "All transactions cleared",
+                "All mining sessions cleared",
+                "All purchases cleared",
+                "All withdrawals cleared"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting test account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset test account")
+
+# Health check
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "message": "Bitcoin Mining API is running"}
+
+# Payment Processing System
+
+class PaymentProcessor:
+    def __init__(self):
+        self.paypal_client = None
+        self.setup_paypal()
+    
+    def setup_paypal(self):
+        """Initialize PayPal SDK client"""
+        try:
+            from paypalcheckoutsdk.core import SandboxEnvironment, LiveEnvironment, PayPalHttpClient
+            
+            if PAYPAL_MODE == "live":
+                environment = LiveEnvironment(client_id=PAYPAL_CLIENT_ID, client_secret=PAYPAL_CLIENT_SECRET)
+            else:
+                environment = SandboxEnvironment(client_id=PAYPAL_CLIENT_ID, client_secret=PAYPAL_CLIENT_SECRET)
+            
+            self.paypal_client = PayPalHttpClient(environment)
+        except Exception as e:
+            logger.error(f"Failed to setup PayPal client: {e}")
+    
+    def validate_promo_code(self, promo_code: str) -> Dict[str, Any]:
+        """Validate promo code and return discount info"""
+        if not promo_code:
+            return {"valid": False, "discount_percent": 0}
+        
+        promo_code = promo_code.upper().strip()
+        if promo_code in PROMO_CODES:
+            promo_info = PROMO_CODES[promo_code]
+            if promo_info["used"] < promo_info["max_uses"]:
+                return {
+                    "valid": True,
+                    "discount_percent": promo_info["discount_percent"],
+                    "code": promo_code
+                }
+        
+        return {"valid": False, "discount_percent": 0}
+    
+    def apply_promo_code(self, promo_code: str):
+        """Apply promo code and increment usage"""
+        if promo_code and promo_code in PROMO_CODES:
+            PROMO_CODES[promo_code]["used"] += 1
+    
+    def calculate_total_with_discount(self, original_price: float, discount_percent: int) -> Dict[str, float]:
+        """Calculate final price with discount"""
+        discount_amount = original_price * (discount_percent / 100)
+        final_price = original_price - discount_amount
+        
+        return {
+            "original_price": round(original_price, 2),
+            "discount_percent": discount_percent,
+            "discount_amount": round(discount_amount, 2),
+            "final_price": round(final_price, 2)
+        }
+
+# Initialize payment processor
+payment_processor = PaymentProcessor()
+
+# Payment Processing Endpoints
+
+@app.post("/api/payments/validate-promo")
+async def validate_promo_code(promo_data: Dict[str, Any]):
+    """Validate promo code"""
+    try:
+        promo_code = promo_data.get("promo_code", "")
+        original_price = float(promo_data.get("price", 0))
+        
+        validation_result = payment_processor.validate_promo_code(promo_code)
+        
+        if validation_result["valid"]:
+            pricing = payment_processor.calculate_total_with_discount(
+                original_price, 
+                validation_result["discount_percent"]
+            )
+            
+            return {
+                "valid": True,
+                "promo_code": validation_result["code"],
+                "discount_percent": validation_result["discount_percent"],
+                **pricing
+            }
+        else:
+            return {
+                "valid": False,
+                "message": "Invalid or expired promo code",
+                "original_price": original_price,
+                "final_price": original_price
+            }
+            
+    except Exception as e:
+        logger.error(f"Error validating promo code: {e}")
+        raise HTTPException(status_code=400, detail="Invalid promo code request")
+
+def _public_base_url(request: Request) -> str:
+    """Public https base URL used for PayPal return/cancel redirects.
+    Prefers PUBLIC_BASE_URL env var; falls back to the incoming request's
+    base URL (forced to https, since PayPal LIVE requires https)."""
+    env_url = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if env_url:
+        return env_url
+    base = str(request.base_url).rstrip("/")
+    if base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base
+
+
+@app.post("/api/payments/create-paypal-order")
+async def create_paypal_order(order_data: Dict[str, Any], request: Request, current_user: Dict = Depends(get_current_user)):
+    """Create PayPal order for miner purchase"""
+    try:
+        from paypalcheckoutsdk.orders import OrdersCreateRequest
+        
+        miner_id = order_data.get("miner_id")
+        promo_code = order_data.get("promo_code", "")
+        subscription_type = order_data.get("subscription_type", "one_time")  # one_time or recurring
+        
+        # Get miner details (single source of truth shared with /api/store/miners)
+        miner = next((m for m in STORE_MINERS if m["id"] == miner_id), None)
+        if not miner:
+            raise HTTPException(status_code=404, detail="Miner not found")
+        
+        # Apply promo code if provided
+        original_price = miner["price"]
+        promo_validation = payment_processor.validate_promo_code(promo_code)
+        
+        if promo_validation["valid"]:
+            pricing = payment_processor.calculate_total_with_discount(
+                original_price, 
+                promo_validation["discount_percent"]
+            )
+            final_price = pricing["final_price"]
+            discount_amount = pricing["discount_amount"]
+        else:
+            final_price = original_price
+            discount_amount = 0
+        
+        # Create PayPal order
+        request = OrdersCreateRequest()
+        request.prefer('return=representation')
+        
+        order_body = {
+            "intent": "CAPTURE",
+            "application_context": {
+                "brand_name": "Koala Mining",
+                "landing_page": "BILLING",
+                "user_action": "PAY_NOW",
+                "return_url": f"{_public_base_url(request)}/api/payments/paypal-return",
+                "cancel_url": f"{_public_base_url(request)}/api/payments/paypal-cancel"
+            },
+            "purchase_units": [{
+                "reference_id": f"{miner_id}_{current_user['id']}_{uuid.uuid4()}",
+                "description": f"{miner['name']} - {miner['hash_rate']} GH/s for {miner['duration_days']} days",
+                "amount": {
+                    "currency_code": "USD",
+                    "value": f"{final_price:.2f}",
+                    "breakdown": {
+                        "item_total": {
+                            "currency_code": "USD",
+                            "value": f"{final_price:.2f}"
+                        }
+                    }
+                },
+                "items": [{
+                    "name": miner["name"],
+                    "description": f"{miner['hash_rate']} GH/s mining power for {miner['duration_days']} days",
+                    "unit_amount": {
+                        "currency_code": "USD",
+                        "value": f"{final_price:.2f}"
+                    },
+                    "quantity": "1",
+                    "category": "DIGITAL_GOODS"
+                }]
+            }]
+        }
+        
+        request.request_body(order_body)
+        response = payment_processor.paypal_client.execute(request)
+        
+        # Store order information for later processing
+        order_info = {
+            "_id": response.result.id,
+            "user_id": current_user["id"],
+            "miner_id": miner_id,
+            "miner_data": miner,
+            "original_price": original_price,
+            "final_price": final_price,
+            "discount_amount": discount_amount,
+            "promo_code": promo_code if promo_validation["valid"] else None,
+            "subscription_type": subscription_type,
+            "status": "created",
+            "created_at": datetime.utcnow()
+        }
+        db.paypal_orders.insert_one(order_info)
+        
+        return {
+            "order_id": response.result.id,
+            "links": [{"rel": link.rel, "href": link.href} for link in response.result.links],
+            "miner_name": miner["name"],
+            "original_price": original_price,
+            "final_price": final_price,
+            "discount_amount": discount_amount,
+            "promo_code": promo_code if promo_validation["valid"] else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating PayPal order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create payment order")
+
+@app.post("/api/payments/capture-paypal-order")
+async def capture_paypal_order(order_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
+    """Capture PayPal order and activate miner"""
+    try:
+        from paypalcheckoutsdk.orders import OrdersCaptureRequest
+        
+        order_id = order_data.get("order_id")
+        if not order_id:
+            raise HTTPException(status_code=400, detail="Order ID is required")
+        
+        # Get stored order information
+        stored_order = db.paypal_orders.find_one({"_id": order_id})
+        if not stored_order or stored_order["user_id"] != current_user["id"]:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        # An order may only be captured once. Without this check the same paid
+        # order can be replayed to mint additional miners.
+        if stored_order.get("status") == "completed":
+            raise HTTPException(status_code=400, detail="This order has already been processed.")
+        
+        # Capture PayPal payment
+        request = OrdersCaptureRequest(order_id)
+        response = payment_processor.paypal_client.execute(request)
+        
+        if response.result.status == "COMPLETED":
+            # Apply promo code if used
+            if stored_order.get("promo_code"):
+                payment_processor.apply_promo_code(stored_order["promo_code"])
+            
+            # Create and activate the miner
+            miner_data = stored_order["miner_data"]
+            new_miner = {
+                "_id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "name": miner_data["name"],
+                "hash_rate": miner_data["hash_rate"],
+                "miner_type": "premium",
+                "status": "active",  # Auto-activate premium miners
+                "duration_hours": miner_data["duration_days"] * 24,
+                "time_remaining": miner_data["duration_days"] * 24,
+                "total_earned": 0.0,
+                "purchase_price": stored_order["final_price"],
+                "payment_method": "paypal",
+                "payment_id": response.result.id,
+                "activated_at": datetime.utcnow(),
+                "expires_at": datetime.utcnow() + timedelta(days=miner_data["duration_days"]),
+                "created_at": datetime.utcnow()
+            }
+            
+            miners_collection.insert_one(new_miner)
+            
+            # Update order status
+            db.paypal_orders.update_one(
+                {"_id": order_id},
+                {"$set": {
+                    "status": "completed",
+                    "captured_at": datetime.utcnow(),
+                    "miner_id": new_miner["_id"],
+                    "payment_details": response.result.dict()
+                }}
+            )
+            
+            # Record transaction
+            transaction_record = {
+                "_id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "transaction_type": "miner_purchase",
+                "amount": stored_order["final_price"],
+                "currency": "USD",
+                "payment_method": "paypal",
+                "payment_id": response.result.id,
+                "miner_id": new_miner["_id"],
+                "miner_name": miner_data["name"],
+                "description": f"Purchased {miner_data['name']} via PayPal",
+                "promo_code": stored_order.get("promo_code"),
+                "discount_amount": stored_order.get("discount_amount", 0),
+                "created_at": datetime.utcnow()
+            }
+            transactions_collection.insert_one(transaction_record)
+            
+            # Record purchase for revenue tracking
+            purchase_record = {
+                "_id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "miner_id": new_miner["_id"],
+                "miner_name": miner_data["name"],
+                "amount": stored_order["final_price"],
+                "payment_method": "paypal",
+                "payment_id": response.result.id,
+                "promo_code": stored_order.get("promo_code"),
+                "discount_amount": stored_order.get("discount_amount", 0),
+                "created_at": datetime.utcnow()
+            }
+            purchases_collection.insert_one(purchase_record)
+            
+            return {
+                "success": True,
+                "message": "Payment completed and miner activated!",
+                "miner_id": new_miner["_id"],
+                "miner_name": miner_data["name"],
+                "hash_rate": miner_data["hash_rate"],
+                "duration_days": miner_data["duration_days"],
+                "amount_paid": stored_order["final_price"],
+                "payment_id": response.result.id,
+                "expires_at": new_miner["expires_at"].isoformat()
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Payment capture failed")
+            
+    except Exception as e:
+        logger.error(f"Error capturing PayPal order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process payment")
+
+@app.get("/api/payments/paypal-return")
+async def paypal_return_handler(token: str = None, PayerID: str = None):
+    """Handle PayPal return after successful payment"""
+    try:
+        # PayPal redirects with token (order_id) and PayerID parameters
+        # We need to automatically capture the payment and redirect to app
+        
+        if not token:
+            # Return HTML page with error and deep link to app
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Error</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">❌</div>
+                    <h1>Payment Error</h1>
+                    <p>There was an error processing your payment.</p>
+                    <p>Please return to the app and try again.</p>
+                    <a href="koala-mining://paypal/success" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+        
+        # Get stored order information
+        stored_order = db.paypal_orders.find_one({"_id": token})
+        
+        if not stored_order:
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Order Not Found</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">⚠️</div>
+                    <h1>Order Not Found</h1>
+                    <p>We couldn't find your payment order.</p>
+                    <p>Please contact support if you were charged.</p>
+                    <a href="koala-mining://paypal/success" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+        
+        # Check if already processed to prevent double activation
+        if stored_order.get("status") == "completed":
+            # Already processed - redirect with success
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="refresh" content="3;url=koala-mining://paypal/success">
+                <title>Payment Already Processed</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                        animation: bounce 1s infinite;
+                    }}
+                    @keyframes bounce {{
+                        0%, 100% {{ transform: translateY(0); }}
+                        50% {{ transform: translateY(-10px); }}
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">✅</div>
+                    <h1>Payment Already Processed</h1>
+                    <p>Your {stored_order['miner_data']['name']} has already been activated!</p>
+                    <p>Redirecting you back to the app...</p>
+                    <a href="koala-mining://paypal/success" class="button">Return to App Now</a>
+                </div>
+                <script>
+                    setTimeout(function() {{
+                        window.location.href = 'koala-mining://paypal/success';
+                    }}, 3000);
+                </script>
+            </body>
+            </html>
+            """)
+        
+        # Capture the payment automatically
+        try:
+            from paypalcheckoutsdk.orders import OrdersCaptureRequest
+            
+            request = OrdersCaptureRequest(token)
+            response = payment_processor.paypal_client.execute(request)
+            
+            if response.result.status == "COMPLETED":
+                # Apply promo code if used
+                if stored_order.get("promo_code"):
+                    payment_processor.apply_promo_code(stored_order["promo_code"])
+                
+                # Create and activate the miner
+                miner_data = stored_order["miner_data"]
+                new_miner = {
+                    "_id": str(uuid.uuid4()),
+                    "user_id": stored_order["user_id"],
+                    "name": miner_data["name"],
+                    "hash_rate": miner_data["hash_rate"],
+                    "miner_type": "premium",
+                    "status": "active",
+                    "duration_hours": miner_data["duration_days"] * 24,
+                    "time_remaining": miner_data["duration_days"] * 24,
+                    "total_earned": 0.0,
+                    "purchase_price": stored_order["final_price"],
+                    "payment_method": "paypal",
+                    "payment_id": response.result.id,
+                    "activated_at": datetime.utcnow(),
+                    "expires_at": datetime.utcnow() + timedelta(days=miner_data["duration_days"]),
+                    "created_at": datetime.utcnow()
+                }
+                
+                miners_collection.insert_one(new_miner)
+                
+                # Update order status
+                db.paypal_orders.update_one(
+                    {"_id": token},
+                    {"$set": {
+                        "status": "completed",
+                        "captured_at": datetime.utcnow(),
+                        "miner_id": new_miner["_id"],
+                        "payment_details": response.result.dict()
+                    }}
+                )
+                
+                # Record transaction
+                transaction_record = {
+                    "_id": str(uuid.uuid4()),
+                    "user_id": stored_order["user_id"],
+                    "transaction_type": "miner_purchase",
+                    "amount": stored_order["final_price"],
+                    "currency": "USD",
+                    "payment_method": "paypal",
+                    "payment_id": response.result.id,
+                    "miner_id": new_miner["_id"],
+                    "miner_name": miner_data["name"],
+                    "description": f"Purchased {miner_data['name']} via PayPal",
+                    "promo_code": stored_order.get("promo_code"),
+                    "discount_amount": stored_order.get("discount_amount", 0),
+                    "created_at": datetime.utcnow()
+                }
+                transactions_collection.insert_one(transaction_record)
+                
+                logger.info(f"PayPal payment captured and miner activated: {new_miner['_id']}")
+                
+                # Return success page with auto-redirect
+                return HTMLResponse(content=f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta http-equiv="refresh" content="3;url=koala-mining://paypal/success">
+                    <title>Payment Successful!</title>
+                    <style>
+                        body {{
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                            color: white;
+                            padding: 20px;
+                        }}
+                        .container {{
+                            background: rgba(255, 255, 255, 0.1);
+                            border: 2px solid #d4af37;
+                            border-radius: 20px;
+                            padding: 40px;
+                            max-width: 500px;
+                            text-align: center;
+                            backdrop-filter: blur(10px);
+                        }}
+                        h1 {{
+                            color: #d4af37;
+                            margin: 0 0 20px 0;
+                            font-size: 28px;
+                        }}
+                        p {{
+                            font-size: 16px;
+                            line-height: 1.6;
+                            margin: 20px 0;
+                        }}
+                        .status {{
+                            font-size: 64px;
+                            margin-bottom: 20px;
+                            animation: bounce 1s infinite;
+                        }}
+                        @keyframes bounce {{
+                            0%, 100% {{ transform: translateY(0); }}
+                            50% {{ transform: translateY(-10px); }}
+                        }}
+                        .details {{
+                            background: rgba(0, 0, 0, 0.3);
+                            border-radius: 10px;
+                            padding: 20px;
+                            margin: 20px 0;
+                            text-align: left;
+                        }}
+                        .detail-row {{
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 10px 0;
+                            padding: 8px 0;
+                            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+                        }}
+                        .detail-label {{
+                            color: #d4af37;
+                            font-weight: bold;
+                        }}
+                        .button {{
+                            display: inline-block;
+                            background: #d4af37;
+                            color: #1a1a1a;
+                            padding: 15px 30px;
+                            border-radius: 10px;
+                            text-decoration: none;
+                            font-weight: bold;
+                            margin-top: 20px;
+                            transition: transform 0.2s;
+                        }}
+                        .button:hover {{
+                            transform: scale(1.05);
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="status">🎉</div>
+                        <h1>Payment Successful!</h1>
+                        <p>Your miner has been activated and is now earning Bitcoin!</p>
+                        
+                        <div class="details">
+                            <div class="detail-row">
+                                <span class="detail-label">Miner:</span>
+                                <span>{miner_data['name']}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Hash Rate:</span>
+                                <span>{miner_data['hash_rate']} GH/s</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Duration:</span>
+                                <span>{miner_data['duration_days']} days</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Amount Paid:</span>
+                                <span>${stored_order['final_price']:.2f}</span>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Redirecting you back to the app...</strong></p>
+                        <a href="koala-mining://paypal/success" class="button">Return to App Now</a>
+                    </div>
+                    <script>
+                        // Attempt deep link redirect
+                        setTimeout(function() {{
+                            window.location.href = 'koala-mining://paypal/success';
+                        }}, 3000);
+                    </script>
+                </body>
+                </html>
+                """)
+            else:
+                raise Exception("Payment capture was not completed")
+                
+        except Exception as capture_error:
+            logger.error(f"Error capturing PayPal payment on return: {capture_error}")
+            return HTMLResponse(content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Processing Error</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                        color: white;
+                        padding: 20px;
+                    }}
+                    .container {{
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #d4af37;
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 500px;
+                        text-align: center;
+                        backdrop-filter: blur(10px);
+                    }}
+                    h1 {{
+                        color: #d4af37;
+                        margin: 0 0 20px 0;
+                        font-size: 28px;
+                    }}
+                    p {{
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin: 20px 0;
+                    }}
+                    .status {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background: #d4af37;
+                        color: #1a1a1a;
+                        padding: 15px 30px;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: transform 0.2s;
+                    }}
+                    .button:hover {{
+                        transform: scale(1.05);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="status">⚠️</div>
+                    <h1>Processing Error</h1>
+                    <p>There was an error processing your payment.</p>
+                    <p>If you were charged, your miner will be activated shortly. Please check your account or contact support.</p>
+                    <a href="koala-mining://paypal/success" class="button">Return to App</a>
+                </div>
+            </body>
+            </html>
+            """)
+            
+    except Exception as e:
+        logger.error(f"Error in PayPal return handler: {e}")
+        return HTMLResponse(content="""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Error</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    color: white;
+                    padding: 20px;
+                }
+                .container {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 2px solid #d4af37;
+                    border-radius: 20px;
+                    padding: 40px;
+                    max-width: 500px;
+                    text-align: center;
+                    backdrop-filter: blur(10px);
+                }
+                h1 {
+                    color: #d4af37;
+                    margin: 0 0 20px 0;
+                    font-size: 28px;
+                }
+                p {
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin: 20px 0;
+                }
+                .status {
+                    font-size: 48px;
+                    margin-bottom: 20px;
+                }
+                .button {
+                    display: inline-block;
+                    background: #d4af37;
+                    color: #1a1a1a;
+                    padding: 15px 30px;
+                    border-radius: 10px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    transition: transform 0.2s;
+                }
+                .button:hover {
+                    transform: scale(1.05);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="status">❌</div>
+                <h1>Unexpected Error</h1>
+                <p>An unexpected error occurred.</p>
+                <p>Please contact support if you were charged.</p>
+                <a href="koala-mining://paypal/success" class="button">Return to App</a>
+            </div>
+        </body>
+        </html>
+        """)
+
+@app.get("/api/payments/paypal-cancel")
+async def paypal_cancel_handler():
+    """Handle PayPal cancellation"""
+    return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="refresh" content="3;url=koala-mining://paypal/cancel">
+        <title>Payment Cancelled</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                color: white;
+                padding: 20px;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid #d4af37;
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                text-align: center;
+                backdrop-filter: blur(10px);
+            }
+            h1 {
+                color: #d4af37;
+                margin: 0 0 20px 0;
+                font-size: 28px;
+            }
+            p {
+                font-size: 16px;
+                line-height: 1.6;
+                margin: 20px 0;
+            }
+            .status {
+                font-size: 48px;
+                margin-bottom: 20px;
+            }
+            .button {
+                display: inline-block;
+                background: #d4af37;
+                color: #1a1a1a;
+                padding: 15px 30px;
+                border-radius: 10px;
+                text-decoration: none;
+                font-weight: bold;
+                margin-top: 20px;
+                transition: transform 0.2s;
+            }
+            .button:hover {
+                transform: scale(1.05);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="status">🚫</div>
+            <h1>Payment Cancelled</h1>
+            <p>Your payment was cancelled.</p>
+            <p>No charges have been made to your account.</p>
+            <p>Redirecting you back to the app...</p>
+            <a href="koala-mining://paypal/cancel" class="button">Return to App Now</a>
+        </div>
+        <script>
+            setTimeout(function() {
+                window.location.href = 'koala-mining://paypal/cancel';
+            }, 3000);
+        </script>
+    </body>
+    </html>
+    """)
+
+# Facebook Ads Integration Endpoints
+
+@app.post("/api/ads/daily-stats")
+async def get_daily_ad_stats(current_user: Dict = Depends(get_current_user)):
+    """Get user's daily ad viewing statistics"""
+    try:
+        today = datetime.utcnow().date()
+        
+        # Get or create daily counter
+        daily_counter = db.daily_ad_counters.find_one({
+            "user_id": current_user["id"],
+            "date": today.isoformat()
+        })
+        
+        if not daily_counter:
+            daily_counter = {
+                "user_id": current_user["id"],
+                "date": today.isoformat(),
+                "ads_watched": 0,
+                "last_reset": datetime.utcnow(),
+                "created_at": datetime.utcnow()
+            }
+            db.daily_ad_counters.insert_one(daily_counter)
+        
+        ads_watched = daily_counter.get("ads_watched", 0)
+        remaining_ads = max(0, MAX_DAILY_ADS - ads_watched)
+        
+        # Calculate next reset time (midnight UTC)
+        tomorrow = today + timedelta(days=1)
+        next_reset = datetime.combine(tomorrow, datetime.min.time())
+        
+        return {
+            "ads_watched_today": ads_watched,
+            "remaining_ads": remaining_ads,
+            "max_daily_ads": MAX_DAILY_ADS,
+            "next_reset": next_reset.isoformat(),
+            "can_watch_ad": remaining_ads > 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting daily ad stats for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get ad statistics")
+
+@app.post("/api/ads/watch")
+async def watch_ad(
+    ad_data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Process ad watch - only reward for miner_activation type"""
+    try:
+        ad_type = ad_data.get("ad_type")  # 'app_launch', 'miner_activation', 'withdrawal'
+        
+        # Validate ad type
+        valid_ad_types = ['app_launch', 'miner_activation', 'withdrawal']
+        if ad_type not in valid_ad_types:
+            raise HTTPException(status_code=400, detail="Invalid ad type")
+        
+        # Check daily limit
+        today = datetime.utcnow().date()
+        daily_counter = db.daily_ad_counters.find_one({
+            "user_id": current_user["id"],
+            "date": today.isoformat()
+        })
+        
+        if not daily_counter:
+            daily_counter = {
+                "user_id": current_user["id"],
+                "date": today.isoformat(),
+                "ads_watched": 0,
+                "last_reset": datetime.utcnow(),
+                "created_at": datetime.utcnow()
+            }
+            db.daily_ad_counters.insert_one(daily_counter)
+        
+        ads_watched = daily_counter.get("ads_watched", 0)
+        if ads_watched >= MAX_DAILY_ADS:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
+            )
+        
+        # Only create ad miner for miner_activation type (rewarded ad)
+        ad_miner = None
+        ad_miner_id = None
+        
+        if ad_type == 'miner_activation':
+            # Create ad miner (2 GH/s for 24 hours) - REWARDED AD
+            ad_miner_id = str(uuid.uuid4())
+            now = datetime.utcnow()
+            expires_at = now + timedelta(hours=AD_MINER_DURATION_HOURS)
+            
+            ad_miner = {
+                "_id": ad_miner_id,
+                "user_id": current_user["id"],
+                "name": f"Ad Miner ({ad_type.replace('_', ' ').title()})",
+                "hash_rate": AD_MINER_HASHRATE,
+                "miner_type": "ad_reward",
+                "status": "active",
+                "duration_hours": AD_MINER_DURATION_HOURS,
+                "time_remaining": AD_MINER_DURATION_HOURS,
+                "total_earned": 0.0,
+                "ad_type": ad_type,
+                "activated_at": now,
+                "expires_at": expires_at,
+                "created_at": now
+            }
+            
+            miners_collection.insert_one(ad_miner)
+        
+        # Update daily counter ONLY for rewarded ads (miner_activation)
+        if ad_type == 'miner_activation':
+            db.daily_ad_counters.update_one(
+                {"user_id": current_user["id"], "date": today.isoformat()},
+                {"$inc": {"ads_watched": 1}, "$set": {"updated_at": datetime.utcnow()}}
+            )
+            # Get updated stats after increment
+            new_ads_watched = ads_watched + 1
+        else:
+            # For non-rewarded ads (app_launch, withdrawal), don't increment counter
+            new_ads_watched = ads_watched
+        
+        # Record ad view transaction
+        now = datetime.utcnow()
+        ad_transaction = {
+            "_id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "transaction_type": "ad_view" if ad_type in ['app_launch', 'withdrawal'] else "ad_reward",
+            "ad_type": ad_type,
+            "miner_id": ad_miner_id if ad_miner else None,
+            "hash_rate_awarded": AD_MINER_HASHRATE if ad_miner else 0,
+            "duration_hours": AD_MINER_DURATION_HOURS if ad_miner else 0,
+            "description": f"Watched {ad_type.replace('_', ' ')} ad" + (f" - earned {int(AD_MINER_HASHRATE)} GH/s for 24h" if ad_miner else ""),
+            "created_at": now
+        }
+        transactions_collection.insert_one(ad_transaction)
+        
+        # Get updated stats
+        remaining_ads = MAX_DAILY_ADS - new_ads_watched
+        
+        # Prepare response based on ad type
+        response_data = {
+            "success": True,
+            "daily_stats": {
+                "ads_watched_today": new_ads_watched,
+                "remaining_ads": remaining_ads,
+                "max_daily_ads": MAX_DAILY_ADS
+            }
+        }
+        
+        # Only include miner data for rewarded ads
+        if ad_type == 'miner_activation' and ad_miner:
+            logger.info(f"User {current_user['id']} watched {ad_type} ad - awarded {int(AD_MINER_HASHRATE)} GH/s ad miner for 24h")
+            response_data["message"] = f"Ad watched successfully! Earned {int(AD_MINER_HASHRATE)} GH/s mining power for 24 hours."
+            response_data["ad_miner"] = {
+                "id": ad_miner_id,
+                "name": ad_miner["name"],
+                "hash_rate": AD_MINER_HASHRATE,
+                "duration_hours": AD_MINER_DURATION_HOURS,
+                "expires_at": expires_at.isoformat()
+            }
+        else:
+            logger.info(f"User {current_user['id']} watched {ad_type} ad (non-rewarded)")
+            response_data["message"] = "Thank you for watching!"
+        
+        return response_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing ad watch for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process ad reward")
+
+@app.post("/api/ads/reset-daily-counter")
+async def reset_daily_counters(x_cron_secret: Optional[str] = Header(None)):
+    """Reset daily ad counters at midnight (cron job endpoint)"""
+    # This route wipes the per-user ad limits, so it must never be callable by
+    # an anonymous client. It requires a shared secret and refuses to run at
+    # all when that secret has not been configured.
+    expected_secret = os.getenv("CRON_SECRET", "")
+    if not expected_secret:
+        raise HTTPException(status_code=503, detail="Scheduled task endpoint is not configured.")
+    if not x_cron_secret or not hmac.compare_digest(x_cron_secret, expected_secret):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    try:
+        
+        # Reset all counters for the new day
+        result = db.daily_ad_counters.update_many(
+            {"date": {"$lt": datetime.utcnow().date().isoformat()}},
+            {"$set": {"ads_watched": 0, "last_reset": datetime.utcnow()}}
+        )
+        
+        logger.info(f"Reset {result.modified_count} daily ad counters for new day")
+        
+        return {
+            "success": True,
+            "counters_reset": result.modified_count,
+            "reset_time": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting daily ad counters: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset daily counters")
+
+@app.get("/api/ads/active-miners")
+async def get_active_ad_miners(current_user: Dict = Depends(get_current_user)):
+    """Get user's active ad-reward miners"""
+    try:
+        # Get active ad miners
+        active_ad_miners = list(miners_collection.find({
+            "user_id": current_user["id"],
+            "miner_type": "ad_reward",
+            "status": "active",
+            "expires_at": {"$gt": datetime.utcnow()}
+        }).sort("expires_at", 1))
+        
+        # Format for frontend
+        formatted_miners = []
+        total_ad_hashrate = 0
+        
+        for miner in active_ad_miners:
+            time_remaining_seconds = (miner["expires_at"] - datetime.utcnow()).total_seconds()
+            time_remaining_hours = max(0, time_remaining_seconds / 3600)
+            
+            formatted_miners.append({
+                "id": miner["_id"],
+                "name": miner["name"],
+                "hash_rate": miner["hash_rate"],
+                "ad_type": miner.get("ad_type", "unknown"),
+                "time_remaining_hours": round(time_remaining_hours, 2),
+                "expires_at": miner["expires_at"].isoformat(),
+                "total_earned": miner.get("total_earned", 0.0)
+            })
+            
+            total_ad_hashrate += miner["hash_rate"]
+        
+        return {
+            "active_ad_miners": formatted_miners,
+            "total_miners": len(formatted_miners),
+            "total_ad_hashrate": total_ad_hashrate
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting active ad miners for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get active ad miners")
+
+# Update the existing ad boost miner endpoint to use new 24-hour duration
+@app.post("/api/miners/activate-ad-boost")
+async def activate_ad_boost(current_user: Dict = Depends(get_current_user)):
+    """Activate ad boost miner (now 2 GH/s for 24 hours instead of 30 minutes)"""
+    try:
+        # Check daily limit first
+        daily_stats = await get_daily_ad_stats(current_user)
+        if not daily_stats["can_watch_ad"]:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily ad limit reached ({MAX_DAILY_ADS}/day). Try again tomorrow."
+            )
+        
+        # Use the new ad watch endpoint
+        ad_data = {"ad_type": "miner_activation"}
+        return await watch_ad(ad_data, current_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error activating ad boost for user {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to activate ad boost")
+
+@app.get("/api/payments/user-purchases")
+async def get_user_purchases(current_user: Dict = Depends(get_current_user)):
+    """Get user's purchase history"""
+    try:
+        # Get transactions
+        user_transactions = list(transactions_collection.find({
+            "user_id": current_user["id"],
+            "transaction_type": "miner_purchase"
+        }).sort("created_at", -1))
+        
+        # Convert ObjectId to string and format for frontend
+        formatted_transactions = []
+        for transaction in user_transactions:
+            formatted_transactions.append({
+                "transaction_id": transaction["_id"],
+                "amount": transaction["amount"],
+                "currency": transaction.get("currency", "USD"),
+                "payment_method": transaction["payment_method"],
+                "miner_name": transaction["miner_name"],
+                "description": transaction["description"],
+                "promo_code": transaction.get("promo_code"),
+                "discount_amount": transaction.get("discount_amount", 0),
+                "created_at": transaction["created_at"].isoformat(),
+                "status": "completed"
+            })
+        
+        return {
+            "purchases": formatted_transactions,
+            "total_purchases": len(formatted_transactions),
+            "total_spent": sum(t["amount"] for t in user_transactions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting user purchases: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve purchase history")
+
+# ==================== ADMIN ENDPOINTS ====================
+# Admin email configuration
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "colourfulkoaladevelopment@gmail.com")
+
+_admin_user = users_collection.find_one({"email": ADMIN_EMAIL})
+if _admin_user and "role" not in _admin_user:
+    users_collection.update_one({"_id": _admin_user["_id"]}, {"$set": {"role": "admin"}})
+
+def is_admin(current_user: Dict) -> bool:
+    """Check if current user is admin via database role field."""
+    return current_user.get("role") == "admin"
+
+@app.get("/api/admin/check")
+async def check_admin_access(current_user: Dict = Depends(get_current_user)):
+    """Check if user has admin access"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return {"is_admin": True}
+
+@app.get("/api/admin/stats")
+async def get_admin_stats(
+    time_range: str = "30_days",  # Options: "30_days" or "all_time"
+    current_user: Dict = Depends(get_current_user)
+):
+    """Get admin statistics"""
+    try:
+        logger.info(f"Admin stats called by {current_user.get('email')}")
+        
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        logger.info("Admin check passed")
+        
+        # Calculate date threshold for 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        logger.info("Counting total users...")
+        # Total users (all time)
+        total_users = users_collection.count_documents({})
+        logger.info(f"Total users: {total_users}")
+        
+        logger.info("Counting active miners...")
+        # Active miners based on time range
+        if time_range == "30_days":
+            active_miners = miners_collection.count_documents({
+                "status": "active",
+                "expires_at": {"$gt": datetime.utcnow()},
+                "created_at": {"$gte": thirty_days_ago}
+            })
+        else:
+            active_miners = miners_collection.count_documents({
+                "status": "active",
+                "expires_at": {"$gt": datetime.utcnow()}
+            })
+        logger.info(f"Active miners: {active_miners}")
+        
+        # Total Miner Revenue from purchases (purchases collection)
+        if time_range == "30_days":
+            revenue_pipeline = [
+                {"$match": {
+                    "created_at": {"$gte": thirty_days_ago}
+                }},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]
+        else:
+            revenue_pipeline = [
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]
+        
+        try:
+            revenue_result = list(purchases_collection.aggregate(revenue_pipeline))
+            total_miner_revenue = revenue_result[0]["total"] if revenue_result and len(revenue_result) > 0 else 0.0
+        except Exception as rev_error:
+            logger.warning(f"Revenue calculation error: {rev_error}")
+            total_miner_revenue = 0.0
+        
+        # Calculate total BTC owed (future earnings from active miners)
+        total_btc_owed = 0.0
+        active_miners_cursor = miners_collection.find(
+            {"status": "active", "expires_at": {"$gt": datetime.utcnow()}},
+            {"_id": 1, "hash_rate": 1, "expires_at": 1}
+        ).limit(10000)
+        active_miners_list = list(active_miners_cursor)
+        
+        for miner in active_miners_list:
+            # Calculate remaining mining time
+            now = datetime.utcnow()
+            expires_at = miner.get("expires_at")
+            
+            if expires_at and expires_at > now:
+                remaining_seconds = (expires_at - now).total_seconds()
+                remaining_hours = remaining_seconds / 3600
+                
+                # Get miner's earnings rate (BTC per hour)
+                hash_rate = miner.get("hash_rate", 0)
+                btc_per_hour = hash_rate * 0.000000000001  # Conversion rate
+                
+                # Calculate total future earnings
+                future_earnings = btc_per_hour * remaining_hours
+                total_btc_owed += future_earnings
+        
+        return {
+            "total_users": total_users,
+            "active_miners": active_miners,
+            "total_miner_revenue": round(total_miner_revenue, 2),
+            "total_btc_owed": round(total_btc_owed, 8),
+            "time_range": time_range
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting admin stats: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
+
+@app.get("/api/admin/users")
+async def get_all_users(current_user: Dict = Depends(get_current_user)):
+    """Get all users for admin dashboard"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        users = []
+        users_cursor = users_collection.find({})
+        users_list = list(users_cursor)
+        
+        # Batch-fetch active miner counts for all users in a single query
+        miner_counts_pipeline = [
+            {"$match": {"status": "active", "expires_at": {"$gt": datetime.utcnow()}}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
+        ]
+        miner_counts = {doc["_id"]: doc["count"] for doc in miners_collection.aggregate(miner_counts_pipeline)}
+        
+        for user in users_list:
+            # Active miners for this user (from pre-fetched counts)
+            active_miners_count = miner_counts.get(str(user["_id"]), 0)
+            
+            users.append({
+                "id": str(user["_id"]),
+                "name": user.get("name", ""),
+                "email": user.get("email", ""),
+                "balance": user.get("bitcoin_balance", 0.0),
+                "active_miners": active_miners_count,
+                "btc_wallet_address": user.get("btc_wallet_address", ""),
+                "wallet_status": user.get("wallet_status", ""),
+                "created_at": user.get("created_at", "").isoformat() if user.get("created_at") else ""
+            })
+        
+        return {"users": users}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
+
+@app.post("/api/admin/reset-user/{user_id}")
+async def reset_user_account(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Reset a specific user's account (delete miners, reset balance)"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        from bson import ObjectId
+        
+        # Resolve user by string id first, then ObjectId
+        user = users_collection.find_one({"_id": user_id})
+        query_id = user_id
+        if not user:
+            try:
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    query_id = ObjectId(user_id)
+            except Exception:
+                pass
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Delete all miners for this user (miners use string user_id)
+        miners_collection.delete_many({"user_id": str(user["_id"])})
+        
+        # Reset user balance and earnings to 0
+        users_collection.update_one(
+            {"_id": query_id},
+            {"$set": {"bitcoin_balance": 0.0, "total_earnings": 0.0}}
+        )
+        
+        logger.info(f"Admin reset user account: {user.get('email')}")
+        
+        return {"message": "User account reset successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset user account")
+
+@app.post("/api/admin/broadcast")
+async def broadcast_notification(
+    message_data: Dict[str, str],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Broadcast a notification to all users"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        message = message_data.get("message", "")
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        # Store notification in database for all users
+        # In a production app, you'd use a notification service or push notifications
+        notification = {
+            "message": message,
+            "created_at": datetime.utcnow(),
+            "type": "broadcast",
+            "sent_by": "admin"
+        }
+        
+        # For now, just log it - in production, implement proper notification system
+        logger.info(f"Admin broadcast notification: {message}")
+        
+        return {"message": "Notification broadcast successfully", "recipients": "all_users"}
+        
+    except Exception as e:
+        logger.error(f"Error broadcasting notification: {e}")
+        raise HTTPException(status_code=500, detail="Failed to broadcast notification")
+
+@app.post("/api/admin/factory-reset")
+async def factory_reset_all_accounts(current_user: Dict = Depends(get_current_user)):
+    """Factory reset all user accounts - DELETE ALL MINERS AND RESET BALANCES"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Delete ALL miners
+        miners_deleted = miners_collection.delete_many({})
+        
+        # Reset ALL user balances to 0
+        users_updated = users_collection.update_many(
+            {},
+            {"$set": {"bitcoin_balance": 0.0, "total_earnings": 0.0}}
+        )
+        
+        logger.warning(f"FACTORY RESET: Deleted {miners_deleted.deleted_count} miners, reset {users_updated.modified_count} user balances")
+        
+        return {
+            "message": "Factory reset completed successfully",
+            "miners_deleted": miners_deleted.deleted_count,
+            "users_reset": users_updated.modified_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during factory reset: {e}")
+        raise HTTPException(status_code=500, detail="Failed to perform factory reset")
+
+@app.get("/api/admin/pending-wallets")
+async def get_pending_wallets(current_user: Dict = Depends(get_current_user)):
+    """Get all users with pending wallet approvals"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Find all users with pending wallet status
+        pending_users_cursor = users_collection.find({
+            "wallet_status": "pending"
+        })
+        pending_users = list(pending_users_cursor)
+        
+        pending_wallets = []
+        for user in pending_users:
+            pending_wallets.append({
+                "user_id": str(user["_id"]),
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email", ""),
+                "btc_wallet_address": user.get("btc_wallet_address", ""),
+                "wallet_registered_at": user.get("wallet_registered_at"),
+                "balance": user.get("bitcoin_balance", 0.0)
+            })
+        
+        return {
+            "pending_wallets": pending_wallets,
+            "count": len(pending_wallets)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting pending wallets: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending wallets")
+
+@app.post("/api/admin/approve-wallet/{user_id}")
+async def approve_wallet(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Approve a user's BTC wallet address"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Update user wallet status to connected (SYNCHRONOUS - no await)
+        result = users_collection.update_one(
+            {"_id": user_id},  # user_id is already a string, don't convert to ObjectId
+            {"$set": {
+                "wallet_status": "connected",
+                "wallet_approved_at": datetime.utcnow()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found or wallet already approved")
+        
+        # Get user info for logging (SYNCHRONOUS - no await)
+        user = users_collection.find_one({"_id": user_id})
+        logger.info(f"Admin approved wallet for user {user.get('email')}: {user.get('btc_wallet_address')}")
+        
+        return {
+            "success": True,
+            "message": "Wallet approved successfully",
+            "user_email": user.get("email"),
+            "btc_wallet_address": user.get("btc_wallet_address")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving wallet: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve wallet")
+
+@app.get("/api/admin/pending-address-changes")
+async def get_pending_address_changes(current_user: Dict = Depends(get_current_user)):
+    """Get all users with a pending withdrawal-address change request"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        cursor = users_collection.find({"pending_address_change.status": "pending"})
+        pending_changes = []
+        for user in list(cursor):
+            pac = user.get("pending_address_change", {})
+            pending_changes.append({
+                "user_id": str(user["_id"]),
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email", ""),
+                "current_address": user.get("btc_wallet_address", ""),
+                "new_address": pac.get("new_address", ""),
+                "requested_at": pac.get("requested_at"),
+                "balance": user.get("bitcoin_balance", 0.0)
+            })
+        return {"pending_changes": pending_changes, "count": len(pending_changes)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting pending address changes: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve pending address changes")
+
+@app.post("/api/admin/approve-address-change/{user_id}")
+async def approve_address_change(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Approve a user's pending withdrawal-address change (admin has already updated it on Kraken)"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user or not user.get("pending_address_change"):
+            raise HTTPException(status_code=404, detail="No pending address change for this user")
+        new_address = user["pending_address_change"].get("new_address")
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "btc_wallet_address": new_address,
+                    "wallet_status": "connected",
+                    "wallet_approved_at": datetime.utcnow()
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin approved address change for {user.get('email')}: {new_address}")
+        return {"success": True, "message": "Address change approved", "btc_wallet_address": new_address}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error approving address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve address change")
+
+@app.post("/api/admin/reject-address-change/{user_id}")
+async def reject_address_change(user_id: str, data: Dict = None, current_user: Dict = Depends(get_current_user)):
+    """Reject a user's pending withdrawal-address change with an optional reason"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user or not user.get("pending_address_change"):
+            raise HTTPException(status_code=404, detail="No pending address change for this user")
+        reason = (data or {}).get("reason", "").strip() if data else ""
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "last_address_change_rejection": {
+                        "new_address": user["pending_address_change"].get("new_address"),
+                        "reason": reason or "No reason provided",
+                        "rejected_at": datetime.utcnow()
+                    }
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin rejected address change for {user.get('email')}. Reason: {reason or 'none'}")
+        return {"success": True, "message": "Address change rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rejecting address change: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reject address change")
+
+@app.post("/api/admin/set-address/{user_id}")
+async def admin_set_address(user_id: str, data: Dict[str, str], current_user: Dict = Depends(get_current_user)):
+    """Admin manually sets a user's withdrawal address"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        new_address = data.get("new_address", "").strip()
+        if not new_address:
+            raise HTTPException(status_code=400, detail="New address is required")
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        users_collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "btc_wallet_address": new_address,
+                    "wallet_status": "connected",
+                    "wallet_approved_at": datetime.utcnow()
+                },
+                "$unset": {"pending_address_change": ""}
+            }
+        )
+        logger.info(f"Admin manually set address for {user.get('email')}: {new_address}")
+        return {"success": True, "message": "Address updated", "btc_wallet_address": new_address}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting address: {e}")
+        raise HTTPException(status_code=500, detail="Failed to set address")
+
+@app.delete("/api/admin/delete-user/{user_id}")
+async def delete_user(user_id: str, current_user: Dict = Depends(get_current_user)):
+    """Delete a user and all their data"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Try to find user by string ID first, then by ObjectId
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            try:
+                from bson import ObjectId
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    user_id = ObjectId(user_id)  # Use ObjectId for subsequent operations
+            except:
+                pass
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Delete user's miners (miners use string user_id)
+        miners_deleted = miners_collection.delete_many({"user_id": str(user["_id"])}).deleted_count
+        
+        # Delete user's sessions
+        user_sessions_collection.delete_many({"user_id": str(user["_id"])})
+        
+        # Delete user
+        users_collection.delete_one({"_id": user_id})
+        
+        logger.info(f"Admin deleted user {user.get('email')}: Deleted {miners_deleted} miners")
+        
+        return {
+            "success": True,
+            "message": "User deleted successfully",
+            "user_email": user.get("email"),
+            "miners_deleted": miners_deleted
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete user")
+
+@app.post("/api/admin/give-btc/{user_id}")
+async def give_btc(user_id: str, body: Dict, current_user: Dict = Depends(get_current_user)):
+    """Adjust a user's BTC balance: add to, remove from, or set the balance."""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        operation = (body.get("operation") or "add").lower()
+        if operation not in ("add", "remove", "set"):
+            raise HTTPException(status_code=400, detail="Invalid operation. Must be add, remove or set")
+        amount = float(body.get("amount", 0))
+        if amount < 0:
+            raise HTTPException(status_code=400, detail="Amount cannot be negative")
+        if operation in ("add", "remove") and amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+        
+        # Try to find user by string ID first, then by ObjectId
+        user = users_collection.find_one({"_id": user_id})
+        if not user:
+            try:
+                from bson import ObjectId
+                user = users_collection.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    user_id = ObjectId(user_id)  # Use ObjectId for update
+            except:
+                pass
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        current_balance = float(user.get("bitcoin_balance", 0) or 0)
+        if operation == "add":
+            new_balance = current_balance + amount
+        elif operation == "remove":
+            new_balance = max(0.0, current_balance - amount)
+        else:  # set
+            new_balance = amount
+        
+        users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {"bitcoin_balance": new_balance}}
+        )
+        
+        # Get updated user info
+        user = users_collection.find_one({"_id": user_id})
+        logger.info(f"Admin {operation} balance for {user.get('email')}: {current_balance} -> {new_balance}")
+        
+        verb = {"add": "Added", "remove": "Removed", "set": "Set"}[operation]
+        return {
+            "success": True,
+            "operation": operation,
+            "message": f"{verb} ₿ {amount} for {user.get('email')}",
+            "new_balance": new_balance
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adjusting balance: {e}")
+        raise HTTPException(status_code=500, detail="Failed to adjust balance")
+
+# Add payment configuration to .env file
+@app.post("/api/admin/configure-payments")
+async def configure_payments(config_data: Dict[str, Any], current_user: Dict = Depends(get_current_user)):
+    """Admin endpoint to configure payment settings"""
+    try:
+        if not is_admin(current_user):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Update payment configuration
+        # In production, this would update environment variables or database config
+        
+        return {"message": "Payment configuration updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error configuring payments: {e}")
+        raise HTTPException(status_code=500, detail="Failed to configure payments")
+
+@app.get("/api/activity/recent")
+async def get_recent_activities():
+    """Get recent activities (purchases and cashouts) for activity feed"""
+    try:
+        # Get recent purchases from last 5 minutes
+        recent_time = datetime.utcnow() - timedelta(minutes=5)
+        
+        recent_purchases = list(purchases_collection.find(
+            {"created_at": {"$gte": recent_time}},
+            {"user_id": 1, "miner_name": 1, "hash_rate": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(5))
+        
+        recent_withdrawals = list(db.withdrawals.find(
+            {"created_at": {"$gte": recent_time}},
+            {"user_id": 1, "amount_btc": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(5))
+        
+        # Batch-fetch all referenced users in one query (avoids N+1)
+        user_ids = list({p["user_id"] for p in recent_purchases} | {w["user_id"] for w in recent_withdrawals})
+        user_map = {u["_id"]: u for u in users_collection.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})} if user_ids else {}
+
+        # Format activities
+        activities = []
+        
+        for purchase in recent_purchases:
+            # Get user name
+            user = user_map.get(purchase["user_id"])
+            if user:
+                name = user.get("name", "Anonymous User")
+                # Obfuscate name: keep first letter of each word, rest as asterisks
+                name_parts = name.split()
+                obfuscated_name = " ".join([part[0] + "*" * (len(part) - 1) if len(part) > 1 else part for part in name_parts])
+                
+                # Format hash rate
+                hash_rate = purchase.get("hash_rate", 0)
+                if hash_rate >= 1000:
+                    hash_str = f"{int(hash_rate / 1000)}TH/s"
+                else:
+                    hash_str = f"{int(hash_rate)}GH/s"
+                
+                activities.append({
+                    "type": "purchase",
+                    "user_name": obfuscated_name,
+                    "miner_name": purchase.get("miner_name", "Unknown Miner"),
+                    "hash_rate": hash_str,
+                    "timestamp": purchase.get("created_at")
+                })
+        
+        for withdrawal in recent_withdrawals:
+            # Get user name
+            user = user_map.get(withdrawal["user_id"])
+            if user:
+                name = user.get("name", "Anonymous User")
+                # Obfuscate name
+                name_parts = name.split()
+                obfuscated_name = " ".join([part[0] + "*" * (len(part) - 1) if len(part) > 1 else part for part in name_parts])
+                
+                activities.append({
+                    "type": "cashout",
+                    "user_name": obfuscated_name,
+                    "amount": withdrawal.get("amount_btc", 0),
+                    "timestamp": withdrawal.get("created_at")
+                })
+        
+        # Sort all activities by timestamp
+        activities.sort(key=lambda x: x.get("timestamp", datetime.min), reverse=True)
+        
+        return {
+            "activities": activities[:5],  # Return top 5 most recent
+            "count": len(activities)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent activities: {e}")
+        # Return empty activities on error - don't crash the feed
+        return {"activities": [], "count": 0}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

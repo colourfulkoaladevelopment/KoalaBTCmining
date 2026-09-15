@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 12 — Validated the fee model + Kraken-error-surfacing + ad-flow fixes. Backend: 5/5 tests PASS in /app/backend/tests/test_iteration_12_btc_withdrawal_clear_error.py. PASSING: (a) auth required (403 without token); (b) Bitcoin min 0.0002 BTC enforced with 'Bitcoin network minimum is 0.0002 BTC' for a CONNECTED+funded user; (c) insufficient-balance returns 400 itemizing 'amount + network fee {x} + withdrawal fee 0.00002000 + service fee 0.00001000'; (d) KEY user-reported bug: real Kraken send returns HTTP 400 with detail 'Withdrawal could not be processed: Withdrawal methods error: EGeneral:Permission denied Your balance has been restored.' — NO longer a generic 500, NO 5xx (so Cloudflare/ingress will not swallow the body); (e) balance is fully refunded after the failed Kraken send (before=0.005, after=0.005 BTC). Frontend (code-review verified + smoke-test confirmed app loads, withdraw modal opens with 'Min ₿ 0.0002'): the dashboard's addressCard has marginBottom:15 producing a visible gap above the 'Withdraw BTC' button; Lightning Network is rendered as a non-touchable View (no onPress) with opacity:0.6 and a 'Coming Soon' label, while Bitcoin Network is selected by default; the confirm alert shows the full itemized fee breakdown (Amount + Network Fee + Withdrawal Fee 0.00002000 + Service Fee 0.00001000 + Total Deducted + USD value); the handleAdWatch flow always calls proceedWithWithdrawal() in every failure path (ad not watched, 429 daily limit, error caught), so the user is never silently returned to the withdraw modal after the forced ad.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/withdraw/bitcoin",
+        "issue": "(carryover from iter11) Transaction record description in server.py:1572 still hardcodes '+ 0.5% fee'; should be itemized network/withdrawal/service fees to match new model."
+      },
+      {
+        "endpoint": "kraken_send_bitcoin",
+        "issue": "(carryover from iter11) Dead code in server.py:1958-1959 — leftover `processing_fee = amount * 0.005` is never used."
+      },
+      {
+        "endpoint": "POST /api/withdraw/bitcoin",
+        "issue": "KRAKEN_API_KEY/SECRET in /app/backend/.env lacks Funding/Withdraw permissions, so EVERY real Kraken send currently fails with 'EGeneral:Permission denied'. EXPECTED behavior per the review request — but until the key is rotated, the address-not-whitelisted code path is unreachable."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "premium-mining-app.tsx", "issue": "Repeated console warnings: 'shadow*' style props are deprecated. Use 'boxShadow'. Reference: /var/log/supervisor/expo.err.log — should migrate to boxShadow / textShadow style API."},
+      {"component": "expo-notifications", "issue": "Console warning '[expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect.' — gate the listener registration behind Platform.OS !== 'web'."},
+      {"component": "pointerEvents prop", "issue": "Console warning 'props.pointerEvents is deprecated. Use style.pointerEvents' — migrate any inline pointerEvents=... props to style: { pointerEvents: ... }."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_12_btc_withdrawal_clear_error.py",
+    "/app/test_reports/pytest/iteration_12_results.xml"
+  ],
+  "action_items": [
+    "(non-blocking cleanup) Update server.py:1572 transaction description to itemize the new fees instead of '+ 0.5% fee'.",
+    "(non-blocking cleanup) Remove dead code in server.py:1958-1959 (`processing_fee = amount * 0.005`).",
+    "(operational, blocks live withdrawals only) Rotate KRAKEN_API_KEY / KRAKEN_API_SECRET in /app/backend/.env to a key that has 'Query Funds' + 'Withdraw Funds' + 'Query withdrawal addresses' enabled. Until then live on-chain sends cannot complete in this environment (the surfaced error is correct and expected).",
+    "(deprecation hygiene) Migrate React Native styles 'shadow*' → 'boxShadow', 'textShadow*' → 'textShadow', and any inline `pointerEvents=` → `style={{ pointerEvents: ... }}`.",
+    "(deprecation hygiene) Wrap the expo-notifications push-token listener with Platform.OS !== 'web' to silence the unsupported-on-web warning."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1614-1645 — the broad except now correctly raises HTTPException(400, detail=f'Withdrawal could not be processed: {clean_error} Your balance has been restored.'), so the previous generic-500-swallowing bug is FIXED.",
+    "premium-mining-app.tsx:1745-1841 (handleAdWatch) — every failure branch (not watched, 429 daily limit, generic error in catch) now calls setTimeout(() => proceedWithWithdrawal(), 300), preventing the silent return-to-modal regression that the user reported.",
+    "premium-mining-app.tsx:1967-1979 (proceedWithWithdrawal) — confirm alert itemizes Withdrawal Amount, Network Fee, Withdrawal Fee (constant 0.00002000), Service Fee (constant 0.00001000), and Total Deducted as required.",
+    "premium-mining-app.tsx:3577-3580 — Lightning Network is rendered as a plain <View> with `disabledNetwork` style (opacity:0.6, dark bg, no onPress); it cannot be selected. Bitcoin Network is the only TouchableOpacity in the row. ✓",
+    "premium-mining-app.tsx:5292-5300 — addressCard has marginBottom:15 which provides a visible gap above the Withdraw BTC button (styles.withdrawButton has no marginTop, so the 15px from the card is the gap). ✓",
+    "server.py is still 4672 LOC — long-term refactor candidate to split into routers (auth, wallet, withdraw, admin, ads, payments)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_12_btc_withdrawal_clear_error.py (NEW, 5 tests, all passing)",
+    "/app/test_reports/pytest/iteration_12_results.xml (NEW)",
+    "/app/test_reports/iteration_12.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5)",
+    "frontend": "Code review + smoke-test confirmation: app loads, login works, withdraw modal opens with 'Min ₿ 0.0002', address card + Withdraw BTC button render with gap. Full keystroke automation of the modal's TextInputs was blocked by React Native web rendering / app-launch-ad overlay, but the underlying code paths (gap, lightning disabled, fee breakdown, ad→confirm fallthrough) are verified in source."
+  },
+  "seed_data_creation": "Each backend test in test_iteration_12 creates a fresh TEST_iter12_<8hex>@example.com user, registers a UNIQUE bc1q... address per user (random bech32 charset, 38-char suffix), admin-approves, and admin-sets balance (0.00021 or 0.005 BTC). No production data touched. The pre-existing test user koalatest@example.com is also wallet-connected with ~0.0053 BTC and was used for the frontend smoke test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth: admin = colourfulkoaladevelopment@gmail.com / KoalaAdmin#2026 (login returns access_token + user). Regular test user koalatest@example.com / TestUser#2026 has wallet_status=connected and ~0.0053 BTC. Register payload requires `name` (not first_name/last_name). Wallet endpoints: POST /api/wallet/register {btc_address}; POST /api/admin/approve-wallet/{user_id}; GET /api/wallet/status returns {wallet_status}; GET /api/wallet/balance returns {total_balance}. Admin top-up: POST /api/admin/give-btc/{user_id} {operation:'set', amount}. Each new test user MUST use a unique BTC address (addresses are globally unique — re-using one fails with 400 'This Bitcoin address is already registered'). Live Kraken sends will fail with 'EGeneral:Permission denied' until the API key is rotated — this is now correctly surfaced as HTTP 400 (not a generic 500), and the user's balance is fully refunded. For frontend automation: app-launch ad modal blocks interactions and must be dismissed first (click 'Watch Ad' → wait 4s → click 'OK' on the 'Welcome!' alert). React Native web TextInputs sometimes render without standard input attributes; prefer XPath or text-based scoping inside the modal.",
+  "rca_of_issue": "ROOT CAUSE (now fixed): server.py:1614-1645 previously caught the kraken-side Exception and re-raised HTTPException(500, 'Bitcoin network error occurred. Your balance has been restored. Please try again later.') — wiping the real error and producing a 5xx body that Cloudflare/ingress overwrites with a generic page, leaving the user with NO message after the forced ad. FIX in place: now raises HTTPException(400, f'Withdrawal could not be processed: {clean_error} Your balance has been restored.') where clean_error strips the 'Kraken withdrawal error: ' prefix. Verified end-to-end (status=400, body contains 'EGeneral:Permission denied', balance fully refunded). FRONTEND counterpart (also fixed): premium-mining-app.tsx handleAdWatch (lines 1745-1841) now ALWAYS calls proceedWithWithdrawal() in every failure branch (ad-not-watched, 429 daily-limit, generic catch), preventing the silent return-to-modal that the user reported."
+}

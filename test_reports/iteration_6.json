@@ -1,0 +1,68 @@
+{
+  "summary": "Iteration_6 verifies the new Lightning withdrawal lane, user-initiated address-change request flow, admin pending-address-changes approval, admin direct set-address, and the refactored Adjust Balance (give-btc) op. BACKEND: 28/28 pytest passed in /app/backend/tests/test_iteration_6_features.py after fixing TWO blocking server-side bugs (see RCA). FRONTEND (mobile 390x844, live preview): admin login -> Pending Address Changes section rendered (count 0 after cleanup); search 'koalatest' -> per-row Balance/Address/Reset/Delete buttons all present and tappable; Balance modal showed Add/Remove/Set selector + amount field, Confirm produced '✅ Success - Added' alert. Address modal opened 'Change Withdrawal Address' with a single 'New address' field, Confirm produced '✅ Success - Address updated for koalatest@example.com'. USER login (koalatest@example.com) bypassed the forced launch ad, scrolled to wallet area where 'Approved Withdrawal Address' card with the seeded bc1qexampleaddress... and a 'Change Address' button is rendered. Tapping Change Address opened the 'Change Withdrawal Address' modal with 3 inputs (Current Password, New Withdrawal Address, Confirm New Withdrawal Address) + Submit Request button. Submitting with matching addresses + correct password produced the '✅ Request Submitted - Address change requested. Your new address will be active after admin approval.' confirmation. All iteration_6 features verified end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Login",
+        "issues": [
+          "Carryover: 'Success! Welcome back to Koala Mining!' alert still appears post-login and must be dismissed before screen is interactive (expected per agent-to-agent note)."
+        ]
+      },
+      {
+        "screen": "User Dashboard",
+        "issues": [
+          "Forced ad ('Watch Ad' modal) gates the dashboard on every non-admin login. It blocks the first interaction with 'Change Address' until dismissed - acceptable for prod but slows automated testing. No testID anywhere in the app makes selector-based UI testing fragile."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "RN-Web deprecated style props",
+        "issue": "Console emits 'shadow*' deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow), 'props.pointerEvents' deprecated (use style.pointerEvents). Carryover, non-blocking. Reference: /app/frontend/app/premium-mining-app.tsx (multiple lines)."
+      },
+      {
+        "component": "expo-notifications",
+        "issue": "'Listening to push token changes is not yet fully supported on web' - expected on web preview, no action."
+      },
+      {
+        "component": "testID coverage",
+        "issue": "premium-mining-app.tsx contains ZERO testID props. All UI tests must rely on text-based selectors, which break easily. Recommend adding testID to: login email/password fields, Sign In button, admin per-row Balance/Address/Reset/Delete buttons, Adjust Balance modal Add/Remove/Set + Confirm, Change Withdrawal Address modal inputs + Submit. Reference: /app/frontend/app/premium-mining-app.tsx."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_6_features.py",
+    "/app/test_reports/pytest/iteration_6_results.xml"
+  ],
+  "action_items": [
+    "Consider adding testID props to admin row buttons (Balance/Address/Reset/Delete), Adjust Balance modal controls, Change Withdrawal Address modal inputs, and the user-facing Change Address button + 3 inputs to make automated testing far less fragile.",
+    "Continue carryover: split premium-mining-app.tsx (now >5000 lines) into per-screen modules.",
+    "Carryover RN-Web deprecation warnings (shadow*, textShadow*, props.pointerEvents) - non-blocking but pollutes the console."
+  ],
+  "critical_code_review_comments": [
+    "FIXED BY TESTING AGENT: server.py was missing `import re` at module top - the BOLT11 decoder used re.match and threw NameError at runtime, causing /api/withdraw/bitcoin to 500 for every lightning request.",
+    "FIXED BY TESTING AGENT: /api/withdraw/bitcoin had `except ValueError: ... except Exception:` but NO `except HTTPException: raise` clause at the outer level (around line 1593). Every intentional HTTPException(403/400) raised inside the function (wallet not registered, invoice invalid, amount mismatch, etc.) was being swallowed and re-raised as HTTPException(500, 'Failed to process withdrawal'). Added `except HTTPException: raise` between the ValueError and the generic Exception handler. This was a CRITICAL bug masking the entire lightning/bitcoin gating logic.",
+    "premium-mining-app.tsx is now ~5289 lines - carryover code-split recommendation.",
+    "AdminPanelComponent has two parallel modals (Adjust Balance + Change Withdrawal Address) both styled with custom adminModal* styles - looks clean, no issues found.",
+    "request_address_change validation is solid: rejects on wrong password (401), invalid address prefix (400), same-as-current (400), duplicate registration (400). good.",
+    "approve_address_change correctly $unsets pending_address_change after promotion - verified by re-querying pending list (now empty) and wallet/status (pending_address_change == null)."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (added `import re` at line 31; added `except HTTPException: raise` before the generic Exception handler at line ~1595 in /api/withdraw/bitcoin)",
+    "/app/backend/tests/test_iteration_6_features.py (NEW, 28 tests covering iteration_6 surface)",
+    "/app/test_reports/pytest/iteration_6_results.xml (NEW, 28/28 passed)",
+    "/app/test_reports/iteration_6.json (NEW)"
+  ],
+  "success_rate": {"backend": "100% (28/28 after server fixes)", "frontend": "100% on iteration_6 flows: admin Pending Address Changes section renders, per-row Balance + Address modals work end-to-end with success alerts, user Change Address flow submits a pending request and shows the green 'Request Submitted' confirmation"},
+  "seed_data_creation": "Used admin POST /api/admin/set-address/{koalatest_id} with bc1qexampleaddress... to seed the test user with a wallet_status='connected' approved address (so the 'Approved Withdrawal Address' card + 'Change Address' button would render). Used POST /api/admin/give-btc {operation:'set',amount:0.005} to set a known balance. After UI testing approved the pending change and reseeded the address back to the canonical bc1qexampleaddress... so subsequent test runs are repeatable.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Two server-side bugs were fixed during this iteration: (1) missing `import re` for BOLT11 decoder, (2) missing `except HTTPException: raise` in /api/withdraw/bitcoin so all intentional 4xx responses were being turned into 500s. Both fixes are in /app/backend/server.py. The seeded admin and test-user credentials live at /app/memory/test_credentials.md. The test user starts the iteration with approved address bc1qexampleaddressxxxxxxxxxxxxxxxxxxxxxx and balance 0.005 BTC. The forced launch ad modal will block the user dashboard until tapped - the playwright helper in test_iteration_6_features.py covers backend only; UI testing must dismiss the 'Watch Ad' modal first. NO testID props exist anywhere in premium-mining-app.tsx - main agent should consider adding them.",
+  "rca_of_issue": "TWO server-side bugs were found and fixed: BUG 1 (`name 're' is not defined`): the new helper decode_bolt11_amount_btc at server.py:234 uses re.match() to parse the BOLT11 prefix, but the `re` module was never imported at the top of server.py. Every /api/withdraw/bitcoin call with network='lightning' threw NameError which was caught by the bare `except Exception` block and surfaced as HTTPException(500, 'Failed to process withdrawal'). FIX: added `import re` at line 31. BUG 2 (HTTPExceptions swallowed as 500): the outer try/except of /api/withdraw/bitcoin had only `except ValueError: ...` then `except Exception as e: logger.error(...); raise HTTPException(500, 'Failed to process withdrawal')`. There was no `except HTTPException: raise` clause so intentional HTTPException(403, 'register your wallet'), HTTPException(400, 'Invalid Lightning invoice'), HTTPException(400, 'does not match'), HTTPException(400, 'Insufficient balance'), etc. - which the new lightning lane and the existing bitcoin gate rely on - were all caught by the generic Exception handler and turned into opaque 500s. The backend log shows the giveaway line `Error processing Bitcoin withdrawal: 403: Please register your Bitcoin wallet address first in your Profile settings.` proving the HTTPException reached the wrong handler. FIX: added `except HTTPException: raise` between the ValueError and Exception handlers (around server.py:1595). After both fixes the test suite that was 4 failed / 1 passed went to 5/5 passed in the Lightning class and 28/28 across the file."
+}

@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration_3 verified ALL 3 fixes from iteration_2. Backend: 14/14 pytest passed in /app/backend/tests/test_paypal_flow.py (added new HIGH-priority real-money parity test). (1) Catalog parity HIGH-priority test_store_catalog_and_paypal_catalog_match iterates every miner returned by GET /api/store/miners (9 miners) and POSTs each to /api/payments/create-paypal-order; ALL 9 return 200 with original_price AND final_price EXACTLY matching the store price. Specifically validated the previously-divergent tiers: miner_10th 'Ultimate Miner' -> $449.99, miner_15th 'Legendary Miner' -> $749.99, miner_20th 'Mythical Miner' -> $999.99 (previously the latter two did not exist in the PayPal catalog and miner_10th was charging $999.99). (2) test_create_paypal_order_unknown_miner_404 now strictly asserts 404 (was tolerating 500); endpoint returns 404 for 'miner_doesnotexist' because `except HTTPException: raise` was added before the broad except at server.py:2798. (3) Regression endpoints all 200 (/auth/me, /wallet/balance, /wallet/status, /miners/list, /store/miners, /referrals/stats). PayPal return/cancel HTML pages still contain koala-mining://paypal/success and koala-mining://paypal/cancel deep links. Admin gating: /api/admin/users -> 200 admin, 403 non-admin. Frontend: logged in as koalatest@example.com on mobile viewport (390x844), dismissed welcome + Watch Ad modals, dashboard fully rendered (Bitcoin Wallet, Mining Status, Daily Ad Rewards, Free Miners (0), Premium Miners (0)). The stray ')}' literal text node from iteration_2 is GONE - confirmed via document.body.innerText scan before scroll, after scroll, with Premium Miners expanded (showing 'No Premium Miners' empty state), and re-collapsed. Premium Miners collapsible expands and collapses normally. STORE_MINERS single source of truth verified at server.py:963. Stray ')}' close at premium-mining-app.tsx:2850 removed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Post-login flow",
+        "issues": [
+          "Carryover from iteration_2: 'Success! Welcome back' alert + 'Advertisement Required' modal still stack on top of the Dashboard after login, requiring two dismissals. Cosmetic - not blocking."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "RN-Web deprecation warnings",
+        "issue": "Still emits 'shadow*' style props deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow), 'props.pointerEvents' deprecated (use style.pointerEvents). Non-blocking. Reference: /app/frontend/app/premium-mining-app.tsx multiple lines."
+      },
+      {
+        "component": "expo-notifications",
+        "issue": "'Listening to push token changes is not yet fully supported on web' - expected on web preview, no action."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_paypal_flow.py",
+    "/app/test_reports/pytest/paypal_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (carryover, non-blocking): Auto-dismiss or chain the 'Welcome back' success alert with the next 'Advertisement Required' modal.",
+    "OPTIONAL (carryover, non-blocking): Migrate RN-Web deprecated style props (shadow*/textShadow*/props.pointerEvents) to the new APIs.",
+    "OPTIONAL (carryover, non-blocking): Add testID props to Store cards, 'Purchase & Activate', 'Pay with PayPal', 'Cancel Purchase' buttons and tab bar items to make automated UI testing more robust."
+  ],
+  "critical_code_review_comments": [
+    "Both root-cause fixes from iteration_2 are correctly applied: (a) STORE_MINERS module-level constant at server.py:963 is now consumed by both /api/store/miners (line 978) and create-paypal-order (line 2711) - single source of truth pattern is correct. (b) `except HTTPException: raise` added at server.py:2798 before the broad except so 404s propagate.",
+    "premium-mining-app.tsx is still 4883 lines - consider splitting Dashboard / Store / Profile / Admin into separate files. Not blocking but increases regression risk.",
+    "No other instances of the `except Exception` -> swallowed HTTPException anti-pattern found near the PayPal endpoints. capture-paypal-order (2804+) already has try/except but should be similarly audited if it raises HTTPException(404)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_paypal_flow.py (added test_store_catalog_and_paypal_catalog_match; tightened 404 assertion; env var fallback)",
+    "/app/test_reports/pytest/paypal_results.xml (regenerated, 14/14 passed)",
+    "/app/test_reports/iteration_3.json (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100% for tested flow (login -> dashboard -> Premium Miners expand/collapse, no stray text)"},
+  "seed_data_creation": "None. Reused koalatest@example.com / colourfulkoaladevelopment@gmail.com from /app/memory/test_credentials.md.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_paypal_flow.py now has 14 tests including the HIGH parity test that iterates every miner in /api/store/miners and asserts create-paypal-order returns matching prices. If you add new miners to STORE_MINERS in server.py, the parity test will automatically cover them. NOTE: The parity test creates one PayPal order per miner (9 live orders against PayPal sandbox/live) - safe because no capture is attempted, but each run leaves a 'created' record in db.paypal_orders. Frontend deep-link return + AppState foreground refresh (paypalPendingRef) still cannot be exercised on web preview - needs physical device / APK to validate that final user-visible auto-redirect.",
+  "rca_of_issue": "Iteration_2 root causes and verified iteration_3 fixes: (1) Catalog divergence - server.py originally had a separate inline miner list inside create_paypal_order (different IDs/prices than /api/store/miners), causing Ultimate Miner UI $449.99 to be charged $999.99 and Legendary/Mythical to 404. Fixed by hoisting a module-level STORE_MINERS list (server.py:963) that both /api/store/miners and create-paypal-order reference. Verified by test_store_catalog_and_paypal_catalog_match. (2) 404 -> 500 - `except Exception` at server.py:2800 was catching the HTTPException(404). Fixed by adding `except HTTPException: raise` at server.py:2798 before broad except. Verified by test_create_paypal_order_unknown_miner_404. (3) Stray ')}' on dashboard - an extra closing fragment after the Premium Miners <View> in premium-mining-app.tsx was rendering as a text node child of a <View>. Fixed by removing the stray close around line 2850. Verified by Playwright body.innerText scan across collapsed/expanded states - no ')}' present anywhere."
+}

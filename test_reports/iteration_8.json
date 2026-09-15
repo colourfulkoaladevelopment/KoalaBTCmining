@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration_8 verifies the new 'address-change rejection notice' surfaced in the user's wallet area. BACKEND (7/7 pytest passed in /app/backend/tests/test_iteration_8_rejection_notice.py): GET /api/wallet/status returns last_address_change_rejection {new_address, reason, rejected_at} when rejected; POST /api/wallet/dismiss-rejection clears it (subsequent status returns null); POST /api/wallet/request-address-change clears any prior rejection and sets pending_address_change; end-to-end request->admin reject(reason='test reason X')->status shows reason exactly and pending=null; dismiss without auth returns 401/403. FRONTEND (mobile 390x844 live preview): seeded a rejection in DB, logged in as koalatest, dismissed Welcome OK and Watch Ad modals; Approved Withdrawal Address card rendered a red-tinted rejection box containing 'Your last address change was declined', 'Reason: UI test: please use a fresh address from your wallet', 'You can submit a new request below.', and a close (X) icon. Tapping X fired POST /api/wallet/dismiss-rejection (verified via network interceptor) and the notice disappeared from the DOM. Wallet card otherwise unaffected (Change Address button still visible/tappable, Withdraw BTC button still rendered, balance + 'Wallet Status: Connected' still shown).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RN-Web deprecated style props", "issue": "Carryover from iter_6/7 - console emits 'shadow*' deprecated (use boxShadow), 'textShadow*' deprecated (use textShadow), 'props.pointerEvents is deprecated'. Non-blocking. Reference: /app/frontend/app/premium-mining-app.tsx (multiple lines)."},
+      {"component": "testID coverage on rejection notice", "issue": "The new rejection notice elements (rejectionBox container, title 'Your last address change was declined', reason text, and the X close TouchableOpacity) have NO testID. Test relied on text + DOM-walking selectors. Recommend adding testID like 'wallet-rejection-notice', 'wallet-rejection-title', 'wallet-rejection-reason', 'wallet-rejection-dismiss'. Reference: /app/frontend/app/premium-mining-app.tsx:2986-3001."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_8_rejection_notice.py",
+    "/app/test_reports/pytest/iteration_8_results.xml"
+  ],
+  "action_items": [
+    "Optional: add testID to the new rejection-notice elements (container/title/reason/X) for future automated testing.",
+    "Carryover: split premium-mining-app.tsx (5415 lines) into per-screen modules.",
+    "Carryover: address RN-Web shadow*/textShadow*/pointerEvents deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py dismiss_address_rejection (line 852-859): correctly auth-gated via get_current_user, uses $unset on last_address_change_rejection, returns {success:true}. LGTM.",
+    "server.py request-address-change (line 833-843): correctly $unsets last_address_change_rejection in same update that sets pending_address_change, so the stale notice goes away atomically on a new request. LGTM.",
+    "server.py get_wallet_status (line 861-881): correctly returns null for both pending_address_change and last_address_change_rejection when absent; serializes new_address/reason/rejected_at without exposing internal _id. LGTM.",
+    "premium-mining-app.tsx loadAppData (line 1163-1169): correctly hydrates addressRejection from statusData.last_address_change_rejection || null. LGTM.",
+    "premium-mining-app.tsx dismissAddressRejection (line 1857-1866): optimistically clears local state THEN calls /api/wallet/dismiss-rejection; swallows network errors silently which is acceptable for a non-critical dismiss. LGTM.",
+    "premium-mining-app.tsx rejectionBox JSX (line 2986-3002): correctly gated on `addressRejection && !pendingAddressChange` so it never overlaps a pending change; reason conditional on `!!addressRejection.reason`; X has hitSlop 8 for tap target. LGTM.",
+    "Carryover: premium-mining-app.tsx still ZERO testID props; >5400 lines; should be code-split."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_8_rejection_notice.py (NEW, 7 tests covering dismiss + new-request-clears + e2e reject-with-reason + auth)",
+    "/app/test_reports/pytest/iteration_8_results.xml (NEW, 7/7 passed)",
+    "/app/test_reports/iteration_8.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7)",
+    "frontend": "100% on the new notice: red rejection card renders with declined title + 'Reason: <text>' + resubmit hint + X icon; tapping X calls POST /api/wallet/dismiss-rejection and removes the card from DOM. Confirmed notice does NOT show when a pending_address_change exists (covered by code-review of conditional)."
+  },
+  "seed_data_creation": "Seeded last_address_change_rejection for koalatest@example.com via: POST /api/wallet/request-address-change (new_address bc1quitestrejnotice99999999999999999) -> POST /api/admin/reject-address-change/{user_id} with {reason:'UI test: please use a fresh address from your wallet'}. After test, dismiss-rejection cleared it. Final user state: btc_wallet_address bc1qexampleaddressxxxxxxxxxxxxxxxxxxxxxx, wallet_status=connected, no pending change, no rejection. Pytest cleanup leaves user in identical clean state. Fully repeatable.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration_8 rejection-notice surfacing feature is fully verified end-to-end. Backend 7/7 pytest + UI flow (seed -> render -> tap X -> POST dismiss-rejection -> notice gone). Test user is clean (no pending, no rejection). One non-blocking quirk for next iteration: Metro runs in CI mode (reloads disabled in /var/log/supervisor/expo.out.log), so any frontend code change requires `sudo supervisorctl restart expo` before the served bundle reflects it. I temporarily added then reverted a console.log in loadAppData to confirm state hydration; file is back to original. The 'Welcome! Thank you for watching' modal still appears after Watch Ad and needs an OK dismiss before the dashboard is interactive. Login still uses 'SIGN IN' button text (not 'Login').",
+  "rca_of_issue": "No app bug found. While diagnosing the UI, I initially saw the rejection box not rendering despite the API returning the field. Root cause was Metro running in CI mode with reloads disabled -- the served JS bundle was a cached pre-feature build for this preview tunnel session. After `sudo supervisorctl restart expo` forced a fresh bundle (Web Bundled 1129 modules), the rejection box rendered correctly and all UI assertions passed. Reproduction: any time frontend code is changed on disk, restart expo before testing the UI."
+}

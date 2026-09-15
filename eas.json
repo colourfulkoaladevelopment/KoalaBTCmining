@@ -1,0 +1,51 @@
+{
+  "cli": {
+    "version": ">= 5.2.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://koala-mining-backend.onrender.com",
+        "EXPO_PUBLIC_ADMOB_APP_ID": "ca-app-pub-5648720019902247~5985575029",
+        "EXPO_PUBLIC_ADMOB_ANDROID_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
+        "EXPO_PUBLIC_ADMOB_ANDROID_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
+        "EXPO_PUBLIC_ADMOB_ANDROID_WITHDRAWAL": "ca-app-pub-5648720019902247/5324682749",
+        "EXPO_PUBLIC_ADMOB_IOS_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
+        "EXPO_PUBLIC_ADMOB_IOS_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
+        "EXPO_PUBLIC_ADMOB_IOS_WITHDRAWAL": "ca-app-pub-5648720019902247/5324682749"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://koala-mining-backend.onrender.com",
+        "EXPO_PUBLIC_ADMOB_APP_ID": "ca-app-pub-5648720019902247~5985575029",
+        "EXPO_PUBLIC_ADMOB_ANDROID_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
+        "EXPO_PUBLIC_ADMOB_ANDROID_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
+        "EXPO_PUBLIC_ADMOB_ANDROID_WITHDRAWAL": "ca-app-pub-5648720019902247/5324682749",
+        "EXPO_PUBLIC_ADMOB_IOS_APP_LAUNCH": "ca-app-pub-5648720019902247/6941016749",
+        "EXPO_PUBLIC_ADMOB_IOS_MINER_ACTIVATION": "ca-app-pub-5648720019902247/6632442285",
+        "EXPO_PUBLIC_ADMOB_IOS_WITHDRAWAL": "ca-app-pub-5648720019902247/5324682749"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
