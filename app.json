@@ -28,8 +28,8 @@
       }
     },
     "android": {
-      "package": "com.koalamining.app",
-      "versionCode": 54,
+      "package": "com.colourfulkoala.koalamining",
+      "versionCode": 55,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
