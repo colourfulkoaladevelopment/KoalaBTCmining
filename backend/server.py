@@ -1155,11 +1155,11 @@ STORE_MINERS = [
     {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000200000000, "sats_bought": 9974, "payout_30day": 6000},
     {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000400000000, "sats_bought": 18713, "payout_30day": 12000},
     {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 27.99, "duration_days": 30, "daily_reward": 0.00000800000000, "sats_bought": 34929, "payout_30day": 24000},
-    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00002000000000, "sats_bought": 99867, "payout_30day": 66000},
-    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00004000000000, "sats_bought": 199721, "payout_30day": 135000},
-    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00008000000000, "sats_bought": 374373, "payout_30day": 270000},
-    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00020000000000, "sats_bought": 561505, "payout_30day": 420000},
-    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00030000000000, "sats_bought": 936173, "payout_30day": 720000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2200.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00002200000000, "sats_bought": 99867, "payout_30day": 66000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4500.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00004500000000, "sats_bought": 199721, "payout_30day": 135000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 9000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00009000000000, "sats_bought": 374373, "payout_30day": 270000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 14000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00014000000000, "sats_bought": 561505, "payout_30day": 420000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 24000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00002400000000, "sats_bought": 936173, "payout_30day": 720000},
     {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 29120.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00029120000000, "sats_bought": 1248389, "payout_30day": 874072}
 ]
 
