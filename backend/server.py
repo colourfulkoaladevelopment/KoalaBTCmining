@@ -2722,7 +2722,7 @@ async def demo_bitcoin_transaction(address: str, amount: float, withdrawal_id: s
 
 # Password reset endpoints
 @app.post("/api/auth/forgot-password")
-async def forgot_password(email_data: Dict[str, str]):
+async def forgot_password(email_data: Dict[str, str], request: Request):
     """Send password reset email"""
     try:
         email = email_data.get("email", "").strip().lower()
@@ -2750,12 +2750,14 @@ async def forgot_password(email_data: Dict[str, str]):
             # Send password reset email
             try:
                 import smtplib
+                import ssl
+                import traceback
                 from email.mime.text import MIMEText
                 from email.mime.multipart import MIMEMultipart
                 
-                # Gmail SMTP configuration (same as contact form)
-                smtp_server = "smtp.gmail.com"
-                smtp_port = 587
+                # Zoho SMTP configuration (SSL on port 465)
+                smtp_server = os.getenv("SMTP_HOST", "smtp.zoho.com")
+                smtp_port = int(os.getenv("SMTP_PORT", "465"))
                 sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
                 sender_password = os.getenv("SMTP_PASSWORD", "")
                 
@@ -2765,8 +2767,13 @@ async def forgot_password(email_data: Dict[str, str]):
                 msg['To'] = email
                 msg['Subject'] = "Bitcoin Mining App - Password Reset"
                 
-                # Create HTML email body with reset instructions
-                reset_link = f"https://onrender.com{reset_token}"
+                # Build reset link from the dynamic public base URL
+                base_url = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+                if not base_url:
+                    base_url = str(request.base_url).rstrip("/")
+                    if base_url.startswith("http://"):
+                        base_url = "https://" + base_url[len("http://"):]
+                reset_link = f"{base_url}/reset-password?token={reset_token}"
                 email_body = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -2815,9 +2822,13 @@ async def forgot_password(email_data: Dict[str, str]):
                 
                 msg.attach(MIMEText(email_body, 'html'))
                 
-                # Send email using Gmail SMTP
-                server = smtplib.SMTP(smtp_server, smtp_port)
-                server.starttls()
+                # Send email using Zoho SMTP over SSL (port 465) or TLS (port 587)
+                if smtp_port == 465:
+                    context = ssl.create_default_context()
+                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+                else:
+                    server = smtplib.SMTP(smtp_server, smtp_port)
+                    server.starttls()
                 server.login(sender_email, sender_password)
                 text = msg.as_string()
                 server.sendmail(sender_email, email, text)
@@ -2826,7 +2837,12 @@ async def forgot_password(email_data: Dict[str, str]):
                 logger.info(f"✅ Password reset email sent successfully to {email}")
                 
             except Exception as email_error:
+                print(f"❌ SMTP CONFIG DIAGNOSTIC ERROR: {str(email_error)}")
+                print(f"❌ SMTP TRACEBACK: {traceback.format_exc()}")
+                print(f"❌ SMTP SERVER: {os.getenv('SMTP_HOST', 'smtp.zoho.com')}:{os.getenv('SMTP_PORT', '465')}")
+                print(f"❌ SMTP SENDER: {os.getenv('SMTP_EMAIL', 'not set')}")
                 logger.error(f"❌ Failed to send password reset email to {email}: {email_error}")
+                logger.error(f"❌ SMTP traceback: {traceback.format_exc()}")
                 # Still return success to prevent email enumeration attacks
                 
             logger.info(f"Password reset requested for {email}.")
