@@ -2750,16 +2750,14 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
             # Send password reset email
             try:
                 import smtplib
-                import ssl
                 import traceback
                 from email.mime.text import MIMEText
                 from email.mime.multipart import MIMEMultipart
                 
-                # Zoho SMTP configuration (SSL on port 465)
-                smtp_server = os.getenv("SMTP_HOST", "smtp.zoho.com")
-                smtp_port = int(os.getenv("SMTP_PORT", "465"))
-                sender_email = os.getenv("SMTP_EMAIL", "colourfulkoaladevelopment@gmail.com")
-                sender_password = os.getenv("SMTP_PASSWORD", "")
+                smtp_server = os.getenv("SMTP_HOST", "smtp.gmail.com")
+                smtp_port = int(os.getenv("SMTP_PORT", "587"))
+                sender_email = os.getenv("SMTP_EMAIL", "koalabtcmining@gmail.com")
+                sender_password = os.getenv("SMTP_PASSWORD")
                 
                 # Create email message
                 msg = MIMEMultipart()
@@ -2822,13 +2820,13 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
                 
                 msg.attach(MIMEText(email_body, 'html'))
                 
-                # Send email using Zoho SMTP over SSL (port 465) or TLS (port 587)
                 if smtp_port == 465:
-                    context = ssl.create_default_context()
-                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=10)
                 else:
-                    server = smtplib.SMTP(smtp_server, smtp_port)
+                    server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+                    server.ehlo()
                     server.starttls()
+                    server.ehlo()
                 server.login(sender_email, sender_password)
                 text = msg.as_string()
                 server.sendmail(sender_email, email, text)
@@ -2839,7 +2837,7 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
             except Exception as email_error:
                 print(f"❌ SMTP CONFIG DIAGNOSTIC ERROR: {str(email_error)}")
                 print(f"❌ SMTP TRACEBACK: {traceback.format_exc()}")
-                print(f"❌ SMTP SERVER: {os.getenv('SMTP_HOST', 'smtp.zoho.com')}:{os.getenv('SMTP_PORT', '465')}")
+                print(f"❌ SMTP SERVER: {os.getenv('SMTP_HOST', 'smtp.gmail.com')}:{os.getenv('SMTP_PORT', '587')}")
                 print(f"❌ SMTP SENDER: {os.getenv('SMTP_EMAIL', 'not set')}")
                 logger.error(f"❌ Failed to send password reset email to {email}: {email_error}")
                 logger.error(f"❌ SMTP traceback: {traceback.format_exc()}")
