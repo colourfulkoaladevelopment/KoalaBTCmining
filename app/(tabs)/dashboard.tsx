@@ -228,7 +228,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           expo_push_token: token,
           device_type: Device.osName?.toLowerCase() || 'unknown',
-          app_version: '1.0.0',
+          app_version: '1.1.2',
         }),
       });
     } catch (error) {
@@ -522,7 +522,7 @@ export default function Dashboard() {
         Notifications.scheduleNotificationAsync({
           content: {
             title: 'Miner Expired!',
-            body: 'Your mining module has completed its cycle. Reactivate your rigs to keep earning Bits!',
+            body: 'Your mining module has completed its cycle. Reactivate your rigs to keep earning Bitcoin!',
             data: { type: 'miner_expired', miner_id: miner.id },
           },
           trigger: null,

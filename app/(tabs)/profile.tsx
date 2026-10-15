@@ -305,7 +305,7 @@ export default function Profile() {
           <Text style={styles.cardTitle}>App Information</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Build Number</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
+            <Text style={styles.infoValue}>1.1.2</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Release Date</Text>
@@ -332,7 +332,7 @@ export default function Profile() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Koala Mining{'\n'}Production v1.0</Text>
+          <Text style={styles.footerText}>Koala Mining{'\n'}Production v1.1.2</Text>
         </View>
       </ScrollView>
 
