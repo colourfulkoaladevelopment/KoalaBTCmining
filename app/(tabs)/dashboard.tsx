@@ -98,6 +98,8 @@ export default function Dashboard() {
   const notificationListener = useRef<any>();
   const responseListener = useRef<any>();
   const notifiedExpirations = useRef<Set<string>>(new Set());
+  const prevMinerStatus = useRef<Map<string, string>>(new Map());
+  const initialDataLoaded = useRef(false);
 
   useEffect(() => {
     initializeAdMob();
@@ -139,7 +141,21 @@ export default function Dashboard() {
       ]);
 
       if (walletRes.ok) setWalletData(walletRes.data);
-      if (minersRes.ok) setMiners(minersRes.data.miners || []);
+      if (minersRes.ok) {
+        const loadedMiners = minersRes.data.miners || [];
+        if (!initialDataLoaded.current) {
+          const now = Date.now();
+          for (const m of loadedMiners) {
+            if (m.status !== 'active' || !m.expires_at) continue;
+            const remainingMs = new Date(m.expires_at).getTime() - now;
+            if (remainingMs <= 0) {
+              notifiedExpirations.current.add(m.id);
+            }
+          }
+          initialDataLoaded.current = true;
+        }
+        setMiners(loadedMiners);
+      }
       if (walletStatusRes.ok) setWalletStatus(walletStatusRes.data);
       if (adStatsRes.ok) setAdStats(adStatsRes.data);
     } catch (error) {
@@ -517,7 +533,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     for (const miner of liveMiners) {
-      if (miner.status === 'expired' && !notifiedExpirations.current.has(miner.id)) {
+      const prevStatus = prevMinerStatus.current.get(miner.id);
+      if (
+        miner.status === 'expired' &&
+        prevStatus === 'active' &&
+        !notifiedExpirations.current.has(miner.id)
+      ) {
         notifiedExpirations.current.add(miner.id);
         Notifications.scheduleNotificationAsync({
           content: {
@@ -528,6 +549,7 @@ export default function Dashboard() {
           trigger: null,
         });
       }
+      prevMinerStatus.current.set(miner.id, miner.status);
     }
   }, [liveMiners]);
 

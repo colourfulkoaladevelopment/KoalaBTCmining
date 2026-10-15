@@ -11,10 +11,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { BACKEND_URL } from '../utils/api';
 
-export default function ResetPasswordScreen() {
+type ResetPasswordScreenProps = {
+  onBack?: () => void;
+};
+
+export default function ResetPasswordScreen({ onBack }: ResetPasswordScreenProps) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,13 +45,13 @@ export default function ResetPasswordScreen() {
       Alert.alert(
         'Check Your Inbox',
         'If the account exists, a secure password reset link has been sent to your inbox.',
-        [{ text: 'Back to Login', onPress: () => router.replace('/') }]
+        [{ text: 'Back to Login', onPress: () => onBack?.() }]
       );
     } catch (error) {
       Alert.alert(
         'Check Your Inbox',
         'If the account exists, a secure password reset link has been sent to your inbox.',
-        [{ text: 'Back to Login', onPress: () => router.replace('/') }]
+        [{ text: 'Back to Login', onPress: () => onBack?.() }]
       );
     } finally {
       setIsLoading(false);
@@ -91,7 +94,7 @@ export default function ResetPasswordScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/')}>
+          <TouchableOpacity style={styles.backButton} onPress={() => onBack?.()}>
             <Text style={styles.backButtonText}>← Back to Login</Text>
           </TouchableOpacity>
         </View>

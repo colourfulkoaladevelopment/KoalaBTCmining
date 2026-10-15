@@ -12,14 +12,16 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { BACKEND_URL } from '../utils/api';
 
+import ResetPasswordScreen from './reset-password';
+
 export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess?: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -84,8 +86,12 @@ export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess?: () => vo
   };
 
   const handleForgotPassword = () => {
-    router.push('/reset-password');
+    setShowResetPassword(true);
   };
+
+  if (showResetPassword) {
+    return <ResetPasswordScreen onBack={() => setShowResetPassword(false)} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
