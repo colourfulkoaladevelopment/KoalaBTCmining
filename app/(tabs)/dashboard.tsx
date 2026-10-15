@@ -396,10 +396,6 @@ export default function Dashboard() {
   const availableSatoshis = Math.floor((walletData?.total_balance || 0) * 100_000_000);
 
   const openWithdrawModal = () => {
-    if (availableSatoshis < 2500) {
-      Alert.alert('Minimum withdrawal limit not met', 'You must accumulate at least 2,500 Satoshis to request a payout.');
-      return;
-    }
     setShowWithdrawModal(true);
   };
 
@@ -585,11 +581,11 @@ export default function Dashboard() {
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.withdrawFundsButton, availableSatoshis < 2500 && styles.withdrawFundsButtonDisabled]}
+            style={styles.withdrawFundsButton}
             onPress={openWithdrawModal}
           >
-            <Ionicons name="arrow-up-circle" size={20} color={availableSatoshis >= 2500 ? '#FFF' : '#999'} />
-            <Text style={[styles.withdrawFundsText, availableSatoshis < 2500 && styles.withdrawFundsTextDisabled]}>Withdraw Funds</Text>
+            <Ionicons name="arrow-up-circle" size={20} color="#FFF" />
+            <Text style={styles.withdrawFundsText}>Withdraw Funds</Text>
           </TouchableOpacity>
           <Text style={styles.satoshiBalance}>{availableSatoshis.toLocaleString()} Satoshis available</Text>
         </View>
