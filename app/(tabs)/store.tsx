@@ -218,9 +218,9 @@ export default function Store() {
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={24} color="#2196F3" />
           <View style={styles.infoText}>
-            <Text style={styles.infoTitle}>30-Day Rentals</Text>
+            <Text style={styles.infoTitle}>30-Day Premium Rentals</Text>
             <Text style={styles.infoDescription}>
-              All miners are rented for 30 days. They will automatically deactivate when the rental period expires.
+              All premium miners are rented for 30 days. 1 GH/s earns 1 Satoshi over 24 hours of continuous runtime.
             </Text>
           </View>
         </View>
@@ -252,43 +252,43 @@ export default function Store() {
           </TouchableOpacity>
           {showEarningsGuide && (
             <>
-              <Text style={styles.legendSubtitle}>Each miner earns Bitcoin based on its hash rate:</Text>
+              <Text style={styles.legendSubtitle}>1 GH/s earns 1 Satoshi (₿ 0.00000001) over 24 hours of continuous runtime:</Text>
               <View style={styles.legendGrid}>
                 <View style={styles.legendItem}>
+                  <Text style={styles.legendHashRate}>1 GH/s</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000000010000 / day</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <Text style={styles.legendHashRate}>5 GH/s</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000000050000 / day</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <Text style={styles.legendHashRate}>25 GH/s</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000000250000 / day</Text>
+                </View>
+                <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>200 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000000544 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000002000000 / day</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>400 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000001087 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000004000000 / day</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>800 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000002174 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000008000000 / day</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>2 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000005435 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000020000000 / day</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>4 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000010870 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000040000000 / day</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <Text style={styles.legendHashRate}>8 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000021740 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>20 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000054350 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>30 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000081525 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>40 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000108700 / day</Text>
+                  <Text style={styles.legendEarning}>₿ 0.000080000000 / day</Text>
                 </View>
               </View>
             </>

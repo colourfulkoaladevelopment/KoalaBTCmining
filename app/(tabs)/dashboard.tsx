@@ -97,6 +97,7 @@ export default function Dashboard() {
   const [satoshiTick, setSatoshiTick] = useState(0);
   const notificationListener = useRef<any>();
   const responseListener = useRef<any>();
+  const notifiedExpirations = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     initializeAdMob();
@@ -247,7 +248,7 @@ export default function Dashboard() {
       setActivatingMiner('free');
       const res = await apiFetch('/api/miners/activate-free', { method: 'POST' });
       if (res.ok) {
-        Alert.alert('Success', 'Free miner activated for 24 hours!');
+        Alert.alert('Success', 'Free miner activated for 4 hours!');
         loadData();
       } else {
         Alert.alert('Error', res.data?.detail || 'Failed to activate free miner');
@@ -494,7 +495,7 @@ export default function Dashboard() {
         setActivatingMiner('ad');
         const res = await apiFetch('/api/miners/watch-ad', { method: 'POST' });
         if (res.ok) {
-          Alert.alert('Success', 'Ad miner boost activated!');
+          Alert.alert('Success', 'Ad miner activated! 5 GH/s for 24 hours.');
           loadData();
         } else {
           Alert.alert('Error', res.data?.detail || 'Failed to activate ad miner');
@@ -531,12 +532,29 @@ export default function Dashboard() {
 
   const activeMinersCount = miners.filter(m => m.status === 'active').length;
 
+  useEffect(() => {
+    for (const miner of liveMiners) {
+      if (miner.status === 'expired' && !notifiedExpirations.current.has(miner.id)) {
+        notifiedExpirations.current.add(miner.id);
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Miner Expired!',
+            body: 'Your mining module has completed its cycle. Reactivate your rigs to keep earning Bits!',
+            data: { type: 'miner_expired', miner_id: miner.id },
+          },
+          trigger: null,
+        });
+      }
+    }
+  }, [liveMiners]);
+
   const liveBalance = (() => {
     const base = walletData?.total_balance ?? 0;
     const todayEarnings = walletData?.today_earnings ?? 0;
     if (base === 0 && todayEarnings === 0 && activeMinersCount === 0) return 0;
     const activeHashRate = walletData?.current_hash_rate ?? 0;
-    const perSecondRate = 0.0000000027175 / 86400;
+    // 1 GH/s yields 1 Satoshi (0.00000001 BTC) over 24 hours
+    const perSecondRate = 0.00000001 / 86400;
     const serverDerived = activeHashRate > 0 ? activeHashRate * perSecondRate * tick : 0;
     const satoshiSpin = activeMinersCount * 0.000000000005 * satoshiTick;
     return base + serverDerived + satoshiSpin;
@@ -581,18 +599,14 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Account Status Badge */}
-        <View style={styles.walletStatusCard}>
-          <View style={styles.walletStatusHeader}>
-            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-            <Text style={styles.walletStatusText}>Account Status: Verified Simulation</Text>
-          </View>
-          {walletStatus?.status === 'connected' && walletStatus?.btc_address && (
-            <Text style={styles.walletAddress} numberOfLines={1}>
-              {walletStatus.btc_address.substring(0, 12)}...{walletStatus.btc_address.substring(walletStatus.btc_address.length - 8)}
-            </Text>
-          )}
-          {walletStatus?.status === 'connected' && (
+        {/* Wallet Actions */}
+        {walletStatus?.status === 'connected' && (
+          <View style={styles.walletStatusCard}>
+            {walletStatus?.btc_address && (
+              <Text style={styles.walletAddress} numberOfLines={1}>
+                {walletStatus.btc_address.substring(0, 12)}...{walletStatus.btc_address.substring(walletStatus.btc_address.length - 8)}
+              </Text>
+            )}
             <View style={styles.walletActionsRow}>
               <TouchableOpacity style={styles.walletActionButton} onPress={() => setShowAddressChangeModal(true)}>
                 <Ionicons name="create" size={16} color="#2196F3" />
@@ -603,8 +617,8 @@ export default function Dashboard() {
                 <Text style={styles.walletActionButtonText}>Withdraw BTC</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Mining Status */}
         <View style={styles.miningCard}>
@@ -628,7 +642,7 @@ export default function Dashboard() {
               <Ionicons name="gift" size={24} color="#4CAF50" />
               <View style={styles.actionButtonText}>
                 <Text style={styles.actionButtonTitle}>Free Daily Miner</Text>
-                <Text style={styles.actionButtonSubtitle}>10 GH/s for 24 hours</Text>
+                <Text style={styles.actionButtonSubtitle}>1 GH/s for 4 hours</Text>
               </View>
               {activatingMiner === 'free' ? (
                 <ActivityIndicator size="small" color="#4CAF50" />
@@ -647,7 +661,7 @@ export default function Dashboard() {
               <View style={styles.actionButtonText}>
                 <Text style={styles.actionButtonTitle}>Watch Ad for Boost</Text>
                 <Text style={styles.actionButtonSubtitle}>
-                  {adStats ? `${adStats.remaining_ads}/${adStats.max_daily_ads} ads remaining today` : '2 GH/s for 30 minutes'}
+                  {adStats ? `${adStats.remaining_ads}/${adStats.max_daily_ads} ads remaining today` : '5 GH/s for 24 hours'}
                 </Text>
               </View>
               {activatingMiner === 'ad' || isWatchingAd ? (

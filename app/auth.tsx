@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 import { BACKEND_URL } from '../utils/api';
 
 export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess?: () => void }) {
@@ -41,13 +42,15 @@ export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess?: () => vo
       setIsLoading(true);
       
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = isLogin 
+      const deviceFingerprint = `${Device.osName}-${Device.osVersion}-${Device.modelName || 'unknown'}-${Device.deviceName || 'unknown'}`;
+      const body = isLogin
         ? { email: formData.email, password: formData.password }
         : {
             name: formData.name,
             email: formData.email,
             password: formData.password,
-            referral_code: formData.referralCode || null
+            referral_code: formData.referralCode || null,
+            device_fingerprint: deviceFingerprint,
           };
 
       const response = await fetch(`${BACKEND_URL}${endpoint}`, {

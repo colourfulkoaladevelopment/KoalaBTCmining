@@ -87,7 +87,7 @@ export default function Invites() {
 
   const shareReferralCode = async () => {
     if (referralStats?.referral_code) {
-      const message = `Join me on Koala Mining and start earning Bitcoin! Use my referral code: ${referralStats.referral_code}\n\nWe both get a 50 GH/s miner for 30 days when you sign up!\n\nDownload: https://koalamining.app`;
+      const message = `Join me on Koala Mining and start earning Bitcoin! Use my referral code: ${referralStats.referral_code}\n\nWe both get a 25 GH/s miner for 30 days when you sign up!\n\nDownload: https://koalamining.app`;
       try {
         await Share.share({ message, title: 'Koala Mining' });
       } catch (error) {
@@ -159,7 +159,7 @@ export default function Invites() {
           <View style={styles.redeemCard}>
             <Text style={styles.cardTitle}>Have a Referral Code?</Text>
             <Text style={styles.redeemDescription}>
-              Redeem a friend's code to get a 50 GH/s bonus miner for 30 days!
+              Redeem a friend's code to get a 25 GH/s bonus miner for 30 days!
             </Text>
             <View style={styles.redeemRow}>
               <TextInput
@@ -210,7 +210,7 @@ export default function Invites() {
             <View style={styles.rewardText}>
               <Text style={styles.rewardTitle}>Sign-up Bonus</Text>
               <Text style={styles.rewardDescription}>
-                Both you and your friend get a 50 GH/s miner for 30 days when they join
+                Both you and your friend get a 25 GH/s miner for 30 days when they join
               </Text>
             </View>
           </View>
@@ -289,7 +289,7 @@ export default function Invites() {
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>2</Text>
             </View>
-            <Text style={styles.stepDescription}>They sign up using your code and both get 50 GH/s miners</Text>
+            <Text style={styles.stepDescription}>They sign up using your code and both get 25 GH/s miners</Text>
           </View>
           <View style={styles.stepItem}>
             <View style={styles.stepNumber}>

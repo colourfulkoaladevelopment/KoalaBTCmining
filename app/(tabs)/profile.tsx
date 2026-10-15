@@ -11,7 +11,6 @@ import {
   Modal,
   TextInput,
   Image,
-  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,16 +58,6 @@ export default function Profile() {
       console.error('Error loading user profile:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const copyReferralCode = async () => {
-    if (userProfile?.referral_code) {
-      try {
-        await Share.share({ message: userProfile.referral_code });
-      } catch {
-        Alert.alert('Error', 'Could not copy to clipboard');
-      }
     }
   };
 
@@ -257,37 +246,23 @@ export default function Profile() {
         {/* Stats Card */}
         <View style={styles.statsCard}>
           <Text style={styles.cardTitle}>Account Stats</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
+          <View style={styles.statsVertical}>
+            <View style={styles.statItemVertical}>
               <Text style={styles.statNumber}>₿ {(userProfile?.bitcoin_balance ?? 0).toFixed(12)}</Text>
               <Text style={styles.statLabel}>Current Balance</Text>
             </View>
-            <View style={styles.statItem}>
+            <View style={styles.statItemVertical}>
               <Text style={styles.statNumber}>₿ {(userProfile?.total_earnings ?? 0).toFixed(12)}</Text>
-              <Text style={styles.statLabel}>Total Earned</Text>
+              <Text style={styles.statLabel}>Lifetime Earnings</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{(userProfile?.total_referral_rewards ?? 0).toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Referral Rewards GH/s</Text>
-            </View>
-            <View style={styles.statItem}>
+            <View style={styles.statItemVertical}>
               <Text style={styles.statNumber}>{getJoinedDate(userProfile?.created_at ?? '')}</Text>
               <Text style={styles.statLabel}>Member Since</Text>
             </View>
           </View>
         </View>
 
-        {/* Referral Code Card */}
-        <View style={styles.referralCard}>
-          <Text style={styles.cardTitle}>Your Referral Code</Text>
-          <View style={styles.referralCodeContainer}>
-            <Text style={styles.referralCode}>{userProfile?.referral_code ?? 'N/A'}</Text>
-            <TouchableOpacity style={styles.copyButton} onPress={copyReferralCode}>
-              <Ionicons name="copy" size={20} color="#FF9800" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.referralDescription}>Share this code to earn rewards when friends join</Text>
-        </View>
+
 
         {/* Actions Card */}
         <View style={styles.actionsCard}>
@@ -329,12 +304,12 @@ export default function Profile() {
         <View style={styles.infoCard}>
           <Text style={styles.cardTitle}>App Information</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoLabel}>Build Number</Text>
             <Text style={styles.infoValue}>1.0.0</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Build</Text>
-            <Text style={styles.infoValue}>2024.001</Text>
+            <Text style={styles.infoLabel}>Release Date</Text>
+            <Text style={styles.infoValue}>Nov 14, 2026</Text>
           </View>
         </View>
 
@@ -428,15 +403,10 @@ const styles = StyleSheet.create({
   removeAvatarText: { fontSize: 12, color: '#FF5722', marginTop: 4 },
   statsCard: { backgroundColor: '#2a2a2a', marginHorizontal: 15, marginBottom: 15, padding: 20, borderRadius: 12 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFF', marginBottom: 15 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statItem: { width: '48%', alignItems: 'center', marginBottom: 20, padding: 16, backgroundColor: '#333', borderRadius: 8 },
+  statsVertical: { flexDirection: 'column' },
+  statItemVertical: { width: '100%', alignItems: 'center', marginBottom: 16, padding: 16, backgroundColor: '#333', borderRadius: 8 },
   statNumber: { fontSize: 16, fontWeight: 'bold', color: '#FF9800', marginBottom: 4, textAlign: 'center' },
   statLabel: { fontSize: 12, color: '#AAA', textAlign: 'center' },
-  referralCard: { backgroundColor: '#2a2a2a', marginHorizontal: 15, marginBottom: 15, padding: 20, borderRadius: 12 },
-  referralCodeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 16, borderRadius: 8, marginBottom: 12 },
-  referralCode: { fontSize: 18, fontWeight: 'bold', color: '#FF9800', letterSpacing: 1, flex: 1, textAlign: 'center' },
-  copyButton: { padding: 8 },
-  referralDescription: { fontSize: 14, color: '#AAA', textAlign: 'center' },
   actionsCard: { backgroundColor: '#2a2a2a', marginHorizontal: 15, marginBottom: 15, padding: 20, borderRadius: 12 },
   actionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#333' },
   actionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#333', justifyContent: 'center', alignItems: 'center', marginRight: 16 },

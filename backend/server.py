@@ -202,6 +202,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     referral_code: Optional[str] = None
+    device_fingerprint: Optional[str] = None
 
     @validator("email")
     def validate_email(cls, v):
@@ -251,7 +252,7 @@ def generate_referral_code() -> str:
             return code
 
 def grant_referral_rewards(referrer_id: str, referee_id: str):
-    """Create the referral record and grant the identical 50 GH/s / 30-day
+    """Create the referral record and grant the identical 25 GH/s / 30-day
     welcome miner to BOTH the referrer and the referee. Used on signup and on
     one-time post-signup redeem."""
     # Create referral record
@@ -263,12 +264,12 @@ def grant_referral_rewards(referrer_id: str, referee_id: str):
         "created_at": datetime.utcnow()
     })
 
-    # 50 GH/s miner for 30 days for the referrer
+    # 25 GH/s miner for 30 days for the referrer
     miners_collection.insert_one({
         "_id": str(uuid.uuid4()),
         "user_id": str(referrer_id),
         "name": "Referral Reward Miner",
-        "hash_rate": 50.0,
+        "hash_rate": 25.0,
         "miner_type": "referral_reward",
         "status": "inactive",
         "duration_hours": 720.0,  # 30 days
@@ -283,7 +284,7 @@ def grant_referral_rewards(referrer_id: str, referee_id: str):
         "_id": str(uuid.uuid4()),
         "user_id": str(referee_id),
         "name": "Welcome Referral Miner",
-        "hash_rate": 50.0,
+        "hash_rate": 25.0,
         "miner_type": "referral_reward",
         "status": "inactive",
         "duration_hours": 720.0,
@@ -415,8 +416,8 @@ async def check_expired_miners():
             
             await send_push_notification(
                 user_id=miner["user_id"],
-                title="Miner Deactivated ⚠️",
-                body=f"Your {miner_type_text} has expired and been deactivated.",
+                title="Miner Expired!",
+                body="Your mining module has completed its cycle. Reactivate your rigs to keep earning Bits!",
                 data={
                     "type": "miner_expired",
                     "miner_id": str(miner["_id"]),
@@ -457,7 +458,7 @@ async def process_mining_earnings():
         user_earnings = {}
         transactions = []
         now = datetime.utcnow()
-        base_rate_per_gh_per_tick = 0.0000000027175 / 144  # 144 ticks per day (every 10 min)
+        base_rate_per_gh_per_tick = 0.00000001 / 144  # 1 GH/s = 1 Satoshi per 24h, 144 ticks per day (every 10 min)
 
         for miner in active_miners:
             # Calculate earnings based on advertised daily_reward
@@ -570,6 +571,7 @@ async def register(request: RegisterRequest):
         "total_referral_rewards": 0.0,
         "total_cashed_out": 0.0,  # Track total withdrawals
         "role": "user",
+        "device_fingerprint": request.device_fingerprint,
         "created_at": datetime.utcnow()
     }
     
@@ -579,6 +581,13 @@ async def register(request: RegisterRequest):
     if request.referral_code:
         referrer = users_collection.find_one({"referral_code": request.referral_code})
         if referrer and str(referrer["_id"]) != user_id:
+            # Anti-fraud: block self-referral on same device
+            if request.device_fingerprint and referrer.get("device_fingerprint") == request.device_fingerprint:
+                users_collection.update_one({"_id": user_id}, {"$set": {"referred_by": None}})
+                raise HTTPException(
+                    status_code=400,
+                    detail="Referral code invalid: Identical device signature detected."
+                )
             grant_referral_rewards(str(referrer["_id"]), user_id)
         else:
             # Invalid code: don't keep a dangling referred_by so the user can
@@ -1012,7 +1021,7 @@ async def activate_miner(miner_id: str, current_user: Dict = Depends(get_current
 
 @app.post("/api/miners/activate-free")
 async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
-    """Activate or create free daily miner (10 GH/s for 24h)"""
+    """Activate or create free daily miner (1 GH/s for 4h)"""
     # Check if user already has an active free miner today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     existing_free = miners_collection.find_one({
@@ -1026,7 +1035,7 @@ async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
     
     # Create or reactivate free miner
     now = datetime.utcnow()
-    expires_at = now + timedelta(hours=24)
+    expires_at = now + timedelta(hours=4)
     
     if existing_free:
         # Reactivate existing free miner
@@ -1034,9 +1043,11 @@ async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
             {"_id": existing_free["_id"]},
             {"$set": {
                 "status": "active",
+                "hash_rate": 1.0,
                 "activated_at": now,
                 "expires_at": expires_at,
-                "time_remaining": 24.0
+                "time_remaining": 4.0,
+                "duration_hours": 4.0
             }}
         )
         miner_id = existing_free["_id"]
@@ -1047,11 +1058,11 @@ async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
             "_id": miner_id,
             "user_id": current_user["id"],
             "name": "Daily Free Miner",
-            "hash_rate": 10.0,
+            "hash_rate": 1.0,
             "miner_type": "free",
             "status": "active",
-            "duration_hours": 24.0,
-            "time_remaining": 24.0,
+            "duration_hours": 4.0,
+            "time_remaining": 4.0,
             "total_earned": 0.0,
             "purchase_price": 0.0,
             "created_at": now,
@@ -1064,7 +1075,7 @@ async def activate_free_miner(current_user: Dict = Depends(get_current_user)):
 
 @app.post("/api/miners/watch-ad")
 async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
-    """Activate ad miner (2 GH/s for 30 minutes, stackable up to 24h)"""
+    """Activate ad miner (5 GH/s for 24 hours)"""
     # Enforce the SAME daily reward limit as /api/ads/watch. Without this the
     # route is a second, unlimited path to the same mining reward.
     today = datetime.utcnow().date().isoformat()
@@ -1097,7 +1108,7 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
     if ad_miner:
         # Extend existing ad miner time (max 24 hours)
         current_remaining = max(0, ad_miner.get("time_remaining", 0.0))
-        new_time_remaining = min(current_remaining + 0.5, 24.0)  # Add 30 minutes, cap at 24h
+        new_time_remaining = min(current_remaining + 24.0, 24.0)  # Add 24 hours, cap at 24h
         
         expires_at = now + timedelta(hours=new_time_remaining)
         
@@ -1105,6 +1116,7 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
             {"_id": ad_miner["_id"]},
             {"$set": {
                 "status": "active" if new_time_remaining > 0 else "inactive",
+                "hash_rate": 5.0,
                 "time_remaining": new_time_remaining,
                 "expires_at": expires_at,
                 "activated_at": now if ad_miner["status"] != "active" else ad_miner.get("activated_at")
@@ -1113,17 +1125,17 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
     else:
         # Create new ad miner
         miner_id = str(uuid.uuid4())
-        expires_at = now + timedelta(minutes=30)
+        expires_at = now + timedelta(hours=24)
         
         ad_miner_data = {
             "_id": miner_id,
             "user_id": current_user["id"],
             "name": "Ad Boost Miner",
-            "hash_rate": 2.0,
+            "hash_rate": 5.0,
             "miner_type": "ad",
             "status": "active",
-            "duration_hours": 0.5,
-            "time_remaining": 0.5,
+            "duration_hours": 24.0,
+            "time_remaining": 24.0,
             "total_earned": 0.0,
             "purchase_price": 0.0,
             "created_at": now,
@@ -1132,7 +1144,7 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
         }
         miners_collection.insert_one(ad_miner_data)
     
-    return {"message": "Ad miner boost activated successfully"}
+    return {"message": "Ad miner activated successfully"}
 
 # Store endpoints
 
@@ -1140,15 +1152,15 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
 # Used by BOTH /api/store/miners (display) and /api/payments/create-paypal-order (pricing),
 # so the price/hash-rate shown to the user always matches what PayPal charges.
 STORE_MINERS = [
-    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000054350000},
-    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000108700000},
-    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000217400000},
-    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00000543500000},
-    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00001087000000},
-    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00002174000000},
-    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00005435000000},
-    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00008152500000},
-    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 40000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00010870000000}
+    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000200000000},
+    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000400000000},
+    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000800000000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00002000000000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00004000000000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00008000000000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00020000000000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00030000000000},
+    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 40000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00040000000000}
 ]
 
 @app.get("/api/store/miners")
@@ -1187,7 +1199,7 @@ async def redeem_referral_code(
 ):
     """One-time redemption of a referral code after signup. Once a user has a
     referrer set, it can never be changed. Grants identical rewards to signup:
-    a 50 GH/s / 30-day miner for both the referrer and the current user."""
+    a 25 GH/s / 30-day miner for both the referrer and the current user."""
     code = (data.get("referral_code") or "").strip().upper()
     if not code:
         raise HTTPException(status_code=400, detail="Please enter a referral code.")
@@ -1228,8 +1240,8 @@ async def redeem_referral_code(
     return {
         "success": True,
         "referred_by": code,
-        "message": "Referral code applied! You and your referrer each received a 50 GH/s miner for 30 days. Activate it to start earning.",
-        "reward": {"hash_rate": 50.0, "duration_days": 30}
+        "message": "Referral code applied! You and your referrer each received a 25 GH/s miner for 30 days. Activate it to start earning.",
+        "reward": {"hash_rate": 25.0, "duration_days": 30}
     }
 
 # Support endpoints
