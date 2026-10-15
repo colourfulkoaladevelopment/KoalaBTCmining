@@ -587,7 +587,19 @@ export default function Dashboard() {
             <Ionicons name="arrow-up-circle" size={20} color="#FFF" />
             <Text style={styles.withdrawFundsText}>Withdraw Funds</Text>
           </TouchableOpacity>
-          <Text style={styles.satoshiBalance}>{availableSatoshis.toLocaleString()} Satoshis available</Text>
+          <View style={styles.withdrawProgressContainer}>
+            <View style={styles.withdrawProgressTrack}>
+              <View
+                style={[
+                  styles.withdrawProgressFill,
+                  { width: `${Math.min((Math.floor(liveBalance * 100_000_000) / 2500) * 100, 100)}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.withdrawProgressLabel}>
+              {Math.floor(liveBalance * 100_000_000).toLocaleString()}/2,500 satoshis minimum withdrawal
+            </Text>
+          </View>
         </View>
 
         {/* Wallet Actions */}
@@ -880,7 +892,10 @@ const styles = StyleSheet.create({
   withdrawFundsButtonDisabled: { backgroundColor: '#444' },
   withdrawFundsText: { color: '#FFF', fontSize: 15, fontWeight: 'bold', marginLeft: 8 },
   withdrawFundsTextDisabled: { color: '#999' },
-  satoshiBalance: { color: '#AAA', fontSize: 12, textAlign: 'center', marginTop: 8 },
+  withdrawProgressContainer: { marginTop: 12, paddingHorizontal: 4 },
+  withdrawProgressTrack: { height: 8, backgroundColor: '#333', borderRadius: 4, overflow: 'hidden' },
+  withdrawProgressFill: { height: '100%', backgroundColor: '#FF9800', borderRadius: 4 },
+  withdrawProgressLabel: { color: '#AAA', fontSize: 12, textAlign: 'center', marginTop: 6 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   stat: { alignItems: 'center' },
   statLabel: { fontSize: 12, color: '#AAA', marginBottom: 5 },
