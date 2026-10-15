@@ -332,7 +332,7 @@ export default function Profile() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Koala Mining{'\n'}Educational Mining Experience</Text>
+          <Text style={styles.footerText}>Koala Mining{'\n'}Production v1.0</Text>
         </View>
       </ScrollView>
 

@@ -1152,15 +1152,15 @@ async def activate_ad_miner(current_user: Dict = Depends(get_current_user)):
 # Used by BOTH /api/store/miners (display) and /api/payments/create-paypal-order (pricing),
 # so the price/hash-rate shown to the user always matches what PayPal charges.
 STORE_MINERS = [
-    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000200000000},
-    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000400000000},
-    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 29.99, "duration_days": 30, "daily_reward": 0.00000800000000},
-    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00002000000000},
-    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00004000000000},
-    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00008000000000},
-    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00020000000000},
-    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00030000000000},
-    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 40000.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00040000000000}
+    {"id": "miner_100gh", "name": "Standard Miner", "hash_rate": 200.0, "price": 7.99, "duration_days": 30, "daily_reward": 0.00000200000000, "sats_bought": 9974, "payout_30day": 6000},
+    {"id": "miner_200gh", "name": "Advanced Miner", "hash_rate": 400.0, "price": 14.99, "duration_days": 30, "daily_reward": 0.00000400000000, "sats_bought": 18713, "payout_30day": 12000},
+    {"id": "miner_400gh", "name": "Pro Miner", "hash_rate": 800.0, "price": 27.99, "duration_days": 30, "daily_reward": 0.00000800000000, "sats_bought": 34929, "payout_30day": 24000},
+    {"id": "miner_1th", "name": "Elite Miner", "hash_rate": 2000.0, "price": 79.99, "duration_days": 30, "daily_reward": 0.00002000000000, "sats_bought": 99867, "payout_30day": 66000},
+    {"id": "miner_2th", "name": "Master Miner", "hash_rate": 4000.0, "price": 159.99, "duration_days": 30, "daily_reward": 0.00004000000000, "sats_bought": 199721, "payout_30day": 135000},
+    {"id": "miner_4th", "name": "Supreme Miner", "hash_rate": 8000.0, "price": 299.99, "duration_days": 30, "daily_reward": 0.00008000000000, "sats_bought": 374373, "payout_30day": 270000},
+    {"id": "miner_10th", "name": "Ultimate Miner", "hash_rate": 20000.0, "price": 449.99, "duration_days": 30, "daily_reward": 0.00020000000000, "sats_bought": 561505, "payout_30day": 420000},
+    {"id": "miner_15th", "name": "Legendary Miner", "hash_rate": 30000.0, "price": 749.99, "duration_days": 30, "daily_reward": 0.00030000000000, "sats_bought": 936173, "payout_30day": 720000},
+    {"id": "miner_20th", "name": "Mythical Miner", "hash_rate": 29120.0, "price": 999.99, "duration_days": 30, "daily_reward": 0.00029120000000, "sats_bought": 1248389, "payout_30day": 874072}
 ]
 
 @app.get("/api/store/miners")
@@ -1737,6 +1737,100 @@ async def withdraw_bitcoin(
     except Exception as e:
         logger.error(f"Error processing Bitcoin withdrawal: {e}")
         raise HTTPException(status_code=500, detail="Failed to process withdrawal")
+
+@app.post("/api/withdraw/request")
+async def request_withdrawal(
+    data: Dict[str, Any],
+    current_user: Dict = Depends(get_current_user)
+):
+    """Submit a satoshi-denominated withdrawal request for admin review.
+
+    Deducts the requested amount from the user's balance atomically and records
+    a pending withdrawal in the withdrawals collection. Payout is handled
+    out-of-band by admin via Kraken after manual verification.
+    """
+    SATOSHIS_PER_BTC = 100_000_000
+    MIN_WITHDRAWAL_SATS = 2500
+
+    address = (data.get("address") or "").strip()
+    sats_amount = data.get("amount")
+
+    if not address:
+        raise HTTPException(status_code=400, detail="Bitcoin withdrawal address is required.")
+    if not (address.startswith("1") or address.startswith("3") or address.startswith("bc1")):
+        raise HTTPException(status_code=400, detail="Invalid Bitcoin address format.")
+
+    try:
+        sats_amount = int(sats_amount)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Amount must be a whole number of Satoshis.")
+
+    if sats_amount < MIN_WITHDRAWAL_SATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Minimum withdrawal limit not met. You must accumulate at least {MIN_WITHDRAWAL_SATS:,} Satoshis to request a payout."
+        )
+
+    amount_btc = sats_amount / SATOSHIS_PER_BTC
+
+    user = users_collection.find_one({"_id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    current_balance = user.get("bitcoin_balance", 0.0)
+    if amount_btc > current_balance:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient balance. Available: {current_balance:.8f} BTC ({int(current_balance * SATOSHIS_PER_BTC):,} sats)."
+        )
+
+    # Atomically claim funds: the balance condition is in the filter so two
+    # concurrent requests cannot both succeed.
+    claim = users_collection.update_one(
+        {"_id": current_user["id"], "bitcoin_balance": {"$gte": amount_btc}},
+        {"$inc": {"bitcoin_balance": -amount_btc, "total_cashed_out": amount_btc}},
+    )
+    if claim.modified_count != 1:
+        raise HTTPException(status_code=400, detail="Insufficient balance for this withdrawal.")
+
+    withdrawal_id = str(uuid.uuid4())
+    withdrawal_record = {
+        "_id": withdrawal_id,
+        "user_id": current_user["id"],
+        "bitcoin_address": address,
+        "amount_sats": sats_amount,
+        "amount_btc": amount_btc,
+        "network": "bitcoin",
+        "status": "Pending Administrative Review",
+        "transaction_hash": None,
+        "created_at": datetime.utcnow(),
+        "processed_at": None,
+        "notes": "Pending Administrative Review",
+    }
+    db.withdrawals.insert_one(withdrawal_record)
+
+    transactions_collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "transaction_type": "withdrawal",
+        "amount": -amount_btc,
+        "description": f"Withdrawal request: {sats_amount:,} sats to {address[:10]}...{address[-6:]}",
+        "withdrawal_id": withdrawal_id,
+        "created_at": datetime.utcnow(),
+    })
+
+    new_balance = current_balance - amount_btc
+    logger.info(f"Withdrawal request created: {sats_amount} sats to {address} (User: {current_user['id']})")
+
+    return {
+        "success": True,
+        "withdrawal_id": withdrawal_id,
+        "amount_sats": sats_amount,
+        "amount_btc": amount_btc,
+        "new_balance_btc": new_balance,
+        "status": "Pending Administrative Review",
+        "message": "Withdrawal request submitted! Payout processing is subject to verification.",
+    }
 
 async def process_bitcoin_withdrawal(address: str, amount: float, withdrawal_id: str, network: str = "bitcoin") -> str:
     """Process Bitcoin withdrawal using configured wallet service"""

@@ -393,29 +393,35 @@ export default function Dashboard() {
     }
   };
 
-  const handleWithdraw = async () => {
-    const amount = parseFloat(withdrawForm.amount);
-    if (!withdrawForm.address.trim()) {
-      Alert.alert('Error', 'Please enter a Bitcoin address');
-      return;
-    }
-    if (!amount || amount < 0.0002) {
-      Alert.alert('Error', 'Minimum withdrawal is 0.0002 BTC');
-      return;
-    }
-    if (amount > (walletData?.total_balance || 0)) {
-      Alert.alert('Error', 'Insufficient balance');
-      return;
-    }
+  const availableSatoshis = Math.floor((walletData?.total_balance || 0) * 100_000_000);
 
-    if (adStats?.can_watch_ad) {
-      Alert.alert('Watch Ad Required', 'You need to watch a short ad before withdrawing.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Watch Ad', onPress: () => showForcedAdForWithdraw() },
-      ]);
-    } else {
-      proceedWithWithdrawal();
+  const openWithdrawModal = () => {
+    if (availableSatoshis < 2500) {
+      Alert.alert('Minimum withdrawal limit not met', 'You must accumulate at least 2,500 Satoshis to request a payout.');
+      return;
     }
+    setShowWithdrawModal(true);
+  };
+
+  const handleWithdraw = async () => {
+    const amount = Number.parseInt(withdrawForm.amount, 10);
+    if (availableSatoshis < 2500) {
+      Alert.alert('Minimum withdrawal limit not met', 'You must accumulate at least 2,500 Satoshis to request a payout.');
+      return;
+    }
+    if (!withdrawForm.address.trim()) {
+      Alert.alert('Error', 'Please enter a Bitcoin withdrawal address.');
+      return;
+    }
+    if (!Number.isInteger(amount) || amount < 2500) {
+      Alert.alert('Error', 'The minimum withdrawal amount is 2,500 Satoshis.');
+      return;
+    }
+    if (amount > availableSatoshis) {
+      Alert.alert('Error', 'Insufficient balance for this payout.');
+      return;
+    }
+    await proceedWithWithdrawal(amount);
   };
 
   const showForcedAdForWithdraw = async () => {
@@ -423,48 +429,29 @@ export default function Dashboard() {
     setShowAdModal(true);
   };
 
-  const proceedWithWithdrawal = async () => {
-    const amount = parseFloat(withdrawForm.amount);
-    const withdrawalFee = 0.00002;
-    const serviceFee = 0.00001;
-    const totalFee = networkFee + withdrawalFee + serviceFee;
-    const receiveAmount = amount - totalFee;
-
-    Alert.alert(
-      'Confirm Withdrawal',
-      `Amount: ${amount} BTC\nNetwork Fee: ${networkFee.toFixed(12)} BTC\nWithdrawal Fee: ${withdrawalFee} BTC\nService Fee: ${serviceFee} BTC\n\nYou will receive: ${receiveAmount.toFixed(12)} BTC`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setIsWithdrawing(true);
-            try {
-              const res = await apiFetch('/api/withdraw/bitcoin', {
-                method: 'POST',
-                body: JSON.stringify({
-                  address: withdrawForm.address,
-                  amount: amount,
-                  network: withdrawForm.network,
-                }),
-              });
-              if (res.ok) {
-                Alert.alert('Success', 'Withdrawal request submitted! It will be processed shortly.');
-                setShowWithdrawModal(false);
-                setWithdrawForm({ address: '', amount: '', network: 'bitcoin' });
-                loadData();
-              } else {
-                Alert.alert('Error', res.data?.detail || 'Withdrawal failed');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Network error occurred');
-            } finally {
-              setIsWithdrawing(false);
-            }
-          },
-        },
-      ]
-    );
+  const proceedWithWithdrawal = async (amountSatoshis: number) => {
+    setIsWithdrawing(true);
+    try {
+      const res = await apiFetch('/api/withdraw/request', {
+        method: 'POST',
+        body: JSON.stringify({
+          address: withdrawForm.address.trim(),
+          amount: amountSatoshis,
+        }),
+      });
+      if (res.ok) {
+        Alert.alert('Payout Submitted', 'Withdrawal request submitted! Payout processing is subject to verification.');
+        setShowWithdrawModal(false);
+        setWithdrawForm({ address: '', amount: '', network: 'bitcoin' });
+        loadData();
+      } else {
+        Alert.alert('Error', res.data?.detail || 'Withdrawal request failed.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error occurred.');
+    } finally {
+      setIsWithdrawing(false);
+    }
   };
 
   const handleAdModalConfirm = async () => {
@@ -489,7 +476,7 @@ export default function Dashboard() {
     setIsWatchingAd(false);
 
     if (currentAdType === 'withdrawal' && adResult) {
-      proceedWithWithdrawal();
+      handleWithdraw();
     } else if (currentAdType === 'miner_activation' && adResult) {
       try {
         setActivatingMiner('ad');
@@ -597,6 +584,14 @@ export default function Dashboard() {
               <Text style={styles.statValue}>{walletData?.active_miners || 0}/{walletData?.total_miners || 0}</Text>
             </View>
           </View>
+          <TouchableOpacity
+            style={[styles.withdrawFundsButton, availableSatoshis < 2500 && styles.withdrawFundsButtonDisabled]}
+            onPress={openWithdrawModal}
+          >
+            <Ionicons name="arrow-up-circle" size={20} color={availableSatoshis >= 2500 ? '#FFF' : '#999'} />
+            <Text style={[styles.withdrawFundsText, availableSatoshis < 2500 && styles.withdrawFundsTextDisabled]}>Withdraw Funds</Text>
+          </TouchableOpacity>
+          <Text style={styles.satoshiBalance}>{availableSatoshis.toLocaleString()} Satoshis available</Text>
         </View>
 
         {/* Wallet Actions */}
@@ -749,10 +744,11 @@ export default function Dashboard() {
       <Modal visible={showWithdrawModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Withdraw Bitcoin</Text>
+            <Text style={styles.modalTitle}>Withdraw Funds</Text>
+            <Text style={styles.modalSubtitle}>Minimum payout: 2,500 Satoshis. Requests are reviewed before processing.</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Bitcoin Address"
+              placeholder="Bitcoin Withdrawal Address"
               placeholderTextColor="#666"
               value={withdrawForm.address}
               onChangeText={text => setWithdrawForm({ ...withdrawForm, address: text })}
@@ -760,21 +756,19 @@ export default function Dashboard() {
             />
             <TextInput
               style={styles.modalInput}
-              placeholder="Amount (BTC) - Min 0.0002"
+              placeholder="Amount to Withdraw (in Satoshis)"
               placeholderTextColor="#666"
               value={withdrawForm.amount}
-              onChangeText={text => setWithdrawForm({ ...withdrawForm, amount: text })}
-              keyboardType="decimal-pad"
+              onChangeText={text => setWithdrawForm({ ...withdrawForm, amount: text.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad"
             />
-            <Text style={styles.feeInfo}>Network Fee: ₿ {networkFee.toFixed(12)}</Text>
-            <Text style={styles.feeInfo}>Withdrawal Fee: ₿ 0.00002000</Text>
-            <Text style={styles.feeInfo}>Service Fee: ₿ 0.00001000</Text>
+            <Text style={styles.feeInfo}>Available: {availableSatoshis.toLocaleString()} Satoshis</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowWithdrawModal(false)}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalConfirmButton} onPress={handleWithdraw} disabled={isWithdrawing}>
-                {isWithdrawing ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalConfirmText}>Withdraw</Text>}
+                {isWithdrawing ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalConfirmText}>Confirm Payout</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -886,6 +880,11 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFF', marginBottom: 10 },
   balance: { fontSize: 28, fontWeight: 'bold', color: '#FF9800', textAlign: 'center', marginVertical: 10 },
   usdValue: { fontSize: 16, color: '#AAA', textAlign: 'center', marginBottom: 15 },
+  withdrawFundsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1976D2', paddingVertical: 13, borderRadius: 10, marginTop: 18 },
+  withdrawFundsButtonDisabled: { backgroundColor: '#444' },
+  withdrawFundsText: { color: '#FFF', fontSize: 15, fontWeight: 'bold', marginLeft: 8 },
+  withdrawFundsTextDisabled: { color: '#999' },
+  satoshiBalance: { color: '#AAA', fontSize: 12, textAlign: 'center', marginTop: 8 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   stat: { alignItems: 'center' },
   statLabel: { fontSize: 12, color: '#AAA', marginBottom: 5 },

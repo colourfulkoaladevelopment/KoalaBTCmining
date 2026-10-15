@@ -21,6 +21,8 @@ interface StoreMiner {
   hash_rate: number;
   price: number;
   duration_days: number;
+  sats_bought: number;
+  payout_30day: number;
 }
 
 interface UserBalance {
@@ -179,15 +181,18 @@ export default function Store() {
   };
 
   const getTierName = (hashRate: number): string => {
-    if (hashRate >= 20000) return 'MYTHICAL';
-    if (hashRate >= 15000) return 'LEGENDARY';
-    if (hashRate >= 10000) return 'ULTIMATE';
-    if (hashRate >= 4000) return 'SUPREME';
-    if (hashRate >= 2000) return 'MASTER';
-    if (hashRate >= 1000) return 'ELITE';
-    if (hashRate >= 400) return 'PRO';
-    if (hashRate >= 200) return 'ADVANCED';
-    return 'STANDARD';
+    const tiers: Record<number, string> = {
+      200: 'STANDARD',
+      400: 'ADVANCED',
+      800: 'PRO',
+      2000: 'ELITE',
+      4000: 'MASTER',
+      8000: 'SUPREME',
+      20000: 'ULTIMATE',
+      29120: 'MYTHICAL',
+      30000: 'LEGENDARY',
+    };
+    return tiers[hashRate] || 'PREMIUM';
   };
 
   if (isLoading) {
@@ -252,44 +257,30 @@ export default function Store() {
           </TouchableOpacity>
           {showEarningsGuide && (
             <>
-              <Text style={styles.legendSubtitle}>1 GH/s earns 1 Satoshi (₿ 0.00000001) over 24 hours of continuous runtime:</Text>
-              <View style={styles.legendGrid}>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>1 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000010000 / day</Text>
+              <Text style={styles.legendSubtitle}>Total estimated 30-day yield per tier, distributed incrementally through 10-minute mining ticks (1 GH/s = 1 Satoshi / 24h):</Text>
+              <View style={styles.legendTable}>
+                <View style={styles.legendTableHeader}>
+                  <Text style={styles.legendTableHeaderText}>Miner</Text>
+                  <Text style={styles.legendTableHeaderText}>30-Day Yield</Text>
+                  <Text style={styles.legendTableHeaderText}>Est. Return</Text>
                 </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>5 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000050000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>25 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000000250000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>200 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000002000000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>400 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000004000000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>800 GH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000008000000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>2 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000020000000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>4 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000040000000 / day</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <Text style={styles.legendHashRate}>8 TH/s</Text>
-                  <Text style={styles.legendEarning}>₿ 0.000080000000 / day</Text>
-                </View>
+                {[
+                  ['Standard', '9,974', '6,000'],
+                  ['Advanced', '18,713', '12,000'],
+                  ['Pro', '34,929', '24,000'],
+                  ['Elite', '99,867', '66,000'],
+                  ['Master', '199,721', '135,000'],
+                  ['Supreme', '374,373', '270,000'],
+                  ['Ultimate', '561,505', '420,000'],
+                  ['Legendary', '936,173', '720,000'],
+                  ['Mythical', '1,248,389', '874,072'],
+                ].map(([name, yield30, estReturn]) => (
+                  <View key={name} style={styles.legendTableRow}>
+                    <Text style={styles.legendTableCell}>{name}</Text>
+                    <Text style={styles.legendTableCell}>{yield30}</Text>
+                    <Text style={[styles.legendTableCell, styles.legendPayoutCell]}>{estReturn}</Text>
+                  </View>
+                ))}
               </View>
             </>
           )}
@@ -321,6 +312,9 @@ export default function Store() {
                     <View style={styles.specRow}>
                       <Ionicons name="time" size={16} color="#2196F3" />
                       <Text style={styles.specText}>{miner.duration_days} days</Text>
+                    </View>
+                    <View style={styles.payoutRows}>
+                      <Text style={styles.payoutText}>Total 30-Day Yield: {miner.payout_30day.toLocaleString()} sats</Text>
                     </View>
                   </View>
                   <View style={styles.priceSection}>
@@ -383,10 +377,14 @@ const styles = StyleSheet.create({
   legendHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   legendTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFD700', marginLeft: 10 },
   legendSubtitle: { fontSize: 14, color: '#AAA', marginBottom: 15 },
-  legendGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 15 },
-  legendItem: { width: '48%', backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#444' },
-  legendHashRate: { fontSize: 14, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
-  legendEarning: { fontSize: 12, color: '#4CAF50', fontWeight: '600' },
+  legendTable: { backgroundColor: '#1a1a1a', borderRadius: 8, overflow: 'hidden', marginBottom: 15 },
+  legendTableHeader: { flexDirection: 'row', backgroundColor: '#333', paddingVertical: 10, paddingHorizontal: 8 },
+  legendTableHeaderText: { flex: 1, fontSize: 12, fontWeight: 'bold', color: '#FFF', textAlign: 'right' },
+  legendTableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#333', paddingVertical: 9, paddingHorizontal: 8 },
+  legendTableCell: { flex: 1, fontSize: 12, color: '#FFF', textAlign: 'right' },
+  legendPayoutCell: { color: '#4CAF50', fontWeight: 'bold' },
+  payoutRows: { width: '100%', marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#444' },
+  payoutText: { fontSize: 12, color: '#4CAF50', textAlign: 'center', marginBottom: 3, fontWeight: '600' },
   premiumHeader: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5 },
   premiumTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFD700', textAlign: 'center' },
   minersGrid: { paddingHorizontal: 15 },
