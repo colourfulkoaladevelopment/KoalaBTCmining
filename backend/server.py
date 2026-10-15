@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 import os
 import uuid
+import secrets
 import random
 import string
 import logging
@@ -2628,7 +2629,7 @@ async def forgot_password(email_data: Dict[str, str]):
         # Always return success for security (don't reveal if email exists)
         if user:
             # Generate reset token
-            reset_token = str(uuid.uuid4())
+            reset_token = secrets.token_urlsafe(32)
             reset_expires = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
             
             # Store reset token in database
@@ -2659,7 +2660,7 @@ async def forgot_password(email_data: Dict[str, str]):
                 msg['Subject'] = "Bitcoin Mining App - Password Reset"
                 
                 # Create HTML email body with reset instructions
-                reset_link = f"{os.getenv('APP_URL', 'https://admin-balance-mgmt-1.preview.emergentagent.com')}/reset.html?token={reset_token}"
+                reset_link = f"https://onrender.com{reset_token}"
                 email_body = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -2732,48 +2733,124 @@ async def forgot_password(email_data: Dict[str, str]):
         logger.error(f"Error in forgot password: {e}")
         raise HTTPException(status_code=500, detail="Failed to process password reset request")
 
-@app.post("/api/auth/reset-password")
-async def reset_password(reset_data: Dict[str, str]):
-    """Reset password using email (self-serve client flow)"""
-    try:
-        email = reset_data.get("email", "").strip().lower()
-        new_password = reset_data.get("new_password", "").strip()
+@app.get("/reset-password")
+async def reset_password_page(token: str = ""):
+    """Serve mobile-responsive HTML form for password reset"""
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koala Mining - Reset Password</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }}
+        .card {{ background: #2a2a2a; border-radius: 16px; padding: 40px 30px; max-width: 420px; width: 100%; border: 1px solid #FFD700; }}
+        h1 {{ color: #FFD700; text-align: center; margin-bottom: 8px; font-size: 24px; }}
+        p {{ color: #AAA; text-align: center; margin-bottom: 24px; font-size: 14px; }}
+        .field {{ margin-bottom: 18px; }}
+        label {{ display: block; color: #CCC; font-size: 13px; margin-bottom: 6px; }}
+        input[type="password"] {{ width: 100%; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 14px 16px; color: #FFF; font-size: 16px; outline: none; }}
+        input[type="password"]:focus {{ border-color: #FFD700; }}
+        .btn {{ width: 100%; background: #FFD700; color: #000; border: none; border-radius: 12px; padding: 16px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }}
+        .btn:active {{ opacity: 0.8; }}
+        .note {{ color: #4CAF50; font-size: 12px; text-align: center; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 6px; }}
+        .error {{ color: #FF5722; text-align: center; margin-top: 16px; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Reset Your Password</h1>
+        <p>Enter your new password below</p>
+        <form action="/api/auth/verify-reset-password" method="POST">
+            <input type="hidden" name="token" value="{html.escape(token)}">
+            <div class="field">
+                <label for="new_password">New Password</label>
+                <input type="password" id="new_password" name="new_password" placeholder="Enter new password" required minlength="6">
+            </div>
+            <div class="field">
+                <label for="confirm_password">Confirm New Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required minlength="6">
+            </div>
+            <button type="submit" class="btn">Submit Reset</button>
+        </form>
+        <div class="note">&#128737; Your password will be encrypted and stored securely</div>
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
 
-        if not email or not new_password:
-            raise HTTPException(status_code=400, detail="Email and new password are required")
+
+@app.post("/api/auth/verify-reset-password")
+async def verify_reset_password(request: Request):
+    """Handle password reset form submission from web view"""
+    try:
+        form = await request.form()
+        token = form.get("token", "").strip()
+        new_password = form.get("new_password", "").strip()
+        confirm_password = form.get("confirm_password", "").strip()
+
+        if not token or not new_password:
+            return HTMLResponse(content="<html><body><p style='color:#FF5722;text-align:center;margin-top:40px;font-size:18px;'>Token and new password are required.</p></body></html>", status_code=400)
+
+        if new_password != confirm_password:
+            return HTMLResponse(content="<html><body><p style='color:#FF5722;text-align:center;margin-top:40px;font-size:18px;'>Passwords do not match.</p></body></html>", status_code=400)
 
         if len(new_password) < MIN_PASSWORD_LENGTH:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters long",
-            )
+            return HTMLResponse(content=f"<html><body><p style='color:#FF5722;text-align:center;margin-top:40px;font-size:18px;'>Password must be at least {MIN_PASSWORD_LENGTH} characters long.</p></body></html>", status_code=400)
 
-        user = users_collection.find_one({"email": email})
+        user = users_collection.find_one({{
+            "reset_token": token,
+            "reset_token_expires": {{"$gt": datetime.utcnow()}}
+        }})
 
         if not user:
-            raise HTTPException(status_code=404, detail="No account found with that email address")
+            return HTMLResponse(content="<html><body><p style='color:#FF5722;text-align:center;margin-top:40px;font-size:18px;'>Invalid or expired reset token. Please request a new password reset.</p></body></html>", status_code=400)
 
         hashed_password = hash_password(new_password)
 
         users_collection.update_one(
-            {"_id": user["_id"]},
-            {"$set": {
+            {{"_id": user["_id"]}},
+            {{"$set": {{
                 "password_hash": hashed_password,
                 "updated_at": datetime.utcnow()
-            }}
+            }}, "$unset": {{
+                "reset_token": "",
+                "reset_token_expires": ""
+            }}}}
         )
 
-        user_sessions_collection.delete_many({"user_id": str(user["_id"])})
+        user_sessions_collection.delete_many({{"user_id": str(user["_id"])}})
 
-        logger.info(f"Password reset successful for user {user['email']}")
+        logger.info(f"Password reset successful for user {{user['email']}}")
 
-        return {"message": "Password has been reset successfully. You can now log in with your new password."}
-        
-    except HTTPException:
-        raise
+        return HTMLResponse(content="""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Complete</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: #2a2a2a; border-radius: 16px; padding: 40px 30px; max-width: 420px; width: 100%; border: 1px solid #4CAF50; text-align: center; }
+        .icon { font-size: 48px; margin-bottom: 16px; }
+        h1 { color: #4CAF50; font-size: 24px; margin-bottom: 12px; }
+        p { color: #CCC; font-size: 16px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">✅</div>
+        <h1>Success!</h1>
+        <p>Password reset successfully! You can now log back into the Koala Mining mobile app.</p>
+    </div>
+</body>
+</html>""")
+
     except Exception as e:
-        logger.error(f"Error in reset password: {e}")
-        raise HTTPException(status_code=500, detail="Failed to reset password")
+        logger.error(f"Error in verify reset password: {e}")
+        return HTMLResponse(content="<html><body><p style='color:#FF5722;text-align:center;margin-top:40px;font-size:18px;'>An error occurred. Please try again.</p></body></html>", status_code=500)
 
 # Reset test account endpoint
 @app.post("/api/test/reset-account")
