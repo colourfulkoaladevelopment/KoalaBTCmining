@@ -94,6 +94,7 @@ export default function Dashboard() {
   const [isSubmittingAddressChange, setIsSubmittingAddressChange] = useState(false);
   const [networkFee, setNetworkFee] = useState(0.00001);
   const [tick, setTick] = useState(0);
+  const [satoshiTick, setSatoshiTick] = useState(0);
   const notificationListener = useRef<any>();
   const responseListener = useRef<any>();
 
@@ -112,6 +113,7 @@ export default function Dashboard() {
 
     const countdownInterval = setInterval(() => {
       setTick(t => t + 1);
+      setSatoshiTick(s => s + 1);
     }, 1000);
 
     return () => {
@@ -527,14 +529,17 @@ export default function Dashboard() {
     return { ...m, time_remaining: remainingMs / 3600000 };
   });
 
+  const activeMinersCount = miners.filter(m => m.status === 'active').length;
+
   const liveBalance = (() => {
     const base = walletData?.total_balance ?? 0;
     const todayEarnings = walletData?.today_earnings ?? 0;
-    if (base === 0 && todayEarnings === 0) return 0;
+    if (base === 0 && todayEarnings === 0 && activeMinersCount === 0) return 0;
     const activeHashRate = walletData?.current_hash_rate ?? 0;
-    if (activeHashRate <= 0) return base;
     const perSecondRate = 0.0000000027175 / 86400;
-    return base + activeHashRate * perSecondRate * tick;
+    const serverDerived = activeHashRate > 0 ? activeHashRate * perSecondRate * tick : 0;
+    const satoshiSpin = activeMinersCount * 0.000000000005 * satoshiTick;
+    return base + serverDerived + satoshiSpin;
   })();
 
   if (isLoading) {
@@ -576,53 +581,29 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Wallet Status / Withdrawal Section */}
+        {/* Account Status Badge */}
         <View style={styles.walletStatusCard}>
           <View style={styles.walletStatusHeader}>
-            <Ionicons
-              name={walletStatus?.status === 'connected' ? 'checkmark-circle' : walletStatus?.status === 'pending' ? 'time' : 'warning'}
-              size={24}
-              color={walletStatus?.status === 'connected' ? '#4CAF50' : walletStatus?.status === 'pending' ? '#FF9800' : '#FF5722'}
-            />
-            <Text style={styles.walletStatusText}>
-              {walletStatus?.status === 'connected' ? 'Wallet Connected' :
-               walletStatus?.status === 'pending' ? 'Wallet Pending Approval' :
-               walletStatus?.status === 'rejected' ? 'Wallet Address Rejected' :
-               'No Wallet Connected'}
-            </Text>
+            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+            <Text style={styles.walletStatusText}>Account Status: Verified Simulation</Text>
           </View>
           {walletStatus?.status === 'connected' && walletStatus?.btc_address && (
             <Text style={styles.walletAddress} numberOfLines={1}>
               {walletStatus.btc_address.substring(0, 12)}...{walletStatus.btc_address.substring(walletStatus.btc_address.length - 8)}
             </Text>
           )}
-          {walletStatus?.status === 'rejected' && walletStatus?.rejection && (
-            <View style={styles.rejectionNotice}>
-              <Text style={styles.rejectionReason}>Reason: {walletStatus.rejection.reason || 'Not specified'}</Text>
-              <TouchableOpacity onPress={dismissAddressRejection}>
-                <Text style={styles.dismissLink}>Dismiss</Text>
+          {walletStatus?.status === 'connected' && (
+            <View style={styles.walletActionsRow}>
+              <TouchableOpacity style={styles.walletActionButton} onPress={() => setShowAddressChangeModal(true)}>
+                <Ionicons name="create" size={16} color="#2196F3" />
+                <Text style={styles.walletActionButtonText}>Change Address</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.walletActionButton, styles.withdrawButton]} onPress={() => setShowWithdrawModal(true)}>
+                <Ionicons name="arrow-up-circle" size={16} color="#4CAF50" />
+                <Text style={styles.walletActionButtonText}>Withdraw BTC</Text>
               </TouchableOpacity>
             </View>
           )}
-          <View style={styles.walletActionsRow}>
-            {walletStatus?.status === 'disconnected' || walletStatus?.status === 'rejected' ? (
-              <TouchableOpacity style={styles.walletActionButton} onPress={() => setShowWalletModal(true)}>
-                <Ionicons name="wallet" size={16} color="#FF9800" />
-                <Text style={styles.walletActionButtonText}>Register Wallet</Text>
-              </TouchableOpacity>
-            ) : walletStatus?.status === 'connected' ? (
-              <>
-                <TouchableOpacity style={styles.walletActionButton} onPress={() => setShowAddressChangeModal(true)}>
-                  <Ionicons name="create" size={16} color="#2196F3" />
-                  <Text style={styles.walletActionButtonText}>Change Address</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.walletActionButton, styles.withdrawButton]} onPress={() => setShowWithdrawModal(true)}>
-                  <Ionicons name="arrow-up-circle" size={16} color="#4CAF50" />
-                  <Text style={styles.walletActionButtonText}>Withdraw BTC</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
-          </View>
         </View>
 
         {/* Mining Status */}

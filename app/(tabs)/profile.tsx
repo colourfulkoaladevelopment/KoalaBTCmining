@@ -322,18 +322,7 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#AAA" />
           </TouchableOpacity>
-          {userProfile?.email === 'colourfulkoaladevelopment@gmail.com' && (
-            <TouchableOpacity style={styles.actionItem} onPress={() => router.push('/admin')}>
-              <View style={styles.actionIcon}>
-                <Ionicons name="shield" size={24} color="#FFD700" />
-              </View>
-              <View style={styles.actionText}>
-                <Text style={styles.actionTitle}>Admin Panel</Text>
-                <Text style={styles.actionDescription}>Manage users and wallets</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#FFD700" />
-            </TouchableOpacity>
-          )}
+
         </View>
 
         {/* App Info */}

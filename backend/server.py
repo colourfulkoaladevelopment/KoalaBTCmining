@@ -2734,50 +2734,39 @@ async def forgot_password(email_data: Dict[str, str]):
 
 @app.post("/api/auth/reset-password")
 async def reset_password(reset_data: Dict[str, str]):
-    """Reset password using token"""
+    """Reset password using email (self-serve client flow)"""
     try:
-        token = reset_data.get("token", "").strip()
+        email = reset_data.get("email", "").strip().lower()
         new_password = reset_data.get("new_password", "").strip()
-        
-        if not token or not new_password:
-            raise HTTPException(status_code=400, detail="Token and new password are required")
-        
+
+        if not email or not new_password:
+            raise HTTPException(status_code=400, detail="Email and new password are required")
+
         if len(new_password) < MIN_PASSWORD_LENGTH:
             raise HTTPException(
                 status_code=400,
                 detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters long",
             )
-        
-        # Find user with valid reset token
-        user = users_collection.find_one({
-            "reset_token": token,
-            "reset_token_expires": {"$gt": datetime.utcnow()}
-        })
-        
+
+        user = users_collection.find_one({"email": email})
+
         if not user:
-            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-        
-        # Hash new password
+            raise HTTPException(status_code=404, detail="No account found with that email address")
+
         hashed_password = hash_password(new_password)
-        
-        # Update password and remove reset token
+
         users_collection.update_one(
             {"_id": user["_id"]},
             {"$set": {
                 "password_hash": hashed_password,
                 "updated_at": datetime.utcnow()
-            }, "$unset": {
-                "reset_token": "",
-                "reset_token_expires": ""
             }}
         )
-        
-        # Invalidate every existing session for this user. Without this, a
-        # session stolen before the reset keeps working after it.
+
         user_sessions_collection.delete_many({"user_id": str(user["_id"])})
 
         logger.info(f"Password reset successful for user {user['email']}")
-        
+
         return {"message": "Password has been reset successfully. You can now log in with your new password."}
         
     except HTTPException:

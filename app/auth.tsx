@@ -81,11 +81,7 @@ export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess?: () => vo
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Forgot Password',
-      'Please contact support at support@bitcoinmining.com to reset your password.',
-      [{ text: 'OK' }]
-    );
+    router.push('/reset-password');
   };
 
   return (
