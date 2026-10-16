@@ -2758,6 +2758,8 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
                 smtp_port = int(os.getenv("SMTP_PORT", "587"))
                 sender_email = os.getenv("SMTP_EMAIL", "koalabtcmining@gmail.com")
                 sender_password = os.getenv("SMTP_PASSWORD")
+                if not sender_password:
+                    raise RuntimeError("SMTP_PASSWORD is not configured")
                 
                 # Create email message
                 msg = MIMEMultipart()
@@ -2820,19 +2822,25 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
                 
                 msg.attach(MIMEText(email_body, 'html'))
                 
-                if smtp_port == 465:
-                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=10)
-                else:
-                    server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
-                server.login(sender_email, sender_password)
-                text = msg.as_string()
-                server.sendmail(sender_email, email, text)
-                server.quit()
-                
-                logger.info(f"✅ Password reset email sent successfully to {email}")
+                server = None
+                try:
+                    if smtp_port == 465:
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=10)
+                    else:
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+                        server.ehlo()
+                        server.starttls()
+                        server.ehlo()
+                    server.login(sender_email, sender_password)
+                    text = msg.as_string()
+                    server.sendmail(sender_email, email, text)
+                    logger.info(f"✅ Password reset email sent successfully to {email}")
+                finally:
+                    if server is not None:
+                        try:
+                            server.quit()
+                        except Exception as close_error:
+                            logger.warning(f"SMTP connection close failed: {close_error}")
                 
             except Exception as email_error:
                 print(f"❌ SMTP CONFIG DIAGNOSTIC ERROR: {str(email_error)}")
@@ -2841,7 +2849,7 @@ async def forgot_password(email_data: Dict[str, str], request: Request):
                 print(f"❌ SMTP SENDER: {os.getenv('SMTP_EMAIL', 'not set')}")
                 logger.error(f"❌ Failed to send password reset email to {email}: {email_error}")
                 logger.error(f"❌ SMTP traceback: {traceback.format_exc()}")
-                # Still return success to prevent email enumeration attacks
+                raise HTTPException(status_code=503, detail="Password reset email could not be sent. Please try again later.")
                 
             logger.info(f"Password reset requested for {email}.")
         

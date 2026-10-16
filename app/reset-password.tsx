@@ -35,11 +35,16 @@ export default function ResetPasswordScreen({ onBack }: ResetPasswordScreenProps
         return;
       }
 
-      await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.detail || 'The reset email could not be sent. Please try again.');
+      }
 
       setEmail('');
       Alert.alert(
@@ -48,11 +53,8 @@ export default function ResetPasswordScreen({ onBack }: ResetPasswordScreenProps
         [{ text: 'Back to Login', onPress: () => onBack?.() }]
       );
     } catch (error) {
-      Alert.alert(
-        'Check Your Inbox',
-        'If the account exists, a secure password reset link has been sent to your inbox.',
-        [{ text: 'Back to Login', onPress: () => onBack?.() }]
-      );
+      const message = error instanceof Error ? error.message : 'The reset email could not be sent. Please try again.';
+      Alert.alert('Unable to Send Reset Link', message);
     } finally {
       setIsLoading(false);
     }
