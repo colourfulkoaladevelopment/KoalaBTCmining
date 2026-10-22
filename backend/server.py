@@ -1750,7 +1750,7 @@ async def request_withdrawal(
     out-of-band by admin via Kraken after manual verification.
     """
     SATOSHIS_PER_BTC = 100_000_000
-    MIN_WITHDRAWAL_SATS = 2500
+    MIN_WITHDRAWAL_SATS = 1000
 
     address = (data.get("address") or "").strip()
     sats_amount = data.get("amount")
@@ -1768,7 +1768,7 @@ async def request_withdrawal(
     if sats_amount < MIN_WITHDRAWAL_SATS:
         raise HTTPException(
             status_code=400,
-            detail=f"Minimum withdrawal limit not met. You must accumulate at least {MIN_WITHDRAWAL_SATS:,} Satoshis to request a payout."
+            detail="Transaction blocked: Request fails to meet the required 1,000 Satoshi floor limit."
         )
 
     amount_btc = sats_amount / SATOSHIS_PER_BTC
