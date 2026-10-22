@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { apiFetch } from '../../utils/api';
@@ -85,6 +84,8 @@ export default function Dashboard() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showAddressChangeModal, setShowAddressChangeModal] = useState(false);
   const [showAdModal, setShowAdModal] = useState(false);
+  const [showActiveMiners, setShowActiveMiners] = useState(true);
+  const [showExpiredMiners, setShowExpiredMiners] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [currentAdType, setCurrentAdType] = useState<string>('');
@@ -92,7 +93,7 @@ export default function Dashboard() {
   const [withdrawForm, setWithdrawForm] = useState({ address: '', amount: '', network: 'bitcoin' });
   const [addressChangeForm, setAddressChangeForm] = useState({ currentPassword: '', newAddress: '', confirmAddress: '' });
   const [isSubmittingAddressChange, setIsSubmittingAddressChange] = useState(false);
-  const [networkFee, setNetworkFee] = useState(0.00001);
+  const networkFee = 0.00001;
   const [tick, setTick] = useState(0);
   const [satoshiTick, setSatoshiTick] = useState(0);
   const notificationListener = useRef<any>();
@@ -123,10 +124,10 @@ export default function Dashboard() {
       clearInterval(interval);
       clearInterval(countdownInterval);
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
     };
   }, []);
@@ -417,16 +418,16 @@ export default function Dashboard() {
 
   const handleWithdraw = async () => {
     const amount = Number.parseInt(withdrawForm.amount, 10);
-    if (availableSatoshis < 2500) {
-      Alert.alert('Minimum withdrawal limit not met', 'You must accumulate at least 2,500 Satoshis to request a payout.');
+    if (availableSatoshis < 1000) {
+      Alert.alert('Minimum withdrawal limit not met', 'You must accumulate at least 1,000 Satoshis to request a payout.');
       return;
     }
     if (!withdrawForm.address.trim()) {
       Alert.alert('Error', 'Please enter a Bitcoin withdrawal address.');
       return;
     }
-    if (!Number.isInteger(amount) || amount < 2500) {
-      Alert.alert('Error', 'The minimum withdrawal amount is 2,500 Satoshis.');
+    if (!Number.isInteger(amount) || amount < 1000) {
+      Alert.alert('Error', 'The minimum withdrawal amount is 1,000 Satoshis.');
       return;
     }
     if (amount > availableSatoshis) {
@@ -529,7 +530,41 @@ export default function Dashboard() {
     return { ...m, time_remaining: remainingMs / 3600000 };
   });
 
-  const activeMinersCount = miners.filter(m => m.status === 'active').length;
+  const activeMiners = liveMiners.filter(miner => miner.time_remaining > 0);
+  const expiredMiners = liveMiners.filter(miner => miner.time_remaining <= 0);
+  const activeMinersCount = activeMiners.length;
+
+  const renderMinerItem = (miner: MinerData) => (
+    <View key={miner.id} style={styles.minerItem}>
+      <View style={styles.minerHeader}>
+        <Text style={styles.minerName}>{miner.name}</Text>
+        <View style={[styles.minerStatus, { backgroundColor: miner.time_remaining > 0 ? '#4CAF50' : '#666' }]}>
+          <Text style={styles.statusText}>{miner.time_remaining > 0 ? 'ACTIVE' : 'EXPIRED'}</Text>
+        </View>
+      </View>
+      <View style={styles.minerStats}>
+        <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
+        <Text style={styles.minerStat}>Earned: ₿ {(miner.total_earned ?? 0).toFixed(12)}</Text>
+        <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(miner.time_remaining)}</Text>
+      </View>
+      {miner.status === 'inactive' && miner.time_remaining > 0 && (
+        <TouchableOpacity
+          style={styles.activateButton}
+          onPress={() => activateMiner(miner.id)}
+          disabled={activatingMiner === miner.id}
+        >
+          {activatingMiner === miner.id ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <>
+              <Ionicons name="play" size={16} color="#FFF" />
+              <Text style={styles.activateButtonText}>Activate</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   useEffect(() => {
     for (const miner of liveMiners) {
@@ -594,7 +629,7 @@ export default function Dashboard() {
           <Text style={styles.usdValue}>≈ ${bitcoinPrice > 0 ? ((walletData?.total_balance || 0) * bitcoinPrice).toFixed(2) : '...'} USD</Text>
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <Text style={styles.statLabel}>Today's Earnings</Text>
+              <Text style={styles.statLabel}>Today&apos;s Earnings</Text>
               <Text style={styles.statValue}>₿ {(walletData?.today_earnings ?? 0).toFixed(12)}</Text>
             </View>
             <View style={styles.stat}>
@@ -614,12 +649,12 @@ export default function Dashboard() {
               <View
                 style={[
                   styles.withdrawProgressFill,
-                  { width: `${Math.min((Math.floor(liveBalance * 100_000_000) / 2500) * 100, 100)}%` },
+                  { width: `${Math.min((Math.floor(liveBalance * 100_000_000) / 1000) * 100, 100)}%` },
                 ]}
               />
             </View>
             <Text style={styles.withdrawProgressLabel}>
-              {Math.floor(liveBalance * 100_000_000).toLocaleString()}/2,500 satoshis minimum withdrawal
+              {Math.floor(liveBalance * 100_000_000).toLocaleString()}/1,000 satoshis minimum withdrawal
             </Text>
           </View>
         </View>
@@ -685,8 +720,9 @@ export default function Dashboard() {
               <Ionicons name="play-circle" size={24} color="#FF5722" />
               <View style={styles.actionButtonText}>
                 <Text style={styles.actionButtonTitle}>Watch Ad for Boost</Text>
+                <Text style={styles.adBoostCapacity}>5 GH/s (for 24 hours)</Text>
                 <Text style={styles.actionButtonSubtitle}>
-                  {adStats ? `${adStats.remaining_ads}/${adStats.max_daily_ads} ads remaining today` : '5 GH/s for 24 hours'}
+                  {adStats ? `${adStats.remaining_ads}/${adStats.max_daily_ads} ads remaining today` : 'Ads available daily'}
                 </Text>
               </View>
               {activatingMiner === 'ad' || isWatchingAd ? (
@@ -700,48 +736,40 @@ export default function Dashboard() {
 
         {/* Your Miners */}
         <View style={styles.minersCard}>
-          <Text style={styles.cardTitle}>Your Miners</Text>
-          {miners.length === 0 ? (
+          <TouchableOpacity style={styles.accordionHeader} onPress={() => setShowActiveMiners(value => !value)} activeOpacity={0.7}>
+            <View style={styles.accordionTitleRow}>
+              <Ionicons name="hardware-chip" size={22} color="#4CAF50" />
+              <Text style={styles.cardTitle}>Your Miners</Text>
+              <Text style={styles.minerCount}>{activeMiners.length}</Text>
+            </View>
+            <Ionicons name={showActiveMiners ? 'chevron-up' : 'chevron-down'} size={20} color="#AAA" />
+          </TouchableOpacity>
+          {showActiveMiners && (activeMiners.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="hardware-chip" size={48} color="#666" />
-              <Text style={styles.emptyStateTitle}>No Miners Yet</Text>
+              <Text style={styles.emptyStateTitle}>No Active Miners</Text>
               <Text style={styles.emptyStateSubtitle}>
                 Activate your free daily miner or visit the store to purchase premium miners
               </Text>
             </View>
-          ) : (
-            liveMiners.map((miner) => (
-              <View key={miner.id} style={styles.minerItem}>
-                <View style={styles.minerHeader}>
-                  <Text style={styles.minerName}>{miner.name}</Text>
-                  <View style={[styles.minerStatus, { backgroundColor: miner.status === 'active' ? '#4CAF50' : '#666' }]}>
-                    <Text style={styles.statusText}>{miner.status.toUpperCase()}</Text>
-                  </View>
-                </View>
-                <View style={styles.minerStats}>
-                  <Text style={styles.minerStat}>Hash Rate: {miner.hash_rate} GH/s</Text>
-                  <Text style={styles.minerStat}>Earned: ₿ {(miner.total_earned ?? 0).toFixed(12)}</Text>
-                  <Text style={styles.minerStat}>Time Left: {formatTimeRemaining(liveMiners.find(m => m.id === miner.id)?.time_remaining ?? miner.time_remaining)}</Text>
-                </View>
-                {miner.status === 'inactive' && miner.time_remaining > 0 && (
-                  <TouchableOpacity
-                    style={styles.activateButton}
-                    onPress={() => activateMiner(miner.id)}
-                    disabled={activatingMiner === miner.id}
-                  >
-                    {activatingMiner === miner.id ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <>
-                        <Ionicons name="play" size={16} color="#FFF" />
-                        <Text style={styles.activateButtonText}>Activate</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))
-          )}
+          ) : activeMiners.map(renderMinerItem))}
+        </View>
+
+        {/* Expired Miners */}
+        <View style={styles.minersCard}>
+          <TouchableOpacity style={styles.accordionHeader} onPress={() => setShowExpiredMiners(value => !value)} activeOpacity={0.7}>
+            <View style={styles.accordionTitleRow}>
+              <Ionicons name="time" size={22} color="#888" />
+              <Text style={styles.cardTitle}>Expired Miners</Text>
+              <Text style={styles.minerCount}>{expiredMiners.length}</Text>
+            </View>
+            <Ionicons name={showExpiredMiners ? 'chevron-up' : 'chevron-down'} size={20} color="#AAA" />
+          </TouchableOpacity>
+          {showExpiredMiners && (expiredMiners.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateSubtitle}>No expired miners</Text>
+            </View>
+          ) : expiredMiners.map(renderMinerItem))}
         </View>
 
         {/* Activity Feed */}
@@ -775,7 +803,8 @@ export default function Dashboard() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Withdraw Funds</Text>
-            <Text style={styles.modalSubtitle}>Minimum payout: 2,500 Satoshis. Requests are reviewed before processing.</Text>
+            <Text style={styles.modalSubtitle}>Minimum payout: 1,000 Satoshis. Requests are reviewed before processing.</Text>
+            <Text style={styles.networkInfo}>Supported Networks: Bitcoin & Lightning Network</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Bitcoin Withdrawal Address"
@@ -792,6 +821,9 @@ export default function Dashboard() {
               onChangeText={text => setWithdrawForm({ ...withdrawForm, amount: text.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
             />
+            <Text style={styles.feeDisclosure}>
+              Transaction fee: {Math.ceil(networkFee * 100_000_000).toLocaleString()} Satoshis added on top of your withdrawal amount.
+            </Text>
             <Text style={styles.feeInfo}>Available: {availableSatoshis.toLocaleString()} Satoshis</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowWithdrawModal(false)}>
@@ -946,7 +978,11 @@ const styles = StyleSheet.create({
   actionButtonText: { flex: 1, marginLeft: 12 },
   actionButtonTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFF' },
   actionButtonSubtitle: { fontSize: 12, color: '#AAA', marginTop: 2 },
+  adBoostCapacity: { fontSize: 13, color: '#FFF', fontWeight: 'bold', marginTop: 2 },
   minersCard: { backgroundColor: '#2a2a2a', marginHorizontal: 15, marginBottom: 15, padding: 20, borderRadius: 12 },
+  accordionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  accordionTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  minerCount: { color: '#AAA', fontSize: 13, marginLeft: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyStateTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFF', marginTop: 16 },
   emptyStateSubtitle: { fontSize: 14, color: '#AAA', textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
@@ -970,7 +1006,9 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF', marginBottom: 12, textAlign: 'center' },
   modalSubtitle: { fontSize: 14, color: '#AAA', marginBottom: 16, textAlign: 'center' },
   modalInput: { backgroundColor: '#1a1a1a', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, fontSize: 15, color: '#FFF', marginBottom: 12, borderWidth: 1, borderColor: '#333' },
-  feeInfo: { fontSize: 12, color: '#AAA', marginBottom: 4 },
+  networkInfo: { fontSize: 13, color: '#4CAF50', textAlign: 'center', marginBottom: 16 },
+  feeDisclosure: { fontSize: 12, color: '#FFCC80', textAlign: 'center', lineHeight: 18, marginBottom: 8 },
+  feeInfo: { fontSize: 12, color: '#AAA', textAlign: 'center', marginBottom: 4 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
   modalCancelButton: { flex: 1, backgroundColor: '#333', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginRight: 10 },
   modalCancelText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },

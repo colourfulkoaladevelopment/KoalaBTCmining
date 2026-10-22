@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { apiFetch, clearSession } from '../../utils/api';
 
@@ -293,7 +292,7 @@ export default function Profile() {
             </View>
             <View style={styles.actionText}>
               <Text style={styles.actionTitle}>Suggest a Feature</Text>
-              <Text style={styles.actionDescription}>Tell us what you'd like to see</Text>
+              <Text style={styles.actionDescription}>Tell us what you&apos;d like to see</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#AAA" />
           </TouchableOpacity>

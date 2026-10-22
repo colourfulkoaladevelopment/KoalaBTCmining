@@ -261,23 +261,23 @@ export default function Store() {
               <View style={styles.legendTable}>
                 <View style={styles.legendTableHeader}>
                   <Text style={styles.legendTableHeaderText}>Miner</Text>
-                  <Text style={styles.legendTableHeaderText}>30-Day Yield</Text>
+                  <Text style={styles.legendTableHeaderText}>Hashrate</Text>
                   <Text style={styles.legendTableHeaderText}>Est. Return</Text>
                 </View>
                 {[
-                  ['Standard', '9,974', '6,000'],
-                  ['Advanced', '18,713', '12,000'],
-                  ['Pro', '34,929', '24,000'],
-                  ['Elite', '99,867', '66,000'],
-                  ['Master', '199,721', '135,000'],
-                  ['Supreme', '374,373', '270,000'],
-                  ['Ultimate', '561,505', '420,000'],
-                  ['Legendary', '936,173', '720,000'],
-                  ['Mythical', '1,248,389', '874,072'],
-                ].map(([name, yield30, estReturn]) => (
+                  ['Standard', '200 GH/s', '6,000'],
+                  ['Advanced', '400 GH/s', '12,000'],
+                  ['Pro', '800 GH/s', '24,000'],
+                  ['Elite', '2.2 TH/s', '66,000'],
+                  ['Master', '4.5 TH/s', '135,000'],
+                  ['Supreme', '9.0 TH/s', '270,000'],
+                  ['Ultimate', '14.0 TH/s', '420,000'],
+                  ['Legendary', '24.0 TH/s', '720,000'],
+                  ['Mythical', '29.1 TH/s', '874,072'],
+                ].map(([name, hashRate, estReturn]) => (
                   <View key={name} style={styles.legendTableRow}>
                     <Text style={styles.legendTableCell}>{name}</Text>
-                    <Text style={styles.legendTableCell}>{yield30}</Text>
+                    <Text style={styles.legendTableCell}>{hashRate}</Text>
                     <Text style={[styles.legendTableCell, styles.legendPayoutCell]}>{estReturn}</Text>
                   </View>
                 ))}
