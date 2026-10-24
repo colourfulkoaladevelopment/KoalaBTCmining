@@ -25,7 +25,7 @@ for _env_path in _env_candidates:
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "test_database")
 
-client = MongoClient(MONGO_URL)
+client = MongoClient(MONGO_URL, maxPoolSize=100)
 db = client[DB_NAME]
 
 # PayPal setup
